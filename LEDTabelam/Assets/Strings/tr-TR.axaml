@@ -1,0 +1,109 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    
+    <!-- Uygulama Başlığı -->
+    <sys:String x:Key="AppTitle">LEDTabelam - Otobüs Hat Tabelası Önizleme</sys:String>
+    
+    <!-- Profil Yönetimi -->
+    <sys:String x:Key="Profile">Profil</sys:String>
+    <sys:String x:Key="NewProfile">Yeni</sys:String>
+    <sys:String x:Key="SaveProfile">Kaydet</sys:String>
+    <sys:String x:Key="DeleteProfile">Sil</sys:String>
+    <sys:String x:Key="DefaultProfile">Varsayılan</sys:String>
+    
+    <!-- Ayarlar -->
+    <sys:String x:Key="Settings">Ayarlar</sys:String>
+    <sys:String x:Key="Slot">Slot</sys:String>
+    <sys:String x:Key="Search">Ara...</sys:String>
+    <sys:String x:Key="Resolution">Çözünürlük</sys:String>
+    <sys:String x:Key="Custom">Özel</sys:String>
+    <sys:String x:Key="Width">Genişlik</sys:String>
+    <sys:String x:Key="Height">Yükseklik</sys:String>
+    
+    <!-- LED Tipi -->
+    <sys:String x:Key="LedType">LED Tipi</sys:String>
+    <sys:String x:Key="Amber">Amber</sys:String>
+    <sys:String x:Key="Red">Kırmızı</sys:String>
+    <sys:String x:Key="Green">Yeşil</sys:String>
+    <sys:String x:Key="FullRGB">Full RGB</sys:String>
+    
+    <!-- Piksel Ayarları -->
+    <sys:String x:Key="Pitch">Pitch</sys:String>
+    <sys:String x:Key="PixelShape">Piksel Şekli</sys:String>
+    <sys:String x:Key="Round">Yuvarlak</sys:String>
+    <sys:String x:Key="Square">Kare</sys:String>
+    
+    <!-- Font -->
+    <sys:String x:Key="Font">Font</sys:String>
+    <sys:String x:Key="LoadFont">Yükle...</sys:String>
+    
+    <!-- Görsel Ayarlar -->
+    <sys:String x:Key="Brightness">Parlaklık</sys:String>
+    <sys:String x:Key="Background">Arka Plan</sys:String>
+    <sys:String x:Key="PixelSize">Piksel Boyutu</sys:String>
+    <sys:String x:Key="InvertColors">Ters Renk</sys:String>
+    <sys:String x:Key="Aging">Eskime</sys:String>
+    
+    <!-- Önizleme -->
+    <sys:String x:Key="Preview">Önizleme</sys:String>
+    <sys:String x:Key="Zoom">Zoom</sys:String>
+    
+    <!-- Slot Düzenleyici -->
+    <sys:String x:Key="SlotEditor">Slot Düzenleyici</sys:String>
+    <sys:String x:Key="RouteNumber">Hat No</sys:String>
+    <sys:String x:Key="RouteText">Güzergah</sys:String>
+    <sys:String x:Key="Alignment">Hizalama</sys:String>
+    <sys:String x:Key="Left">Sol</sys:String>
+    <sys:String x:Key="Center">Orta</sys:String>
+    <sys:String x:Key="Right">Sağ</sys:String>
+    <sys:String x:Key="Top">Üst</sys:String>
+    <sys:String x:Key="Bottom">Alt</sys:String>
+    
+    <!-- Stil -->
+    <sys:String x:Key="Style">Stil</sys:String>
+    <sys:String x:Key="BackgroundFill">Arkaplan</sys:String>
+    <sys:String x:Key="Stroke">Stroke</sys:String>
+    <sys:String x:Key="Save">Kaydet</sys:String>
+    <sys:String x:Key="Cancel">İptal</sys:String>
+    
+    <!-- Zone Düzenleyici -->
+    <sys:String x:Key="ZoneEditor">Zone Düzenleyici</sys:String>
+    <sys:String x:Key="AddZone">Zone Ekle</sys:String>
+    <sys:String x:Key="Logo">Logo</sys:String>
+    <sys:String x:Key="ScrollingText">Kayan Yazı</sys:String>
+    
+    <!-- Animasyon -->
+    <sys:String x:Key="Animation">Animasyon</sys:String>
+    <sys:String x:Key="Play">Oynat</sys:String>
+    <sys:String x:Key="Pause">Duraklat</sys:String>
+    <sys:String x:Key="Stop">Durdur</sys:String>
+    <sys:String x:Key="Speed">Hız</sys:String>
+    <sys:String x:Key="PixelsPerSecond">px/s</sys:String>
+    
+    <!-- Dışa Aktar -->
+    <sys:String x:Key="Export">Dışa Aktar</sys:String>
+    <sys:String x:Key="SavePng">PNG Kaydet</sys:String>
+    <sys:String x:Key="SaveGif">GIF Kaydet</sys:String>
+    <sys:String x:Key="SaveWebP">WebP Kaydet</sys:String>
+    
+    <!-- Hata Mesajları -->
+    <sys:String x:Key="ErrorInvalidResolution">Geçersiz çözünürlük değeri. 1-512 piksel aralığında olmalıdır.</sys:String>
+    <sys:String x:Key="ErrorFontNotFound">Font dosyası bulunamadı.</sys:String>
+    <sys:String x:Key="ErrorFontInvalid">Desteklenmeyen font formatı.</sys:String>
+    <sys:String x:Key="ErrorFontTooLarge">Dosya çok büyük (max 10MB).</sys:String>
+    <sys:String x:Key="ErrorFontEmpty">Font karakter içermiyor.</sys:String>
+    <sys:String x:Key="ErrorFontImageMissing">Font görüntü dosyası bulunamadı.</sys:String>
+    <sys:String x:Key="ErrorProfileNotFound">Profil bulunamadı.</sys:String>
+    <sys:String x:Key="ErrorProfileSaveFailed">Profil kaydedilemedi.</sys:String>
+    <sys:String x:Key="ErrorExportFailed">Dışa aktarma başarısız.</sys:String>
+    <sys:String x:Key="ErrorDiskFull">Yetersiz disk alanı.</sys:String>
+    
+    <!-- Uyarı Mesajları -->
+    <sys:String x:Key="WarningTextOverflow">Metin display yüksekliğini aşıyor.</sys:String>
+    <sys:String x:Key="WarningDeleteProfile">Bu profili silmek istediğinizden emin misiniz?</sys:String>
+    
+    <!-- Slot Durumları -->
+    <sys:String x:Key="Undefined">Tanımsız</sys:String>
+    
+</ResourceDictionary>

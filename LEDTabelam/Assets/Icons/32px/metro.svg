@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Metro/Subway Icon - Pixel art for LED display -->
+  <!-- Train body -->
+  <rect x="4" y="8" width="24" height="16" rx="4" fill="white"/>
+  <!-- Windows -->
+  <rect x="6" y="10" width="8" height="6" fill="black"/>
+  <rect x="18" y="10" width="8" height="6" fill="black"/>
+  <!-- Front light -->
+  <rect x="14" y="12" width="4" height="4" fill="black"/>
+  <!-- Rails -->
+  <rect x="2" y="26" width="28" height="4" fill="white"/>
+  <!-- Wheels -->
+  <rect x="6" y="24" width="6" height="2" fill="white"/>
+  <rect x="20" y="24" width="6" height="2" fill="white"/>
+</svg>

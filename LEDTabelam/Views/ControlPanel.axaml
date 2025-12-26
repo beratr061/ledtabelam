@@ -1,0 +1,193 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LEDTabelam.ViewModels"
+             xmlns:models="using:LEDTabelam.Models"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="320" d:DesignHeight="800"
+             x:Class="LEDTabelam.Views.ControlPanel"
+             x:DataType="vm:ControlPanelViewModel">
+
+    <StackPanel Spacing="8">
+        
+        <!-- Slot Seçici -->
+        <Border Classes="panel">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="header" Text="Slot"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <NumericUpDown Grid.Column="0"
+                                   Value="{Binding CurrentSlotNumber}"
+                                   Minimum="1"
+                                   Maximum="999"
+                                   FormatString="000"
+                                   Increment="1"/>
+                    <Button Grid.Column="1" Content="Ara..." Margin="8,0,0,0"/>
+                </Grid>
+                <TextBox Watermark="Slot ara (hat no veya güzergah)..."
+                         Text="{Binding SlotSearchQuery}"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Çözünürlük Ayarları -->
+        <Border Classes="panel">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="header" Text="Çözünürlük"/>
+                <ComboBox ItemsSource="{Binding Resolutions}"
+                          SelectedItem="{Binding SelectedResolution}"
+                          HorizontalAlignment="Stretch"/>
+                <Grid IsVisible="{Binding IsCustomResolution}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <NumericUpDown Grid.Column="0"
+                                   Value="{Binding PanelWidth}"
+                                   Minimum="1"
+                                   Maximum="512"
+                                   Watermark="Genişlik"/>
+                    <TextBlock Grid.Column="1" Text="x" VerticalAlignment="Center" Margin="8,0"/>
+                    <NumericUpDown Grid.Column="2"
+                                   Value="{Binding PanelHeight}"
+                                   Minimum="1"
+                                   Maximum="512"
+                                   Watermark="Yükseklik"/>
+                </Grid>
+                
+                <!-- Gerçek çözünürlük bilgisi -->
+                <TextBlock Text="{Binding ActualWidth, StringFormat='Gerçek: {0}'}" 
+                           Foreground="#808080" FontSize="10"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- LED Renk Tipi -->
+        <Border Classes="panel">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="header" Text="LED Tipi"/>
+                <StackPanel Spacing="4">
+                    <RadioButton Content="Amber" 
+                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Amber}}"
+                                 GroupName="ColorType"/>
+                    <RadioButton Content="Kırmızı" 
+                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Red}}"
+                                 GroupName="ColorType"/>
+                    <RadioButton Content="Yeşil" 
+                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Green}}"
+                                 GroupName="ColorType"/>
+                    <RadioButton Content="1R1G1B" 
+                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.OneROneGOneB}}"
+                                 GroupName="ColorType"/>
+                    <RadioButton Content="Full RGB" 
+                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.FullRGB}}"
+                                 GroupName="ColorType"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+        
+        <!-- Piksel Ayarları -->
+        <Border Classes="panel">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="header" Text="Piksel Ayarları"/>
+                
+                <TextBlock Classes="label" Text="Pitch"/>
+                <ComboBox ItemsSource="{Binding PitchOptions}"
+                          SelectedItem="{Binding SelectedPitch}"
+                          HorizontalAlignment="Stretch"/>
+                <NumericUpDown IsVisible="{Binding IsCustomPitch}"
+                               Value="{Binding CustomPitchRatio}"
+                               Minimum="0.1"
+                               Maximum="1.0"
+                               Increment="0.1"
+                               FormatString="0.0"
+                               Watermark="Pitch Oranı"/>
+                
+                <TextBlock Classes="label" Text="Piksel Şekli"/>
+                <StackPanel Orientation="Horizontal" Spacing="16">
+                    <RadioButton Content="Yuvarlak" 
+                                 IsChecked="{Binding SelectedShape, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:PixelShape.Round}}"
+                                 GroupName="PixelShape"/>
+                    <RadioButton Content="Kare" 
+                                 IsChecked="{Binding SelectedShape, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:PixelShape.Square}}"
+                                 GroupName="PixelShape"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+        
+        <!-- Font Ayarları -->
+        <Border Classes="panel">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="header" Text="Font"/>
+                <ComboBox ItemsSource="{Binding Fonts}"
+                          SelectedItem="{Binding SelectedFont}"
+                          HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <Button Content="Font Yükle..." 
+                        HorizontalAlignment="Stretch"
+                        x:Name="LoadFontButton"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Görsel Ayarlar -->
+        <Border Classes="panel">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="header" Text="Görsel Ayarlar"/>
+                
+                <TextBlock Classes="label" Text="{Binding Brightness, StringFormat='Parlaklık: %{0}'}"/>
+                <Slider Minimum="0" Maximum="100" Value="{Binding Brightness}"/>
+                
+                <TextBlock Classes="label" Text="{Binding BackgroundDarkness, StringFormat='Arka Plan: %{0}'}"/>
+                <Slider Minimum="0" Maximum="100" Value="{Binding BackgroundDarkness}"/>
+                
+                <TextBlock Classes="label" Text="{Binding PixelSize, StringFormat='Piksel Boyutu: {0} px'}"/>
+                <Slider Minimum="1" Maximum="20" Value="{Binding PixelSize}"/>
+                
+                <TextBlock Classes="label" Text="{Binding LineSpacing, StringFormat='Satır Arası: {0} px'}"/>
+                <Slider Minimum="0" Maximum="10" Value="{Binding LineSpacing}"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Efektler -->
+        <Border Classes="panel">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="header" Text="Efektler"/>
+                
+                <CheckBox Content="Ters Renk" IsChecked="{Binding InvertColors}"/>
+                
+                <TextBlock Classes="label" Text="{Binding AgingPercent, StringFormat='Eskime: %{0}'}"/>
+                <Slider Minimum="0" Maximum="5" Value="{Binding AgingPercent}"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Metin Girişi -->
+        <Border Classes="panel">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="header" Text="Metin"/>
+                <TextBox AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         Height="80"
+                         Text="{Binding InputText}"
+                         Watermark="Tabela metnini girin..."/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Animasyon Hızı -->
+        <Border Classes="panel">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="header" Text="Animasyon"/>
+                <TextBlock Classes="label" Text="{Binding AnimationSpeed, StringFormat='Hız: {0} px/s'}"/>
+                <Slider Minimum="1" Maximum="100" Value="{Binding AnimationSpeed}"/>
+            </StackPanel>
+        </Border>
+        
+    </StackPanel>
+
+</UserControl>

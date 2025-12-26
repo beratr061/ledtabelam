@@ -1,0 +1,97 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LEDTabelam.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="400"
+             x:Class="LEDTabelam.Views.PreviewPanel"
+             x:DataType="vm:PreviewViewModel">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- LED Display Önizleme Alanı -->
+        <Border Grid.Row="0" 
+                Background="#404040" 
+                CornerRadius="8" 
+                Margin="4"
+                ClipToBounds="True">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto">
+                <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <!-- LED Display Image -->
+                    <Image x:Name="LedDisplayImage"
+                           Source="{Binding DisplayBitmap, Converter={x:Static vm:SkiaBitmapToImageConverter.Instance}}"
+                           Width="{Binding ScaledWidth}"
+                           Height="{Binding ScaledHeight}"
+                           Stretch="None"
+                           RenderOptions.BitmapInterpolationMode="None"/>
+                    
+                    <!-- Placeholder when no image -->
+                    <TextBlock Text="LED Tabela Önizleme"
+                               Foreground="#808080"
+                               FontSize="24"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding DisplayBitmap, Converter={x:Static ObjectConverters.IsNull}}"/>
+                </Grid>
+            </ScrollViewer>
+        </Border>
+        
+        <!-- Zoom Kontrolleri -->
+        <Border Grid.Row="1" 
+                Background="#2D2D2D" 
+                CornerRadius="8" 
+                Margin="4"
+                Padding="12,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Zoom Out Button -->
+                <Button Grid.Column="0" 
+                        Content="-" 
+                        Width="32" 
+                        Height="32"
+                        Command="{Binding ZoomOutCommand}"
+                        ToolTip.Tip="Uzaklaştır (Ctrl+-)"/>
+                
+                <!-- Zoom Slider -->
+                <Slider Grid.Column="1" 
+                        Minimum="50" 
+                        Maximum="400" 
+                        Value="{Binding ZoomLevel}"
+                        Margin="12,0"
+                        VerticalAlignment="Center"/>
+                
+                <!-- Zoom In Button -->
+                <Button Grid.Column="2" 
+                        Content="+" 
+                        Width="32" 
+                        Height="32"
+                        Command="{Binding ZoomInCommand}"
+                        ToolTip.Tip="Yakınlaştır (Ctrl++)"/>
+                
+                <!-- Zoom Level Display -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="12,0,0,0">
+                    <TextBlock Text="{Binding ZoomLevel, StringFormat='%{0}'}" 
+                               Foreground="#B0B0B0"
+                               VerticalAlignment="Center"
+                               Width="50"/>
+                    <Button Content="100%" 
+                            Command="{Binding ResetZoomCommand}"
+                            Margin="8,0,0,0"
+                            ToolTip.Tip="Zoom'u sıfırla"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+
+</UserControl>

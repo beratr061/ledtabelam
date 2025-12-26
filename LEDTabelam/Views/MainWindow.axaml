@@ -1,0 +1,210 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:LEDTabelam.ViewModels"
+        xmlns:views="using:LEDTabelam.Views"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="720"
+        x:Class="LEDTabelam.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="{Binding Title}"
+        MinWidth="1280"
+        MinHeight="720"
+        Background="#1E1E1E">
+
+    <Window.Styles>
+        <!-- Fluent Design benzeri stiller -->
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="#2D2D2D"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="4"/>
+        </Style>
+        <Style Selector="TextBlock.header">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style Selector="TextBlock.label">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#B0B0B0"/>
+            <Setter Property="Margin" Value="0,4,0,2"/>
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="Background" Value="#3D3D3D"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="12,6"/>
+        </Style>
+        <Style Selector="Button:pointerover">
+            <Setter Property="Background" Value="#4D4D4D"/>
+        </Style>
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="#0078D4"/>
+        </Style>
+        <Style Selector="Button.primary:pointerover">
+            <Setter Property="Background" Value="#1084D8"/>
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="#3D3D3D"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="#3D3D3D"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+        <Style Selector="Slider">
+            <Setter Property="Foreground" Value="#0078D4"/>
+        </Style>
+        <Style Selector="CheckBox">
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+        </Style>
+        <Style Selector="RadioButton">
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+        </Style>
+        <Style Selector="NumericUpDown">
+            <Setter Property="Background" Value="#3D3D3D"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+    </Window.Styles>
+
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Ctrl+S" Command="{Binding SavePngCommand}"/>
+        <KeyBinding Gesture="Ctrl+O" Command="{Binding LoadFontCommand}"/>
+        <KeyBinding Gesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}"/>
+        <KeyBinding Gesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}"/>
+        <KeyBinding Gesture="Ctrl+Add" Command="{Binding ZoomInCommand}"/>
+        <KeyBinding Gesture="Ctrl+Subtract" Command="{Binding ZoomOutCommand}"/>
+    </Window.KeyBindings>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Üst Toolbar - Profil Yönetimi -->
+        <Border Grid.Row="0" Background="#252525" Padding="12,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Sol: Profil Seçici -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Profil:" VerticalAlignment="Center" Foreground="#B0B0B0"/>
+                    <ComboBox Width="200" 
+                              ItemsSource="{Binding ControlPanel.Profiles}"
+                              SelectedItem="{Binding ControlPanel.SelectedProfile}"
+                              DisplayMemberBinding="{Binding Name}"/>
+                    <Button Content="Yeni" Command="{Binding ControlPanel.CreateProfileCommand}" CommandParameter="Yeni Profil"/>
+                    <Button Content="Kaydet" Command="{Binding ControlPanel.SaveProfileCommand}"/>
+                    <Button Content="Sil" Command="{Binding ControlPanel.DeleteProfileCommand}"/>
+                </StackPanel>
+                
+                <!-- Orta: Başlık -->
+                <TextBlock Grid.Column="1" 
+                           Text="{Binding Title}" 
+                           HorizontalAlignment="Center" 
+                           VerticalAlignment="Center"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Foreground="#E0E0E0"/>
+                
+                <!-- Sağ: Hızlı Erişim Butonları -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                    <Button Content="PNG" Command="{Binding SavePngCommand}" ToolTip.Tip="PNG Kaydet (Ctrl+S)"/>
+                    <Button Content="GIF" Command="{Binding SaveGifCommand}" ToolTip.Tip="GIF Kaydet"/>
+                    <Button Content="WebP" Command="{Binding SaveWebPCommand}" ToolTip.Tip="WebP Kaydet"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- Ana İçerik Alanı -->
+        <Grid Grid.Row="1" Margin="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320" MinWidth="280"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Sol Panel: Kontrol Paneli -->
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                <views:ControlPanel DataContext="{Binding ControlPanel}"/>
+            </ScrollViewer>
+            
+            <!-- Ayırıcı -->
+            <GridSplitter Grid.Column="1" Width="4" Background="#3D3D3D" ResizeDirection="Columns"/>
+            
+            <!-- Sağ Panel: Önizleme ve Düzenleyiciler -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" MinHeight="200"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto" MinHeight="150"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Önizleme Paneli -->
+                <views:PreviewPanel Grid.Row="0" DataContext="{Binding Preview}"/>
+                
+                <!-- Ayırıcı -->
+                <GridSplitter Grid.Row="1" Height="4" Background="#3D3D3D" ResizeDirection="Rows"/>
+                
+                <!-- Alt Panel: HD2020 tarzı basit menü -->
+                <TabControl Grid.Row="2" Background="#252525">
+                    <TabItem Header="Program Düzenleyici">
+                        <views:ProgramEditor DataContext="{Binding ProgramEditor}"/>
+                    </TabItem>
+                    <TabItem Header="Animasyon">
+                        <views:AnimationPanel/>
+                    </TabItem>
+                    <TabItem Header="Dışa Aktar">
+                        <views:ExportPanel/>
+                    </TabItem>
+                    <TabItem Header="Playlist">
+                        <views:PlaylistPanel DataContext="{Binding Playlist}"/>
+                    </TabItem>
+                </TabControl>
+            </Grid>
+        </Grid>
+        
+        <!-- Durum Çubuğu -->
+        <Border Grid.Row="2" Background="#252525" Padding="12,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0" 
+                           Text="{Binding StatusMessage}" 
+                           Foreground="#B0B0B0"
+                           FontSize="12"
+                           VerticalAlignment="Center"/>
+                
+                <TextBlock Grid.Column="1" 
+                           Text="{Binding ControlPanel.CurrentSettings.Width, StringFormat='Çözünürlük: {0}'}" 
+                           Foreground="#808080"
+                           FontSize="12"
+                           Margin="20,0"
+                           VerticalAlignment="Center"/>
+                
+                <TextBlock Grid.Column="2" 
+                           Text="{Binding Preview.ZoomLevel, StringFormat='Zoom: %{0}'}" 
+                           Foreground="#808080"
+                           FontSize="12"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+    </Grid>
+
+</Window>

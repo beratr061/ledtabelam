@@ -1,0 +1,170 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LEDTabelam.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="280"
+             x:Class="LEDTabelam.Views.SimpleTabelaEditor"
+             x:DataType="vm:SimpleTabelaViewModel">
+
+    <Border Background="#2D2D2D" CornerRadius="8" Padding="16">
+        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,*">
+            
+            <!-- Sol Taraf: Destination ve Metin Listesi -->
+            <StackPanel Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" Spacing="12" Margin="0,0,16,0">
+                
+                <!-- Destination (Slot) Seçici -->
+                <Border Background="#252525" CornerRadius="6" Padding="12">
+                    <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto" RowDefinitions="Auto">
+                        <TextBlock Grid.Column="0" Text="Hedef:" Foreground="#B0B0B0" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <NumericUpDown Grid.Column="1" Value="{Binding SlotNumber}" Minimum="1" Maximum="999" 
+                                       Width="80" FormatString="000" Increment="1"/>
+                        <TextBlock Grid.Column="2" Text="/" Foreground="#606060" VerticalAlignment="Center" Margin="8,0"/>
+                        <TextBlock Grid.Column="3" Text="999" Foreground="#606060" VerticalAlignment="Center"/>
+                        
+                        <Button Grid.Column="4" Content="Ekle" Margin="12,0,4,0" Padding="12,6"
+                                Command="{Binding AddNewCommand}"/>
+                        <Button Grid.Column="5" Content="Sil" Margin="4,0,4,0" Padding="12,6"
+                                Command="{Binding DeleteCommand}"/>
+                        <Button Grid.Column="6" Content="Kaydet" Background="#0078D4" Margin="4,0,0,0" Padding="12,6"
+                                Command="{Binding SaveCommand}"/>
+                    </Grid>
+                </Border>
+                
+                <!-- Metin Listesi (DataGrid benzeri) -->
+                <Border Background="#252525" CornerRadius="6" Padding="12">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Metinler" FontWeight="SemiBold" Foreground="#E0E0E0" FontSize="13"/>
+                        
+                        <!-- Başlık Satırı -->
+                        <Grid ColumnDefinitions="40,*,60,60,60" Margin="0,4,0,0">
+                            <TextBlock Grid.Column="0" Text="#" Foreground="#808080" FontSize="11" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="Metin" Foreground="#808080" FontSize="11" Margin="8,0,0,0"/>
+                            <TextBlock Grid.Column="2" Text="Renk" Foreground="#808080" FontSize="11" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="3" Text="Sembol" Foreground="#808080" FontSize="11" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="4" Text="Kayan" Foreground="#808080" FontSize="11" HorizontalAlignment="Center"/>
+                        </Grid>
+                        
+                        <Border Height="1" Background="#3D3D3D" Margin="0,4"/>
+                        
+                        <!-- Satır 1: Hat Kodu -->
+                        <Grid ColumnDefinitions="40,*,60,60,60">
+                            <TextBlock Grid.Column="0" Text="1" Foreground="#FFB000" FontSize="12" 
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/>
+                            <TextBox Grid.Column="1" Text="{Binding HatKodu}" Watermark="Hat Kodu (10B, MK...)" 
+                                     Margin="8,0" FontSize="12"/>
+                            <Button Grid.Column="2" Width="28" Height="28" Padding="0" HorizontalAlignment="Center"
+                                    Background="{Binding HatKoduRenk, Converter={x:Static vm:ColorToBrushConverter.Instance}}"
+                                    Click="OnHatKoduColorClick" ToolTip.Tip="Renk Seç"/>
+                            <CheckBox Grid.Column="3" IsChecked="{Binding HatKoduSembol}" HorizontalAlignment="Center"/>
+                            <CheckBox Grid.Column="4" IsChecked="{Binding HatKoduKayan}" HorizontalAlignment="Center"/>
+                        </Grid>
+                        
+                        <!-- Satır 2: Güzergah 1 -->
+                        <Grid ColumnDefinitions="40,*,60,60,60">
+                            <TextBlock Grid.Column="0" Text="2" Foreground="#00FF00" FontSize="12" 
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/>
+                            <TextBox Grid.Column="1" Text="{Binding GuzergahSatir1}" Watermark="Güzergah Satır 1" 
+                                     Margin="8,0" FontSize="12"/>
+                            <Button Grid.Column="2" Width="28" Height="28" Padding="0" HorizontalAlignment="Center"
+                                    Background="{Binding GuzergahRenk, Converter={x:Static vm:ColorToBrushConverter.Instance}}"
+                                    Click="OnGuzergahColorClick" ToolTip.Tip="Renk Seç"/>
+                            <CheckBox Grid.Column="3" IsChecked="{Binding Guzergah1Sembol}" HorizontalAlignment="Center"/>
+                            <CheckBox Grid.Column="4" IsChecked="{Binding Guzergah1Kayan}" HorizontalAlignment="Center"/>
+                        </Grid>
+                        
+                        <!-- Satır 3: Güzergah 2 (opsiyonel) -->
+                        <Grid ColumnDefinitions="40,*,60,60,60" IsVisible="{Binding IkiSatirGuzergah}">
+                            <TextBlock Grid.Column="0" Text="3" Foreground="#00FF00" FontSize="12" 
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/>
+                            <TextBox Grid.Column="1" Text="{Binding GuzergahSatir2}" Watermark="Güzergah Satır 2" 
+                                     Margin="8,0" FontSize="12"/>
+                            <Button Grid.Column="2" Width="28" Height="28" Padding="0" HorizontalAlignment="Center"
+                                    Background="{Binding GuzergahRenk, Converter={x:Static vm:ColorToBrushConverter.Instance}}"
+                                    Click="OnGuzergahColorClick" ToolTip.Tip="Renk Seç"/>
+                            <CheckBox Grid.Column="3" IsChecked="{Binding Guzergah2Sembol}" HorizontalAlignment="Center"/>
+                            <CheckBox Grid.Column="4" IsChecked="{Binding Guzergah2Kayan}" HorizontalAlignment="Center"/>
+                        </Grid>
+                        
+                        <Border Height="1" Background="#3D3D3D" Margin="0,4"/>
+                        
+                        <!-- Satır Ekleme Kontrolleri -->
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <CheckBox Content="2. Satır Güzergah" IsChecked="{Binding IkiSatirGuzergah}" 
+                                      Foreground="#B0B0B0" FontSize="11"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+            
+            <!-- Sağ Taraf: Hizalama ve Ayarlar -->
+            <StackPanel Grid.Row="0" Grid.Column="1" Grid.RowSpan="2" Spacing="12" Width="180">
+                
+                <!-- Hizalama Kontrolleri -->
+                <Border Background="#252525" CornerRadius="6" Padding="12">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Hizalama" FontWeight="SemiBold" Foreground="#E0E0E0" FontSize="13"/>
+                        
+                        <!-- Yatay Hizalama -->
+                        <TextBlock Text="Yatay:" Foreground="#808080" FontSize="11" Margin="0,4,0,0"/>
+                        <Grid ColumnDefinitions="*,*,*" Margin="0,4,0,0">
+                            <Button Grid.Column="0" Content="◀" Width="40" Height="32" x:Name="BtnLeft"
+                                    Click="OnLeftAlignClick" ToolTip.Tip="Sola Hizala"/>
+                            <Button Grid.Column="1" Content="◆" Width="40" Height="32" Margin="4,0" x:Name="BtnCenterH"
+                                    Click="OnCenterHAlignClick" ToolTip.Tip="Ortala"/>
+                            <Button Grid.Column="2" Content="▶" Width="40" Height="32" x:Name="BtnRight"
+                                    Click="OnRightAlignClick" ToolTip.Tip="Sağa Hizala"/>
+                        </Grid>
+                        
+                        <!-- Dikey Hizalama -->
+                        <TextBlock Text="Dikey:" Foreground="#808080" FontSize="11" Margin="0,8,0,0"/>
+                        <Grid ColumnDefinitions="*,*,*" Margin="0,4,0,0">
+                            <Button Grid.Column="0" Content="▲" Width="40" Height="32" x:Name="BtnTop"
+                                    Click="OnTopAlignClick" ToolTip.Tip="Üste Hizala"/>
+                            <Button Grid.Column="1" Content="◆" Width="40" Height="32" Margin="4,0" x:Name="BtnCenterV"
+                                    Click="OnCenterVAlignClick" ToolTip.Tip="Ortala"/>
+                            <Button Grid.Column="2" Content="▼" Width="40" Height="32" x:Name="BtnBottom"
+                                    Click="OnBottomAlignClick" ToolTip.Tip="Alta Hizala"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Zone Genişlikleri -->
+                <Border Background="#252525" CornerRadius="6" Padding="12">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Zone Genişlikleri" FontWeight="SemiBold" Foreground="#E0E0E0" FontSize="13"/>
+                        
+                        <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,4,0,0">
+                            <TextBlock Grid.Column="0" Text="Hat:" Foreground="#808080" FontSize="11" VerticalAlignment="Center"/>
+                            <Slider Grid.Column="1" Minimum="5" Maximum="50" Value="{Binding HatKoduGenislik}" Margin="8,0"/>
+                            <TextBlock Grid.Column="2" Text="{Binding HatKoduGenislik, StringFormat='%{0}'}" 
+                                       Foreground="#B0B0B0" FontSize="11" Width="30" VerticalAlignment="Center"/>
+                        </Grid>
+                        
+                        <TextBlock Text="{Binding GuzergahGenislik, StringFormat='Güzergah: %{0}'}" 
+                                   Foreground="#606060" FontSize="10" HorizontalAlignment="Right"/>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Hızlı Renk Seçimi -->
+                <Border Background="#252525" CornerRadius="6" Padding="12">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Hızlı Renkler" FontWeight="SemiBold" Foreground="#E0E0E0" FontSize="13"/>
+                        <TextBlock Text="(Önce renk kutusuna tıklayın)" Foreground="#606060" FontSize="10"/>
+                        
+                        <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <Button Width="28" Height="28" Background="#FF0000" Margin="2" Click="OnQuickColorRed" ToolTip.Tip="Kırmızı"/>
+                            <Button Width="28" Height="28" Background="#00FF00" Margin="2" Click="OnQuickColorGreen" ToolTip.Tip="Yeşil"/>
+                            <Button Width="28" Height="28" Background="#FFB000" Margin="2" Click="OnQuickColorAmber" ToolTip.Tip="Amber"/>
+                            <Button Width="28" Height="28" Background="#FFFFFF" Margin="2" Click="OnQuickColorWhite" ToolTip.Tip="Beyaz"/>
+                            <Button Width="28" Height="28" Background="#00FFFF" Margin="2" Click="OnQuickColorCyan" ToolTip.Tip="Cyan"/>
+                            <Button Width="28" Height="28" Background="#FF00FF" Margin="2" Click="OnQuickColorMagenta" ToolTip.Tip="Magenta"/>
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+            
+        </Grid>
+    </Border>
+
+</UserControl>

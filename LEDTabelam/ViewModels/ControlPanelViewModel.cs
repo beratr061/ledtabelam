@@ -1,0 +1,752 @@
+using System;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Reactive;
+using System.Reactive.Linq;
+using System.Threading.Tasks;
+using ReactiveUI;
+using LEDTabelam.Models;
+using LEDTabelam.Services;
+
+namespace LEDTabelam.ViewModels;
+
+/// <summary>
+/// Kontrol paneli ViewModel'i
+/// Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 4.1, 5.1, 5.3, 5.5, 5.7, 9.13, 20.4
+/// </summary>
+public class ControlPanelViewModel : ViewModelBase
+{
+    private readonly IProfileManager _profileManager;
+    private readonly ISlotManager _slotManager;
+    private readonly IFontLoader _fontLoader;
+    private readonly IZoneManager _zoneManager;
+
+    #region Resolution Properties
+
+    private string _selectedResolution = "128x16";
+    private int _panelWidth = 128;  // P10 referansında panel genişliği
+    private int _panelHeight = 16;  // P10 referansında panel yüksekliği
+    private bool _isCustomResolution = false;
+
+    /// <summary>
+    /// Standart panel boyutu seçenekleri (P10 referansında)
+    /// </summary>
+    public ObservableCollection<string> Resolutions { get; } = new()
+    {
+        "32x16", "64x16", "96x16", "128x16", "160x16", "192x16", "Özel"
+    };
+
+    /// <summary>
+    /// Seçili panel boyutu
+    /// </summary>
+    public string SelectedResolution
+    {
+        get => _selectedResolution;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedResolution, value);
+            IsCustomResolution = value == "Özel";
+            if (!IsCustomResolution && !string.IsNullOrEmpty(value))
+            {
+                ParseResolution(value);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Panel genişliği (P10 referansında)
+    /// </summary>
+    public int PanelWidth
+    {
+        get => _panelWidth;
+        set
+        {
+            var validValue = Math.Clamp(value, 1, 512);
+            this.RaiseAndSetIfChanged(ref _panelWidth, validValue);
+            this.RaisePropertyChanged(nameof(ActualWidth));
+            UpdateCurrentSettings();
+        }
+    }
+
+    /// <summary>
+    /// Panel yüksekliği (P10 referansında)
+    /// </summary>
+    public int PanelHeight
+    {
+        get => _panelHeight;
+        set
+        {
+            var validValue = Math.Clamp(value, 1, 512);
+            this.RaiseAndSetIfChanged(ref _panelHeight, validValue);
+            this.RaisePropertyChanged(nameof(ActualHeight));
+            UpdateCurrentSettings();
+        }
+    }
+
+    /// <summary>
+    /// Gerçek çözünürlük genişliği (pitch'e göre hesaplanmış)
+    /// </summary>
+    public int ActualWidth => SelectedPitch.GetActualResolution(PanelWidth);
+
+    /// <summary>
+    /// Gerçek çözünürlük yüksekliği (pitch'e göre hesaplanmış)
+    /// </summary>
+    public int ActualHeight => SelectedPitch.GetActualResolution(PanelHeight);
+
+    /// <summary>
+    /// Özel çözünürlük modu aktif mi
+    /// </summary>
+    public bool IsCustomResolution
+    {
+        get => _isCustomResolution;
+        set => this.RaiseAndSetIfChanged(ref _isCustomResolution, value);
+    }
+
+    #endregion
+
+    #region Color Properties
+
+    private LedColorType _selectedColorType = LedColorType.Amber;
+
+    /// <summary>
+    /// Seçili LED renk tipi
+    /// </summary>
+    public LedColorType SelectedColorType
+    {
+        get => _selectedColorType;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedColorType, value);
+            UpdateCurrentSettings();
+        }
+    }
+
+    /// <summary>
+    /// LED renk tipi seçenekleri
+    /// </summary>
+    public LedColorType[] ColorTypes { get; } = Enum.GetValues<LedColorType>();
+
+    #endregion
+
+    #region Font Properties
+
+    private BitmapFont? _selectedFont;
+    private string _inputText = string.Empty;
+
+    /// <summary>
+    /// Yüklenmiş fontlar
+    /// </summary>
+    public ObservableCollection<BitmapFont> Fonts { get; } = new();
+
+    /// <summary>
+    /// Seçili font
+    /// </summary>
+    public BitmapFont? SelectedFont
+    {
+        get => _selectedFont;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedFont, value);
+            UpdateCurrentSettings();
+        }
+    }
+
+    /// <summary>
+    /// Metin girişi
+    /// </summary>
+    public string InputText
+    {
+        get => _inputText;
+        set => this.RaiseAndSetIfChanged(ref _inputText, value);
+    }
+
+    #endregion
+
+    #region Visual Settings Properties
+
+    private int _brightness = 100;
+    private int _backgroundDarkness = 100;
+    private int _pixelSize = 8;
+    private PixelPitch _selectedPitch = PixelPitch.P10;
+    private double _customPitchRatio = 0.7;
+    private PixelShape _selectedShape = PixelShape.Round;
+    private bool _invertColors = false;
+    private int _agingPercent = 0;
+    private int _lineSpacing = 2;
+
+    /// <summary>
+    /// Parlaklık seviyesi (%0-100)
+    /// </summary>
+    public int Brightness
+    {
+        get => _brightness;
+        set
+        {
+            var validValue = Math.Clamp(value, 0, 100);
+            this.RaiseAndSetIfChanged(ref _brightness, validValue);
+            UpdateCurrentSettings();
+        }
+    }
+
+    /// <summary>
+    /// Arka plan karartma seviyesi (%0-100)
+    /// </summary>
+    public int BackgroundDarkness
+    {
+        get => _backgroundDarkness;
+        set
+        {
+            var validValue = Math.Clamp(value, 0, 100);
+            this.RaiseAndSetIfChanged(ref _backgroundDarkness, validValue);
+            UpdateCurrentSettings();
+        }
+    }
+
+    /// <summary>
+    /// Piksel boyutu (1-20)
+    /// </summary>
+    public int PixelSize
+    {
+        get => _pixelSize;
+        set
+        {
+            var validValue = Math.Clamp(value, 1, 20);
+            this.RaiseAndSetIfChanged(ref _pixelSize, validValue);
+            UpdateCurrentSettings();
+        }
+    }
+
+    /// <summary>
+    /// Seçili piksel pitch değeri
+    /// </summary>
+    public PixelPitch SelectedPitch
+    {
+        get => _selectedPitch;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedPitch, value);
+            IsCustomPitch = value == PixelPitch.Custom;
+            // Pitch değiştiğinde gerçek çözünürlüğü güncelle
+            this.RaisePropertyChanged(nameof(ActualWidth));
+            this.RaisePropertyChanged(nameof(ActualHeight));
+            UpdateCurrentSettings();
+        }
+    }
+
+    /// <summary>
+    /// Piksel pitch seçenekleri
+    /// </summary>
+    public PixelPitch[] PitchOptions { get; } = Enum.GetValues<PixelPitch>();
+
+    /// <summary>
+    /// Özel pitch oranı
+    /// </summary>
+    public double CustomPitchRatio
+    {
+        get => _customPitchRatio;
+        set
+        {
+            var validValue = Math.Clamp(value, 0.1, 1.0);
+            this.RaiseAndSetIfChanged(ref _customPitchRatio, validValue);
+            UpdateCurrentSettings();
+        }
+    }
+
+    private bool _isCustomPitch = false;
+
+    /// <summary>
+    /// Özel pitch modu aktif mi
+    /// </summary>
+    public bool IsCustomPitch
+    {
+        get => _isCustomPitch;
+        set => this.RaiseAndSetIfChanged(ref _isCustomPitch, value);
+    }
+
+    /// <summary>
+    /// Seçili piksel şekli
+    /// </summary>
+    public PixelShape SelectedShape
+    {
+        get => _selectedShape;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedShape, value);
+            UpdateCurrentSettings();
+        }
+    }
+
+    /// <summary>
+    /// Piksel şekli seçenekleri
+    /// </summary>
+    public PixelShape[] ShapeOptions { get; } = Enum.GetValues<PixelShape>();
+
+    /// <summary>
+    /// Ters renk modu
+    /// </summary>
+    public bool InvertColors
+    {
+        get => _invertColors;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _invertColors, value);
+            UpdateCurrentSettings();
+        }
+    }
+
+    /// <summary>
+    /// Eskime efekti yüzdesi (%0-5)
+    /// </summary>
+    public int AgingPercent
+    {
+        get => _agingPercent;
+        set
+        {
+            var validValue = Math.Clamp(value, 0, 5);
+            this.RaiseAndSetIfChanged(ref _agingPercent, validValue);
+            UpdateCurrentSettings();
+        }
+    }
+
+    /// <summary>
+    /// Satır arası boşluk
+    /// </summary>
+    public int LineSpacing
+    {
+        get => _lineSpacing;
+        set
+        {
+            var validValue = Math.Clamp(value, 0, 10);
+            this.RaiseAndSetIfChanged(ref _lineSpacing, validValue);
+            UpdateCurrentSettings();
+        }
+    }
+
+    #endregion
+
+    #region Profile Properties
+
+    private Profile? _selectedProfile;
+
+    /// <summary>
+    /// Profil listesi
+    /// </summary>
+    public ObservableCollection<Profile> Profiles { get; } = new();
+
+    /// <summary>
+    /// Seçili profil
+    /// </summary>
+    public Profile? SelectedProfile
+    {
+        get => _selectedProfile;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedProfile, value);
+            if (value != null)
+            {
+                LoadProfileSettings(value);
+            }
+        }
+    }
+
+    #endregion
+
+    #region Slot Properties
+
+    private int _currentSlotNumber = 1;
+    private string _slotSearchQuery = string.Empty;
+
+    /// <summary>
+    /// Mevcut slot numarası (1-999)
+    /// </summary>
+    public int CurrentSlotNumber
+    {
+        get => _currentSlotNumber;
+        set
+        {
+            var validValue = Math.Clamp(value, 1, 999);
+            this.RaiseAndSetIfChanged(ref _currentSlotNumber, validValue);
+        }
+    }
+
+    /// <summary>
+    /// Slot arama sorgusu
+    /// </summary>
+    public string SlotSearchQuery
+    {
+        get => _slotSearchQuery;
+        set => this.RaiseAndSetIfChanged(ref _slotSearchQuery, value);
+    }
+
+    /// <summary>
+    /// Arama sonuçları
+    /// </summary>
+    public ObservableCollection<TabelaSlot> SearchResults { get; } = new();
+
+    #endregion
+
+    #region Animation Properties
+
+    private int _animationSpeed = 20;
+
+    /// <summary>
+    /// Animasyon hızı (piksel/saniye, 1-100)
+    /// </summary>
+    public int AnimationSpeed
+    {
+        get => _animationSpeed;
+        set
+        {
+            var validValue = Math.Clamp(value, 1, 100);
+            this.RaiseAndSetIfChanged(ref _animationSpeed, validValue);
+        }
+    }
+
+    #endregion
+
+    #region Current Settings
+
+    private DisplaySettings _currentSettings = new();
+
+    /// <summary>
+    /// Mevcut görüntüleme ayarları
+    /// </summary>
+    public DisplaySettings CurrentSettings
+    {
+        get => _currentSettings;
+        private set => this.RaiseAndSetIfChanged(ref _currentSettings, value);
+    }
+
+    #endregion
+
+    #region Commands
+
+    /// <summary>
+    /// Font yükleme komutu
+    /// </summary>
+    public ReactiveCommand<string, Unit> LoadFontCommand { get; }
+
+    /// <summary>
+    /// Profil kaydetme komutu
+    /// </summary>
+    public ReactiveCommand<Unit, Unit> SaveProfileCommand { get; }
+
+    /// <summary>
+    /// Yeni profil oluşturma komutu
+    /// </summary>
+    public ReactiveCommand<string, Unit> CreateProfileCommand { get; }
+
+    /// <summary>
+    /// Profil silme komutu
+    /// </summary>
+    public ReactiveCommand<Unit, Unit> DeleteProfileCommand { get; }
+
+    /// <summary>
+    /// Slot arama komutu
+    /// </summary>
+    public ReactiveCommand<Unit, Unit> SearchSlotsCommand { get; }
+
+    #endregion
+
+    /// <summary>
+    /// ControlPanelViewModel constructor
+    /// </summary>
+    public ControlPanelViewModel(
+        IProfileManager profileManager,
+        ISlotManager slotManager,
+        IFontLoader fontLoader,
+        IZoneManager zoneManager)
+    {
+        _profileManager = profileManager ?? throw new ArgumentNullException(nameof(profileManager));
+        _slotManager = slotManager ?? throw new ArgumentNullException(nameof(slotManager));
+        _fontLoader = fontLoader ?? throw new ArgumentNullException(nameof(fontLoader));
+        _zoneManager = zoneManager ?? throw new ArgumentNullException(nameof(zoneManager));
+
+        // Komutları oluştur
+        LoadFontCommand = ReactiveCommand.CreateFromTask<string>(LoadFontAsync);
+        SaveProfileCommand = ReactiveCommand.CreateFromTask(SaveProfileAsync);
+        CreateProfileCommand = ReactiveCommand.CreateFromTask<string>(CreateProfileAsync);
+        DeleteProfileCommand = ReactiveCommand.CreateFromTask(DeleteProfileAsync);
+        SearchSlotsCommand = ReactiveCommand.Create(SearchSlots);
+
+        // Metin değişikliklerini debounce ile izle (250ms)
+        this.WhenAnyValue(x => x.InputText)
+            .Throttle(TimeSpan.FromMilliseconds(250))
+            .ObserveOn(RxApp.MainThreadScheduler)
+            .Subscribe(_ => OnInputTextChanged())
+            .DisposeWith(Disposables);
+
+        // Slot arama sorgusunu izle
+        this.WhenAnyValue(x => x.SlotSearchQuery)
+            .Throttle(TimeSpan.FromMilliseconds(300))
+            .ObserveOn(RxApp.MainThreadScheduler)
+            .Subscribe(_ => SearchSlots())
+            .DisposeWith(Disposables);
+
+        // Başlangıç ayarlarını uygula
+        UpdateCurrentSettings();
+    }
+
+    #region Private Methods
+
+    private void ParseResolution(string resolution)
+    {
+        var parts = resolution.Split('x');
+        if (parts.Length == 2 &&
+            int.TryParse(parts[0], out var width) &&
+            int.TryParse(parts[1], out var height))
+        {
+            _panelWidth = width;
+            _panelHeight = height;
+            this.RaisePropertyChanged(nameof(PanelWidth));
+            this.RaisePropertyChanged(nameof(PanelHeight));
+            this.RaisePropertyChanged(nameof(ActualWidth));
+            this.RaisePropertyChanged(nameof(ActualHeight));
+            UpdateCurrentSettings();
+        }
+    }
+
+    private void UpdateCurrentSettings()
+    {
+        CurrentSettings = new DisplaySettings
+        {
+            PanelWidth = PanelWidth,
+            PanelHeight = PanelHeight,
+            // Width ve Height artık Pitch'e göre otomatik hesaplanıyor
+            ColorType = SelectedColorType,
+            Brightness = Brightness,
+            BackgroundDarkness = BackgroundDarkness,
+            PixelSize = PixelSize,
+            Pitch = SelectedPitch,
+            CustomPitchRatio = CustomPitchRatio,
+            Shape = SelectedShape,
+            InvertColors = InvertColors,
+            AgingPercent = AgingPercent,
+            LineSpacing = LineSpacing
+        };
+    }
+
+    private void LoadProfileSettings(Profile profile)
+    {
+        var settings = profile.Settings;
+
+        // Panel boyutu
+        var resolutionString = $"{settings.PanelWidth}x{settings.PanelHeight}";
+        if (Resolutions.Contains(resolutionString))
+        {
+            SelectedResolution = resolutionString;
+        }
+        else
+        {
+            SelectedResolution = "Özel";
+            PanelWidth = settings.PanelWidth;
+            PanelHeight = settings.PanelHeight;
+        }
+
+        // Renk
+        SelectedColorType = settings.ColorType;
+
+        // Görsel ayarlar
+        Brightness = settings.Brightness;
+        BackgroundDarkness = settings.BackgroundDarkness;
+        PixelSize = settings.PixelSize;
+        SelectedPitch = settings.Pitch;
+        CustomPitchRatio = settings.CustomPitchRatio;
+        SelectedShape = settings.Shape;
+        InvertColors = settings.InvertColors;
+        AgingPercent = settings.AgingPercent;
+        LineSpacing = settings.LineSpacing;
+
+        // Zone'ları yükle
+        _zoneManager.LoadZones(profile.DefaultZones);
+    }
+
+    private async Task LoadFontAsync(string filePath)
+    {
+        try
+        {
+            BitmapFont font;
+            if (filePath.EndsWith(".fnt", StringComparison.OrdinalIgnoreCase))
+            {
+                font = await _fontLoader.LoadBMFontAsync(filePath);
+            }
+            else if (filePath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                font = await _fontLoader.LoadJsonFontAsync(filePath);
+            }
+            else
+            {
+                throw new ArgumentException("Desteklenmeyen font formatı. .fnt veya .json dosyası seçin.");
+            }
+
+            if (_fontLoader.ValidateFont(font))
+            {
+                Fonts.Add(font);
+                SelectedFont = font;
+            }
+        }
+        catch (Exception)
+        {
+            // Hata View tarafından ele alınacak
+            throw;
+        }
+    }
+
+    private async Task SaveProfileAsync()
+    {
+        if (SelectedProfile != null)
+        {
+            SelectedProfile.Settings = CurrentSettings;
+            SelectedProfile.FontName = SelectedFont?.Name ?? string.Empty;
+            SelectedProfile.DefaultZones = _zoneManager.GetZones();
+            SelectedProfile.ModifiedAt = DateTime.UtcNow;
+
+            await _profileManager.SaveProfileAsync(SelectedProfile);
+        }
+    }
+
+    private async Task CreateProfileAsync(string name)
+    {
+        var profile = new Profile
+        {
+            Name = name,
+            Settings = CurrentSettings,
+            FontName = SelectedFont?.Name ?? string.Empty,
+            DefaultZones = _zoneManager.GetZones(),
+            CreatedAt = DateTime.UtcNow,
+            ModifiedAt = DateTime.UtcNow
+        };
+
+        await _profileManager.SaveProfileAsync(profile);
+        Profiles.Add(profile);
+        SelectedProfile = profile;
+    }
+
+    private async Task DeleteProfileAsync()
+    {
+        if (SelectedProfile != null)
+        {
+            var name = SelectedProfile.Name;
+            if (await _profileManager.DeleteProfileAsync(name))
+            {
+                Profiles.Remove(SelectedProfile);
+                SelectedProfile = Profiles.FirstOrDefault();
+            }
+        }
+    }
+
+    private void SearchSlots()
+    {
+        SearchResults.Clear();
+        if (!string.IsNullOrWhiteSpace(SlotSearchQuery))
+        {
+            var results = _slotManager.SearchSlots(SlotSearchQuery);
+            foreach (var slot in results)
+            {
+                SearchResults.Add(slot);
+            }
+        }
+    }
+
+    private void OnInputTextChanged()
+    {
+        // Metin değişikliği bildirimi - Preview tarafından dinlenecek
+        this.RaisePropertyChanged(nameof(InputText));
+    }
+
+    #endregion
+
+    /// <summary>
+    /// Profilleri yükler
+    /// </summary>
+    public async Task LoadProfilesAsync()
+    {
+        var profiles = await _profileManager.GetAllProfilesAsync();
+        Profiles.Clear();
+        foreach (var profile in profiles)
+        {
+            Profiles.Add(profile);
+        }
+
+        if (!Profiles.Any())
+        {
+            var defaultProfile = await _profileManager.GetOrCreateDefaultProfileAsync();
+            Profiles.Add(defaultProfile);
+        }
+
+        SelectedProfile = Profiles.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Dahili fontları yükler (Assets/Fonts klasöründen)
+    /// </summary>
+    public async Task LoadBuiltInFontsAsync()
+    {
+        try
+        {
+            // Uygulama dizinini bul
+            var appDir = AppDomain.CurrentDomain.BaseDirectory;
+            var fontsDir = System.IO.Path.Combine(appDir, "Assets", "Fonts");
+
+            if (!System.IO.Directory.Exists(fontsDir))
+            {
+                return;
+            }
+
+            // .fnt dosyalarını yükle
+            var fntFiles = System.IO.Directory.GetFiles(fontsDir, "*.fnt");
+            foreach (var fntFile in fntFiles)
+            {
+                try
+                {
+                    var font = await _fontLoader.LoadBMFontAsync(fntFile);
+                    if (_fontLoader.ValidateFont(font))
+                    {
+                        Fonts.Add(font);
+                    }
+                }
+                catch (Exception)
+                {
+                    // Tek font yüklenemezse devam et
+                }
+            }
+
+            // .json dosyalarını yükle
+            var jsonFiles = System.IO.Directory.GetFiles(fontsDir, "*.json");
+            foreach (var jsonFile in jsonFiles)
+            {
+                try
+                {
+                    var font = await _fontLoader.LoadJsonFontAsync(jsonFile);
+                    if (_fontLoader.ValidateFont(font))
+                    {
+                        Fonts.Add(font);
+                    }
+                }
+                catch (Exception)
+                {
+                    // Tek font yüklenemezse devam et
+                }
+            }
+
+            // İlk fontu seç
+            if (Fonts.Count > 0 && SelectedFont == null)
+            {
+                SelectedFont = Fonts[0];
+            }
+        }
+        catch (Exception)
+        {
+            // Font yükleme hatası sessizce yoksayılır
+        }
+    }
+
+    /// <summary>
+    /// Tüm başlangıç verilerini yükler
+    /// </summary>
+    public async Task InitializeAsync()
+    {
+        await LoadBuiltInFontsAsync();
+        await LoadProfilesAsync();
+    }
+}

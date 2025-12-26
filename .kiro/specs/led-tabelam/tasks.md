@@ -1,0 +1,362 @@
+# Implementation Plan: LEDTabelam
+
+## Overview
+
+Bu plan, LEDTabelam uygulamasını Avalonia UI + .NET 8 + SkiaSharp kullanarak adım adım implement etmek için tasarlanmıştır. MVVM pattern ve ReactiveUI kullanılacaktır.
+
+## Tasks
+
+- [x] 1. Proje Yapısı ve Temel Kurulum
+  - [x] 1.1 Avalonia projesi oluştur ve NuGet paketlerini ekle
+    - `dotnet new avalonia.app -n LEDTabelam`
+    - Avalonia 11.x, Avalonia.ReactiveUI, SkiaSharp, System.Text.Json paketleri
+    - _Requirements: 12.1, 12.2_
+  - [x] 1.2 Proje klasör yapısını oluştur
+    - Views/, ViewModels/, Models/, Services/, Assets/Fonts/ klasörleri
+    - _Requirements: 12.1_
+  - [x] 1.3 App.axaml'da Fluent tema ve Türkçe kaynak dosyalarını yapılandır
+    - _Requirements: 10.1, 10.5_
+
+- [x] 2. Model Sınıflarını Implement Et
+  - [x] 2.1 DisplaySettings model sınıfını oluştur
+    - Width, Height, ColorType, Brightness, Pitch, Shape, Zoom, InvertColors, AgingPercent, LineSpacing
+    - ReactiveObject'ten türet
+    - _Requirements: 1.1, 2.1, 5.1, 5.3, 5.5, 5.7, 6.7, 6.15, 14.6, 19.1_
+  - [x] 2.2 BitmapFont ve FontChar model sınıflarını oluştur
+    - Name, FilePath, LineHeight, Base, FontImage (SKBitmap), Characters dictionary, Kernings
+    - _Requirements: 4.4, 4.5, 4.6, 4.7_
+  - [x] 2.3 TabelaSlot model sınıfını oluştur
+    - SlotNumber, RouteNumber, RouteText, IconPath, Zones, TextStyle, Alignment
+    - _Requirements: 20.1, 20.2_
+  - [x] 2.4 Profile model sınıfını oluştur
+    - Name, Settings, FontName, DefaultZones, Slots dictionary (1-999), CreatedAt, ModifiedAt
+    - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6_
+  - [x] 2.5 Zone model sınıfını oluştur
+    - Index, WidthPercent, ContentType, Content, Alignment, IsScrolling, ScrollSpeed
+    - _Requirements: 17.1, 17.2, 17.3_
+  - [x] 2.6 TextStyle model sınıfını oluştur
+    - HasBackground, BackgroundColor, HasStroke, StrokeWidth, StrokeColor
+    - _Requirements: 22.1, 22.2, 22.4, 22.5, 22.6_
+  - [x] 2.7 PlaylistItem model sınıfını oluştur
+    - Order, Text, DurationSeconds, TransitionType
+    - _Requirements: 15.1, 15.2, 15.7_
+  - [x] 2.8 Enum tanımlamalarını oluştur
+    - LedColorType, PixelPitch, PixelShape, ZoneContentType, TransitionType, HorizontalAlignment, VerticalAlignment
+    - _Requirements: 2.1, 5.7, 19.1, 17.3, 15.7, 21.1, 21.2_
+  - [x] 2.9 Model sınıfları için property testleri yaz
+    - **Property 2: Profile Round-Trip Consistency**
+    - **Property 3: Slot Round-Trip Consistency**
+    - **Validates: Requirements 9.x, 20.x**
+
+- [x] 3. Checkpoint - Model sınıfları tamamlandı
+  - Tüm model sınıflarının derlendiğinden emin ol
+  - Kullanıcıya soru varsa sor
+
+- [x] 4. Font Loader Servisini Implement Et
+  - [x] 4.1 IFontLoader interface'ini oluştur
+    - LoadBMFontAsync, LoadJsonFontAsync, ValidateFont, RenderText metodları
+    - _Requirements: 4.1, 4.2, 4.3_
+  - [x] 4.2 BMFont XML parser'ı implement et
+    - System.Xml.Linq ile .fnt dosyasını parse et
+    - char id, x, y, width, height, xoffset, yoffset, xadvance okuma
+    - kerning bilgisi okuma
+    - _Requirements: 4.4, 4.6, 4.7_
+  - [x] 4.3 JSON font parser'ı implement et
+    - System.Text.Json ile .json dosyasını parse et
+    - _Requirements: 4.5_
+  - [x] 4.4 Font validation logic'i implement et
+    - 10MB limit kontrolü, boş karakter seti kontrolü, PNG dosyası varlık kontrolü
+    - _Requirements: 4.9, 4.10, 4.11_
+  - [x] 4.5 RenderText metodunu implement et
+    - Metin → SKBitmap dönüşümü
+    - Türkçe karakter desteği
+    - Placeholder karakter (□) desteği
+    - _Requirements: 3.2, 3.3, 3.5, 4.8_
+  - [x] 4.6 FontLoader için property testleri yaz
+    - **Property 1: Font Round-Trip Consistency**
+    - **Property 6: Turkish Character Rendering**
+    - **Validates: Requirements 4.4, 4.5, 4.6, 3.2, 3.3**
+
+- [x] 5. LED Renderer Servisini Implement Et
+  - [x] 5.1 ILedRenderer interface'ini oluştur
+    - RenderDisplay, RenderWithGlow, DrawGridOverlay, ApplyAgingEffect metodları
+    - _Requirements: 6.1, 6.2, 6.13_
+  - [x] 5.2 Temel LED render'ı implement et (SkiaSharp)
+    - SKCanvas ile yuvarlak/kare piksel çizimi
+    - Piksel arası boşluk hesaplama (pitch)
+    - Nearest Neighbor ölçekleme
+    - _Requirements: 6.1, 6.5, 6.10, 6.12, 19.1, 19.2_
+  - [x] 5.3 Glow efekti implement et
+    - SKImageFilter.CreateBlur kullanımı
+    - Parlaklığa göre 2-10px yarıçap
+    - %30 alpha halo
+    - _Requirements: 6.2, 6.3, 6.4, 6.11_
+  - [x] 5.4 Grid overlay implement et
+    - Pikseller arası siyah ızgara çizimi
+    - _Requirements: 6.13, 6.14_
+  - [x] 5.5 Renk modları implement et
+    - Amber, Kırmızı, Yeşil tek renk
+    - 1R1G1B ve Full RGB
+    - Ters renk modu
+    - _Requirements: 2.2, 2.3, 2.4, 2.5, 6.15_
+  - [x] 5.6 Parlaklık ve arka plan ayarları implement et
+    - Alpha/intensity hesaplama
+    - Arka plan rengi (#000000 - #0a0a0a)
+    - _Requirements: 5.1, 5.2, 5.3, 5.4_
+  - [x] 5.7 Aging efekti implement et
+    - Rastgele ölü piksel simülasyonu
+    - %0-5 oran ayarı
+    - _Requirements: 19.3, 19.4, 19.5, 19.6_
+  - [x] 5.8 LedRenderer için property testleri yaz
+    - **Property 7: Single Color Mode Consistency**
+    - **Property 8: Brightness Affects All Pixels Uniformly**
+    - **Property 9: Pixel Pitch Determines Spacing**
+    - **Property 18: Aging Effect Distribution**
+    - **Validates: Requirements 2.2, 5.1, 5.7, 19.3**
+
+- [x] 6. Checkpoint - Core render servisleri tamamlandı
+  - FontLoader ve LedRenderer testlerinin geçtiğinden emin ol
+  - Kullanıcıya soru varsa sor
+
+- [x] 7. Profile ve Slot Manager Servislerini Implement Et
+  - [x] 7.1 IProfileManager interface'ini oluştur
+    - GetAllProfiles, LoadProfile, SaveProfile, DeleteProfile, DuplicateProfile, ExportProfile, ImportProfile
+    - _Requirements: 9.1, 9.7, 9.8, 9.9, 9.10, 9.11_
+  - [x] 7.2 ProfileManager'ı implement et
+    - JSON serialization/deserialization
+    - Dosya sistemi operasyonları
+    - Varsayılan profil oluşturma
+    - _Requirements: 9.7, 9.12_
+  - [x] 7.3 ISlotManager interface'ini oluştur
+    - GetSlot, SetSlot, SearchSlots, ExportSlots, ImportSlots
+    - _Requirements: 20.3, 20.5, 20.7, 20.8_
+  - [x] 7.4 SlotManager'ı implement et
+    - 001-999 slot yönetimi
+    - Arama fonksiyonu (hat numarası/güzergah)
+    - Toplu import/export
+    - _Requirements: 20.1, 20.6, 20.7, 20.8, 20.9, 20.10_
+  - [x] 7.5 ProfileManager ve SlotManager için property testleri yaz
+    - **Property 2: Profile Round-Trip Consistency**
+    - **Property 3: Slot Round-Trip Consistency**
+    - **Property 15: Slot Search Completeness**
+    - **Validates: Requirements 9.x, 20.x**
+
+- [x] 8. Zone Manager Servisini Implement Et
+  - [x] 8.1 IZoneManager interface'ini oluştur
+    - GetZones, AddZone, RemoveZone, UpdateZoneWidth, NormalizeZoneWidths
+    - _Requirements: 17.1, 17.4_
+  - [x] 8.2 ZoneManager'ı implement et
+    - Yüzde bazlı genişlik yönetimi
+    - Width normalization (toplam %100)
+    - Katman mantığı (arka plan/ön plan)
+    - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5, 17.6, 17.7_
+  - [x] 8.3 ZoneManager için property testleri yaz
+    - **Property 5: Zone Width Normalization**
+    - **Validates: Requirements 17.1, 17.2, 17.4**
+
+- [x] 9. Animation ve Export Servislerini Implement Et
+  - [x] 9.1 IAnimationService interface'ini oluştur
+    - StartScrollAnimation, StopAnimation, PauseAnimation, ResumeAnimation, CurrentOffset, IsPlaying
+    - _Requirements: 8.1, 8.2, 8.3_
+  - [x] 9.2 AnimationService'i implement et
+    - Kayan yazı animasyonu
+    - Play/Pause/Stop state machine
+    - Hız ayarı (1-100 px/s)
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
+  - [x] 9.3 IExportService interface'ini oluştur
+    - ExportPngAsync, ExportGifAsync, ExportWebPAsync
+    - _Requirements: 7.1, 7.5, 7.6_
+  - [x] 9.4 ExportService'i implement et
+    - PNG export (zoom seçeneği ile)
+    - GIF export (frame'ler, FPS)
+    - WebP export
+    - _Requirements: 7.1, 7.2, 7.3, 7.5, 7.6, 7.7_
+  - [x] 9.5 Animation ve Export servisleri için property testleri yaz
+    - **Property 16: Animation State Machine**
+    - **Property 17: Export Format Validity**
+    - **Validates: Requirements 8.x, 7.x**
+
+- [x] 10. SVG Renderer ve Asset Library Implement Et
+  - [x] 10.1 ISvgRenderer interface'ini oluştur
+    - RenderSvg, RenderBitmap
+    - _Requirements: 16.1, 16.5_
+  - [x] 10.2 SvgRenderer'ı implement et
+    - SVG yükleme ve ölçekleme
+    - Hard-edge rendering (IsAntialias = false)
+    - Renk boyama
+    - _Requirements: 16.1, 16.2, 16.3, 16.4_
+  - [x] 10.3 Bitmap threshold işlemi implement et
+    - PNG/JPG yükleme
+    - Threshold ile binarization
+    - _Requirements: 16.5, 16.6, 16.7_
+  - [x] 10.4 Asset Library implement et
+    - Dahili pixel-perfect ikonlar (16px/32px)
+    - Kategoriler: Bayraklar, Erişilebilirlik, Oklar, Ulaşım
+    - Kullanıcı ikon ekleme
+    - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5_
+  - [x] 10.5 SvgRenderer için property testleri yaz
+    - **Property 13: SVG Threshold Binarization**
+    - **Validates: Requirements 16.5, 16.6, 16.7**
+
+- [x] 11. Checkpoint - Tüm servisler tamamlandı
+  - Tüm servis testlerinin geçtiğinden emin ol
+  - Kullanıcıya soru varsa sor
+
+- [x] 12. ViewModels Implement Et
+  - [x] 12.1 ViewModelBase sınıfını oluştur
+    - ReactiveObject'ten türet
+    - _Requirements: 10.4_
+  - [x] 12.2 MainWindowViewModel'i implement et
+    - ControlPanel, Preview, SlotEditor alt ViewModel'leri
+    - Keyboard shortcut command'ları
+    - _Requirements: 10.2, 13.1, 13.2, 13.3, 13.4_
+  - [x] 12.3 ControlPanelViewModel'i implement et
+    - Resolution, Color, Font, Visual settings binding'leri
+    - Profile ve Slot seçimi
+    - ReactiveUI WhenAnyValue ile değişiklik izleme
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 4.1, 5.1, 5.3, 5.5, 5.7, 9.13, 20.4_
+  - [x] 12.4 PreviewViewModel'i implement et
+    - LED display render binding
+    - Zoom kontrolleri
+    - _Requirements: 6.7, 6.8, 6.9_
+  - [x] 12.5 SlotEditorViewModel'i implement et
+    - Slot düzenleme form binding'leri
+    - Hizalama ve stil ayarları
+    - _Requirements: 20.9, 21.1, 21.2, 21.3, 22.1, 22.4_
+  - [x] 12.6 PlaylistViewModel'i implement et
+    - Playlist item yönetimi
+    - Sürükle-bırak sıralama
+    - Loop modu
+    - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5, 15.6, 15.7_
+
+- [x] 13. Views (AXAML) Implement Et
+  - [x] 13.1 MainWindow.axaml oluştur
+    - Sol panel (kontroller) + Sağ panel (önizleme) layout
+    - Fluent Design stil
+    - _Requirements: 10.1, 10.2, 10.3_
+  - [x] 13.2 ControlPanel.axaml oluştur
+    - Resolution ComboBox ve özel çözünürlük TextBox'ları
+    - LED renk tipi RadioButton'ları
+    - Font ComboBox ve Yükle butonu
+    - Slider'lar (parlaklık, arka plan, piksel boyutu)
+    - Pitch ve Shape seçiciler
+    - Profile ve Slot seçiciler
+    - _Requirements: 1.1, 1.3, 1.4, 2.1, 4.1, 4.2, 5.1, 5.3, 5.5, 5.7, 9.13, 19.1, 20.4_
+  - [x] 13.3 PreviewPanel.axaml oluştur
+    - LED display canvas/image
+    - Zoom kontrolleri (+/- butonları, slider)
+    - _Requirements: 6.6, 6.7, 6.8_
+  - [x] 13.4 SlotEditor.axaml oluştur
+    - Hat numarası ve güzergah TextBox'ları
+    - Hizalama ComboBox'ları
+    - Stil checkbox'ları (arkaplan, stroke)
+    - _Requirements: 20.9, 21.1, 21.2, 22.1, 22.4_
+  - [x] 13.5 ZoneEditor.axaml oluştur
+    - Zone listesi ve genişlik ayarları
+    - Sürükle-bırak zone sınırları
+    - _Requirements: 17.1, 17.4_
+  - [x] 13.6 AnimationPanel.axaml oluştur
+    - Play/Pause/Stop butonları
+    - Hız slider'ı
+    - _Requirements: 8.1, 8.4_
+  - [x] 13.7 ExportPanel.axaml oluştur
+    - PNG/GIF/WebP kaydet butonları
+    - _Requirements: 7.1, 7.5, 7.6_
+  - [x] 13.8 PlaylistPanel.axaml oluştur
+    - Mesaj listesi
+    - Süre ayarları
+    - Geçiş efekti seçimi
+    - _Requirements: 15.1, 15.2, 15.7_
+
+- [x] 14. Keyboard Shortcuts ve File Dialogs Implement Et
+  - [x] 14.1 Keyboard shortcut binding'lerini implement et
+    - Ctrl+S: PNG kaydet
+    - Ctrl+O: Font yükle
+    - Space: Animasyon Play/Pause
+    - Ctrl++/Ctrl+-: Zoom
+    - _Requirements: 13.1, 13.2, 13.3, 13.4_
+  - [x] 14.2 File dialog'ları implement et
+    - OpenFileDialog (font yükleme)
+    - SaveFileDialog (export)
+    - Platform native dialog'lar
+    - _Requirements: 4.2, 7.1, 12.3_
+
+- [x] 15. Checkpoint - UI tamamlandı
+  - Uygulamanın başlatılıp çalıştığından emin ol
+  - Temel UI etkileşimlerini test et
+  - Kullanıcıya soru varsa sor
+
+- [x] 16. Varsayılan Font ve Assets Ekle
+  - [x] 16.1 Örnek BMFont oluştur veya ekle
+    - Türkçe karakter desteği ile
+    - Assets/Fonts/ klasörüne
+    - _Requirements: 4.13_
+  - [x] 16.2 Dahili ikonları ekle
+    - Türk Bayrağı, Engelli İkonu, Oklar, Ulaşım sembolleri
+    - 16px ve 32px versiyonlar
+    - _Requirements: 18.1, 18.2, 18.3_
+  - [x] 16.3 Varsayılan profil oluştur
+    - "Varsayılan" adıyla
+    - 128x16, Amber, P10 ayarları
+    - _Requirements: 9.12_
+
+- [x] 17. Hizalama ve Metin Stilleri Implement Et
+  - [x] 17.1 Hizalama hesaplamalarını implement et
+    - Sol/Orta/Sağ yatay hizalama
+    - Üst/Orta/Alt dikey hizalama
+    - Zone bazlı bağımsız hizalama
+    - _Requirements: 21.1, 21.2, 21.3, 21.4, 21.5, 21.6_
+  - [x] 17.2 Metin arkaplan render'ı implement et
+    - Dolgu rengi çizimi
+    - _Requirements: 22.1, 22.2, 22.3_
+  - [x] 17.3 Stroke render'ı implement et
+    - Kontur çizimi (1-3 piksel)
+    - _Requirements: 22.4, 22.5, 22.6, 22.7_
+  - [x] 17.4 Hizalama ve stil için property testleri yaz
+    - **Property 14: Alignment Positioning**
+    - **Property 19: Stroke Expands Glyph Bounds**
+    - **Validates: Requirements 21.x, 22.x**
+
+- [x] 18. Çoklu Satır ve Resolution Validation Implement Et
+  - [x] 18.1 Çoklu satır render'ı implement et
+    - Satır yüksekliği hesaplama
+    - Line spacing uygulama
+    - Yükseklik aşımı uyarısı
+    - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6_
+  - [x] 18.2 Resolution validation implement et
+    - 1-512 aralık kontrolü
+    - Geçersiz değer reddi
+    - Son geçerli değer koruma
+    - _Requirements: 1.5, 1.6_
+  - [x] 18.3 Çoklu satır ve resolution için property testleri yaz
+    - **Property 4: Resolution Bounds Validation**
+    - **Property 11: Multi-line Text Height Calculation**
+    - **Validates: Requirements 1.5, 1.6, 14.x**
+
+- [x] 19. Playlist ve Geçiş Efektleri Implement Et
+  - [x] 19.1 Playlist manager'ı implement et
+    - Mesaj ekleme/silme
+    - Sıra değiştirme
+    - Loop modu
+    - _Requirements: 15.1, 15.4, 15.5_
+  - [x] 19.2 Geçiş efektlerini implement et
+    - Fade geçişi
+    - Slide geçişi
+    - _Requirements: 15.7_
+  - [x] 19.3 Playlist için property testleri yaz
+    - **Property 12: Playlist Transition Completeness**
+    - **Validates: Requirements 15.x**
+
+- [x] 20. Final Checkpoint - Tüm özellikler tamamlandı
+  - Tüm testlerin geçtiğinden emin ol
+  - Uygulamayı baştan sona test et
+  - README.md oluştur (kurulum, kullanım, geliştirme talimatları)
+  - Kullanıcıya soru varsa sor
+
+## Notes
+
+- Tüm test task'ları zorunlu olarak işaretlendi (kapsamlı test coverage)
+- Her task spesifik requirements'a referans veriyor
+- Checkpoint'lar incremental validation sağlıyor
+- Property testleri universal correctness properties'i validate ediyor
+- Unit testler specific examples ve edge cases için

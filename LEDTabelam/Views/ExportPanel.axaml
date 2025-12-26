@@ -1,0 +1,153 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LEDTabelam.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="150"
+             x:Class="LEDTabelam.Views.ExportPanel"
+             x:DataType="vm:MainWindowViewModel">
+
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- PNG Export -->
+        <Border Grid.Column="0" 
+                Background="#252525" 
+                CornerRadius="8"
+                Padding="16"
+                Margin="0,0,8,0">
+            <StackPanel Spacing="8">
+                <TextBlock Text="PNG Kaydet"
+                           Foreground="#E0E0E0"
+                           FontSize="14"
+                           FontWeight="SemiBold"/>
+                <TextBlock Text="Mevcut önizlemeyi PNG formatında kaydedin."
+                           Foreground="#808080"
+                           FontSize="11"
+                           TextWrapping="Wrap"/>
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                    <CheckBox Content="Zoom uygula" x:Name="PngUseZoomCheckBox" IsChecked="True"/>
+                </StackPanel>
+                <Button Content="PNG Kaydet" 
+                        Classes="primary"
+                        HorizontalAlignment="Stretch"
+                        x:Name="SavePngButton"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- GIF Export -->
+        <Border Grid.Column="1" 
+                Background="#252525" 
+                CornerRadius="8"
+                Padding="16"
+                Margin="4,0">
+            <StackPanel Spacing="8">
+                <TextBlock Text="GIF Kaydet"
+                           Foreground="#E0E0E0"
+                           FontSize="14"
+                           FontWeight="SemiBold"/>
+                <TextBlock Text="Animasyonlu önizlemeyi GIF formatında kaydedin."
+                           Foreground="#808080"
+                           FontSize="11"
+                           TextWrapping="Wrap"/>
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Grid.Column="0" 
+                               Text="FPS:" 
+                               Foreground="#B0B0B0"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,4"/>
+                    <NumericUpDown Grid.Row="0" Grid.Column="1" 
+                                   x:Name="GifFpsUpDown"
+                                   Value="15"
+                                   Minimum="1"
+                                   Maximum="30"
+                                   Margin="0,0,0,4"/>
+                    
+                    <TextBlock Grid.Row="1" Grid.Column="0" 
+                               Text="Süre (s):" 
+                               Foreground="#B0B0B0"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0"/>
+                    <NumericUpDown Grid.Row="1" Grid.Column="1" 
+                                   x:Name="GifDurationUpDown"
+                                   Value="3"
+                                   Minimum="1"
+                                   Maximum="30"/>
+                </Grid>
+                <Button Content="GIF Kaydet" 
+                        Classes="primary"
+                        HorizontalAlignment="Stretch"
+                        x:Name="SaveGifButton"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- WebP Export -->
+        <Border Grid.Column="2" 
+                Background="#252525" 
+                CornerRadius="8"
+                Padding="16"
+                Margin="8,0,0,0">
+            <StackPanel Spacing="8">
+                <TextBlock Text="WebP Kaydet"
+                           Foreground="#E0E0E0"
+                           FontSize="14"
+                           FontWeight="SemiBold"/>
+                <TextBlock Text="Animasyonlu önizlemeyi WebP formatında kaydedin."
+                           Foreground="#808080"
+                           FontSize="11"
+                           TextWrapping="Wrap"/>
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Grid.Column="0" 
+                               Text="FPS:" 
+                               Foreground="#B0B0B0"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,4"/>
+                    <NumericUpDown Grid.Row="0" Grid.Column="1" 
+                                   x:Name="WebPFpsUpDown"
+                                   Value="15"
+                                   Minimum="1"
+                                   Maximum="30"
+                                   Margin="0,0,0,4"/>
+                    
+                    <TextBlock Grid.Row="1" Grid.Column="0" 
+                               Text="Süre (s):" 
+                               Foreground="#B0B0B0"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0"/>
+                    <NumericUpDown Grid.Row="1" Grid.Column="1" 
+                                   x:Name="WebPDurationUpDown"
+                                   Value="3"
+                                   Minimum="1"
+                                   Maximum="30"/>
+                </Grid>
+                <Button Content="WebP Kaydet" 
+                        Classes="primary"
+                        HorizontalAlignment="Stretch"
+                        x:Name="SaveWebPButton"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+
+</UserControl>
