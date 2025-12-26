@@ -337,6 +337,7 @@ public class ProfileSlotManagerPropertyTests : IDisposable
         
         Assert.NotNull(profile);
         Assert.Equal("Varsayılan", profile.Name);
+        // ProfileManager.CreateDefaultProfile() içinde Width=128, Height=16 olarak ayarlanıyor
         Assert.Equal(128, profile.Settings.Width);
         Assert.Equal(16, profile.Settings.Height);
         Assert.Equal(LedColorType.Amber, profile.Settings.ColorType);
@@ -346,11 +347,15 @@ public class ProfileSlotManagerPropertyTests : IDisposable
     [Fact]
     public async Task ProfileManager_DuplicateProfile_CreatesNewProfile()
     {
-        // Create original profile
+        // Create original profile with explicit settings
+        var originalSettings = new DisplaySettings();
+        originalSettings.Width = 192;
+        originalSettings.Height = 32;
+        
         var original = new Profile
         {
             Name = "Original_" + Guid.NewGuid().ToString("N"),
-            Settings = new DisplaySettings { Width = 192, Height = 32 },
+            Settings = originalSettings,
             FontName = "TestFont"
         };
         await _profileManager.SaveProfileAsync(original);
@@ -361,8 +366,8 @@ public class ProfileSlotManagerPropertyTests : IDisposable
         
         Assert.NotNull(duplicate);
         Assert.Equal(newName, duplicate.Name);
-        Assert.Equal(original.Settings.Width, duplicate.Settings.Width);
-        Assert.Equal(original.Settings.Height, duplicate.Settings.Height);
+        Assert.Equal(192, duplicate.Settings.Width);
+        Assert.Equal(32, duplicate.Settings.Height);
         Assert.Equal(original.FontName, duplicate.FontName);
     }
 

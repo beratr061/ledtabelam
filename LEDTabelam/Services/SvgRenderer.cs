@@ -143,9 +143,13 @@ public class SvgRenderer : ISvgRenderer
         if (targetHeight <= 0)
             throw new ArgumentOutOfRangeException(nameof(targetHeight), "Hedef yükseklik pozitif olmalıdır");
 
+        // Kaynak bitmap boyutları geçersizse hata fırlat
+        if (source.Width <= 0 || source.Height <= 0)
+            throw new ArgumentException("Kaynak bitmap boyutları geçersiz", nameof(source));
+
         // En-boy oranını koruyarak ölçekleme
         float scale = (float)targetHeight / source.Height;
-        int targetWidth = (int)Math.Ceiling(source.Width * scale);
+        int targetWidth = Math.Max(1, (int)Math.Ceiling(source.Width * scale));
 
         var result = new SKBitmap(targetWidth, targetHeight);
         using var canvas = new SKCanvas(result);

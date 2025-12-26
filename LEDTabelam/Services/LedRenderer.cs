@@ -30,6 +30,10 @@ public class LedRenderer : ILedRenderer, IDisposable
         Color = new SKColor(255, 255, 255, 77) // %30 alpha
     };
 
+    // Glow filtresi önbelleği - parlaklık değişmediğinde yeniden kullanılır
+    private SKImageFilter? _cachedGlowFilter;
+    private float _cachedGlowRadius = -1;
+
     private bool _disposed;
 
     /// <inheritdoc/>
@@ -192,9 +196,16 @@ public class LedRenderer : ILedRenderer, IDisposable
         SKColor backgroundColor = GetBackgroundColor(settings);
         canvas.Clear(backgroundColor);
 
-        // Glow efekti için blur filtresi - her seferinde yeni oluşturulmalı (radius değişken)
-        using var glowFilter = SKImageFilter.CreateBlur(glowRadius, glowRadius);
-        _glowPaint.ImageFilter = glowFilter;
+        // Glow filtresi önbelleği - sadece radius değiştiğinde yeniden oluştur
+        // ReSharper disable once CompareOfFloatsByEqualityOperator
+        if (_cachedGlowFilter == null || _cachedGlowRadius != glowRadius)
+        {
+            _cachedGlowFilter?.Dispose();
+            _cachedGlowFilter = SKImageFilter.CreateBlur(glowRadius, glowRadius);
+            _cachedGlowRadius = glowRadius;
+        }
+
+        _glowPaint.ImageFilter = _cachedGlowFilter;
 
         // Önce glow katmanını çiz
         canvas.DrawBitmap(source, 0, 0, _glowPaint);
@@ -411,6 +422,8 @@ public class LedRenderer : ILedRenderer, IDisposable
         _ledPaint.Dispose();
         _gridPaint.Dispose();
         _glowPaint.Dispose();
+        _cachedGlowFilter?.Dispose();
+        _cachedGlowFilter = null;
         
         GC.SuppressFinalize(this);
     }

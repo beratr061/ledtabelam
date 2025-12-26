@@ -16,13 +16,16 @@ public class MainWindowViewModel : ViewModelBase
 {
     private readonly IProfileManager _profileManager;
     private readonly ISlotManager _slotManager;
-    private readonly IFontLoader _fontLoader;
-    private readonly ILedRenderer _ledRenderer;
-    private readonly IAnimationService _animationService;
-    private readonly IExportService _exportService;
     private readonly IZoneManager _zoneManager;
-    private readonly IMultiLineTextRenderer _multiLineTextRenderer;
-    private readonly IPreviewRenderer _previewRenderer;
+    private readonly IEngineServices _engineServices;
+
+    // Kolay erişim için kısayollar
+    private IFontLoader FontLoader => _engineServices.FontLoader;
+    private ILedRenderer LedRenderer => _engineServices.LedRenderer;
+    private IAnimationService AnimationService => _engineServices.AnimationService;
+    private IExportService ExportService => _engineServices.ExportService;
+    private IMultiLineTextRenderer MultiLineTextRenderer => _engineServices.MultiLineTextRenderer;
+    private IPreviewRenderer PreviewRenderer => _engineServices.PreviewRenderer;
 
     private string _title = "LEDTabelam - Otobüs Hat Tabelası Önizleme";
     private string _statusMessage = "Hazır";
@@ -125,29 +128,19 @@ public class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel(
         IProfileManager profileManager,
         ISlotManager slotManager,
-        IFontLoader fontLoader,
-        ILedRenderer ledRenderer,
-        IAnimationService animationService,
-        IExportService exportService,
         IZoneManager zoneManager,
-        IMultiLineTextRenderer multiLineTextRenderer,
-        IPreviewRenderer previewRenderer)
+        IEngineServices engineServices)
     {
         _profileManager = profileManager ?? throw new ArgumentNullException(nameof(profileManager));
         _slotManager = slotManager ?? throw new ArgumentNullException(nameof(slotManager));
-        _fontLoader = fontLoader ?? throw new ArgumentNullException(nameof(fontLoader));
-        _ledRenderer = ledRenderer ?? throw new ArgumentNullException(nameof(ledRenderer));
-        _animationService = animationService ?? throw new ArgumentNullException(nameof(animationService));
-        _exportService = exportService ?? throw new ArgumentNullException(nameof(exportService));
         _zoneManager = zoneManager ?? throw new ArgumentNullException(nameof(zoneManager));
-        _multiLineTextRenderer = multiLineTextRenderer ?? throw new ArgumentNullException(nameof(multiLineTextRenderer));
-        _previewRenderer = previewRenderer ?? throw new ArgumentNullException(nameof(previewRenderer));
+        _engineServices = engineServices ?? throw new ArgumentNullException(nameof(engineServices));
 
         // Alt ViewModel'leri oluştur
-        ControlPanel = new ControlPanelViewModel(_profileManager, _slotManager, _fontLoader, _zoneManager);
-        Preview = new PreviewViewModel(_ledRenderer, _animationService);
+        ControlPanel = new ControlPanelViewModel(_profileManager, _slotManager, FontLoader, _zoneManager);
+        Preview = new PreviewViewModel(LedRenderer, AnimationService);
         SlotEditor = new SlotEditorViewModel(_slotManager);
-        Playlist = new PlaylistViewModel(_animationService);
+        Playlist = new PlaylistViewModel(AnimationService);
         SimpleTabelaEditor = new SimpleTabelaViewModel();
         ProgramEditor = new ProgramEditorViewModel();
 
@@ -198,7 +191,7 @@ public class MainWindowViewModel : ViewModelBase
             .DisposeWith(Disposables);
 
         // Animasyon durumu değişikliklerini izle
-        _animationService.StateChanged += OnAnimationStateChanged;
+        AnimationService.StateChanged += OnAnimationStateChanged;
     }
 
     #region Command Implementations
@@ -236,26 +229,26 @@ public class MainWindowViewModel : ViewModelBase
 
     private void ToggleAnimation()
     {
-        if (_animationService.IsPlaying)
+        if (AnimationService.IsPlaying)
         {
-            _animationService.PauseAnimation();
+            AnimationService.PauseAnimation();
             StatusMessage = "Animasyon duraklatıldı";
         }
-        else if (_animationService.IsPaused)
+        else if (AnimationService.IsPaused)
         {
-            _animationService.ResumeAnimation();
+            AnimationService.ResumeAnimation();
             StatusMessage = "Animasyon devam ediyor";
         }
         else
         {
-            _animationService.StartScrollAnimation(ControlPanel.AnimationSpeed);
+            AnimationService.StartScrollAnimation(ControlPanel.AnimationSpeed);
             StatusMessage = "Animasyon başlatıldı";
         }
     }
 
     private void StopAnimation()
     {
-        _animationService.StopAnimation();
+        AnimationService.StopAnimation();
         StatusMessage = "Animasyon durduruldu";
     }
 
@@ -324,7 +317,7 @@ public class MainWindowViewModel : ViewModelBase
             if (simpleTabelaZones.Count > 0 && settings.ColorType == LedColorType.FullRGB)
             {
                 // PreviewRenderer ile zone'ları render et
-                var colorMatrix = _previewRenderer.RenderZonesToColorMatrix(font, simpleTabelaZones, settings);
+                var colorMatrix = PreviewRenderer.RenderZonesToColorMatrix(font, simpleTabelaZones, settings);
                 Preview.UpdateColorMatrix(colorMatrix);
             }
             else
@@ -336,7 +329,7 @@ public class MainWindowViewModel : ViewModelBase
                 {
                     // PreviewRenderer ile zone'ları render et
                     var zoneList = new System.Collections.Generic.List<Zone>(zones);
-                    var colorMatrix = _previewRenderer.RenderZonesToColorMatrix(font, zoneList, settings);
+                    var colorMatrix = PreviewRenderer.RenderZonesToColorMatrix(font, zoneList, settings);
                     Preview.UpdateColorMatrix(colorMatrix);
                 }
                 else
@@ -351,7 +344,7 @@ public class MainWindowViewModel : ViewModelBase
 
                     var ledColor = settings.GetLedColor();
                     var skColor = new SkiaSharp.SKColor(ledColor.R, ledColor.G, ledColor.B, ledColor.A);
-                    var textBitmap = _fontLoader.RenderText(font, text, skColor);
+                    var textBitmap = FontLoader.RenderText(font, text, skColor);
 
                     if (textBitmap != null)
                     {
@@ -396,7 +389,7 @@ public class MainWindowViewModel : ViewModelBase
 
             // PreviewRenderer ile program öğelerini render et
             var items = new System.Collections.Generic.List<TabelaItem>(ProgramEditor.Items);
-            var colorMatrix = _previewRenderer.RenderProgramToColorMatrix(
+            var colorMatrix = PreviewRenderer.RenderProgramToColorMatrix(
                 items,
                 defaultFont,
                 fontName => ProgramEditor.GetFontByName(fontName),
@@ -442,7 +435,7 @@ public class MainWindowViewModel : ViewModelBase
     {
         if (disposing)
         {
-            _animationService.StateChanged -= OnAnimationStateChanged;
+            AnimationService.StateChanged -= OnAnimationStateChanged;
             SimpleTabelaEditor.TabelaChanged -= OnSimpleTabelaChanged;
             ProgramEditor.ItemsChanged -= OnProgramItemsChanged;
             ControlPanel.Dispose();

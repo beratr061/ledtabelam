@@ -34,6 +34,15 @@ public partial class App : Application
             var multiLineTextRenderer = new MultiLineTextRenderer(fontLoader);
             var previewRenderer = new PreviewRenderer(fontLoader, multiLineTextRenderer);
 
+            // Engine servisleri Facade'ı oluştur
+            var engineServices = new EngineServices(
+                fontLoader,
+                ledRenderer,
+                animationService,
+                exportService,
+                multiLineTextRenderer,
+                previewRenderer);
+
             // Varsayılan profili oluştur (yoksa)
             _ = profileManager.GetOrCreateDefaultProfileAsync();
 
@@ -42,13 +51,8 @@ public partial class App : Application
                 DataContext = new MainWindowViewModel(
                     profileManager,
                     slotManager,
-                    fontLoader,
-                    ledRenderer,
-                    animationService,
-                    exportService,
                     zoneManager,
-                    multiLineTextRenderer,
-                    previewRenderer),
+                    engineServices),
             };
             
             // Servisleri MainWindow'a enjekte et (keyboard shortcuts için)

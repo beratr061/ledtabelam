@@ -42,10 +42,9 @@ public class MultiLineTextRenderer : IMultiLineTextRenderer
             return emptyBitmap;
         }
 
-        // Her satırı önce render et ve gerçek yüksekliklerini bul
+        // Her satırı render et
         var lineBitmaps = new List<SKBitmap>();
         int maxWidth = 0;
-        int actualLineHeight = 0;
         
         foreach (var line in lines)
         {
@@ -54,10 +53,6 @@ public class MultiLineTextRenderer : IMultiLineTextRenderer
                 var lineBitmap = RenderSingleLine(font, line, color);
                 lineBitmaps.Add(lineBitmap);
                 maxWidth = Math.Max(maxWidth, lineBitmap.Width);
-                
-                // Gerçek karakter yüksekliğini bul (boş olmayan piksel satırları)
-                int lineActualHeight = GetActualBitmapHeight(lineBitmap);
-                actualLineHeight = Math.Max(actualLineHeight, lineActualHeight);
             }
             else
             {
@@ -65,16 +60,16 @@ public class MultiLineTextRenderer : IMultiLineTextRenderer
             }
         }
 
-        // Eğer gerçek yükseklik bulunamadıysa font LineHeight kullan
-        if (actualLineHeight == 0)
-            actualLineHeight = font.LineHeight;
-
         // Minimum genişlik kontrolü
         if (maxWidth <= 0)
             maxWidth = 1;
 
-        // Toplam yüksekliği hesapla (gerçek karakter yüksekliği ile)
-        int totalHeight = lineCount * actualLineHeight;
+        // Font LineHeight kullan (tutarlılık için)
+        int lineHeight = font.LineHeight;
+
+        // Toplam yüksekliği hesapla
+        // Formül: (satır_sayısı * font_satır_yüksekliği) + ((satır_sayısı - 1) * satır_arası_boşluk)
+        int totalHeight = lineCount * lineHeight;
         if (lineCount > 1)
         {
             totalHeight += (lineCount - 1) * lineSpacing;
@@ -92,18 +87,11 @@ public class MultiLineTextRenderer : IMultiLineTextRenderer
             var lineBitmap = lineBitmaps[i];
             if (lineBitmap != null)
             {
-                // Bitmap'in üst kısmındaki boşluğu atla
-                int topOffset = GetTopOffset(lineBitmap);
-                
-                // Sadece içerik kısmını çiz
-                var srcRect = new SKRect(0, topOffset, lineBitmap.Width, topOffset + actualLineHeight);
-                var destRect = new SKRect(0, currentY, lineBitmap.Width, currentY + actualLineHeight);
-                
-                canvas.DrawBitmap(lineBitmap, srcRect, destRect);
+                canvas.DrawBitmap(lineBitmap, 0, currentY);
                 lineBitmap.Dispose();
             }
 
-            currentY += actualLineHeight;
+            currentY += lineHeight;
             if (i < lineBitmaps.Count - 1)
             {
                 currentY += lineSpacing;
@@ -111,51 +99,6 @@ public class MultiLineTextRenderer : IMultiLineTextRenderer
         }
 
         return result;
-    }
-
-    /// <summary>
-    /// Bitmap'in gerçek içerik yüksekliğini bulur (boş satırları hariç tutar)
-    /// </summary>
-    private int GetActualBitmapHeight(SKBitmap bitmap)
-    {
-        int topY = -1;
-        int bottomY = -1;
-        
-        for (int y = 0; y < bitmap.Height; y++)
-        {
-            for (int x = 0; x < bitmap.Width; x++)
-            {
-                var pixel = bitmap.GetPixel(x, y);
-                if (pixel.Alpha > 0)
-                {
-                    if (topY == -1) topY = y;
-                    bottomY = y;
-                    break;
-                }
-            }
-        }
-        
-        if (topY == -1) return bitmap.Height;
-        return bottomY - topY + 1;
-    }
-
-    /// <summary>
-    /// Bitmap'in üst kısmındaki boşluk miktarını bulur
-    /// </summary>
-    private int GetTopOffset(SKBitmap bitmap)
-    {
-        for (int y = 0; y < bitmap.Height; y++)
-        {
-            for (int x = 0; x < bitmap.Width; x++)
-            {
-                var pixel = bitmap.GetPixel(x, y);
-                if (pixel.Alpha > 0)
-                {
-                    return y;
-                }
-            }
-        }
-        return 0;
     }
 
 

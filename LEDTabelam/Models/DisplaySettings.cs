@@ -17,6 +17,10 @@ public class DisplaySettings : ReactiveObject
     private int _width = 32;
     private int _height = 16;
     
+    // Width/Height'ın manuel olarak set edilip edilmediğini takip et
+    private bool _widthManuallySet = false;
+    private bool _heightManuallySet = false;
+    
     private LedColorType _colorType = LedColorType.Amber;
     private Color _customColor = Color.FromArgb(255, 255, 176, 0);
     private int _brightness = 100;
@@ -64,7 +68,11 @@ public class DisplaySettings : ReactiveObject
     public int Width
     {
         get => _width;
-        set => this.RaiseAndSetIfChanged(ref _width, value);
+        set
+        {
+            _widthManuallySet = true;
+            this.RaiseAndSetIfChanged(ref _width, value);
+        }
     }
 
     /// <summary>
@@ -73,7 +81,11 @@ public class DisplaySettings : ReactiveObject
     public int Height
     {
         get => _height;
-        set => this.RaiseAndSetIfChanged(ref _height, value);
+        set
+        {
+            _heightManuallySet = true;
+            this.RaiseAndSetIfChanged(ref _height, value);
+        }
     }
 
     /// <summary>
@@ -191,11 +203,20 @@ public class DisplaySettings : ReactiveObject
 
     /// <summary>
     /// Pitch'e göre çözünürlüğü günceller
+    /// Sadece Width/Height manuel olarak set edilmediyse günceller
     /// </summary>
     private void UpdateResolution()
     {
-        Width = Pitch.GetActualResolution(PanelWidth);
-        Height = Pitch.GetActualResolution(PanelHeight);
+        if (!_widthManuallySet)
+        {
+            _width = Pitch.GetActualResolution(PanelWidth);
+            this.RaisePropertyChanged(nameof(Width));
+        }
+        if (!_heightManuallySet)
+        {
+            _height = Pitch.GetActualResolution(PanelHeight);
+            this.RaisePropertyChanged(nameof(Height));
+        }
     }
 
     /// <summary>
