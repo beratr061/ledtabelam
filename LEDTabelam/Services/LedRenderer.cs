@@ -9,8 +9,29 @@ namespace LEDTabelam.Services;
 /// LED render servisi implementasyonu
 /// Requirements: 6.1, 6.2, 6.5, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 19.1, 19.2, 19.3, 19.4, 19.5, 19.6
 /// </summary>
-public class LedRenderer : ILedRenderer
+public class LedRenderer : ILedRenderer, IDisposable
 {
+    // Paint nesnelerini önbelleğe al - GC baskısını azaltır
+    private readonly SKPaint _ledPaint = new SKPaint
+    {
+        IsAntialias = false,
+        Style = SKPaintStyle.Fill
+    };
+
+    private readonly SKPaint _gridPaint = new SKPaint
+    {
+        IsAntialias = false,
+        Style = SKPaintStyle.Fill,
+        Color = SKColors.Black
+    };
+
+    private readonly SKPaint _glowPaint = new SKPaint
+    {
+        Color = new SKColor(255, 255, 255, 77) // %30 alpha
+    };
+
+    private bool _disposed;
+
     /// <inheritdoc/>
     public SKBitmap RenderDisplay(bool[,] pixelMatrix, DisplaySettings settings)
     {
@@ -42,13 +63,8 @@ public class LedRenderer : ILedRenderer
         // Parlaklık uygula
         ledColor = ApplyBrightness(ledColor, settings.Brightness);
 
-        // LED'leri çiz
-        using var paint = new SKPaint
-        {
-            IsAntialias = false, // Nearest Neighbor için
-            Style = SKPaintStyle.Fill,
-            Color = ledColor
-        };
+        // Önbelleğe alınmış paint'i güncelle
+        _ledPaint.Color = ledColor;
 
         for (int x = 0; x < matrixWidth; x++)
         {
@@ -64,7 +80,7 @@ public class LedRenderer : ILedRenderer
 
                 if (isLit)
                 {
-                    DrawLedPixel(canvas, x, y, pixelSize, ledDiameter, settings.Shape, paint);
+                    DrawLedPixel(canvas, x, y, pixelSize, ledDiameter, settings.Shape, _ledPaint);
                 }
             }
         }
@@ -98,12 +114,6 @@ public class LedRenderer : ILedRenderer
         SKColor backgroundColor = GetBackgroundColor(settings);
         canvas.Clear(backgroundColor);
 
-        using var paint = new SKPaint
-        {
-            IsAntialias = false,
-            Style = SKPaintStyle.Fill
-        };
-
         for (int x = 0; x < matrixWidth; x++)
         {
             for (int y = 0; y < matrixHeight; y++)
@@ -136,9 +146,9 @@ public class LedRenderer : ILedRenderer
 
                 // Parlaklık uygula
                 SKColor finalColor = ApplyBrightness(pixelColor, settings.Brightness);
-                paint.Color = finalColor;
+                _ledPaint.Color = finalColor;
 
-                DrawLedPixel(canvas, x, y, pixelSize, ledDiameter, settings.Shape, paint);
+                DrawLedPixel(canvas, x, y, pixelSize, ledDiameter, settings.Shape, _ledPaint);
             }
         }
 
@@ -182,21 +192,18 @@ public class LedRenderer : ILedRenderer
         SKColor backgroundColor = GetBackgroundColor(settings);
         canvas.Clear(backgroundColor);
 
-        // Glow efekti için blur filtresi
+        // Glow efekti için blur filtresi - her seferinde yeni oluşturulmalı (radius değişken)
         using var glowFilter = SKImageFilter.CreateBlur(glowRadius, glowRadius);
-        
-        // Glow katmanı için paint (%30 alpha)
-        using var glowPaint = new SKPaint
-        {
-            ImageFilter = glowFilter,
-            Color = new SKColor(255, 255, 255, 77) // %30 alpha (255 * 0.3 ≈ 77)
-        };
+        _glowPaint.ImageFilter = glowFilter;
 
         // Önce glow katmanını çiz
-        canvas.DrawBitmap(source, 0, 0, glowPaint);
+        canvas.DrawBitmap(source, 0, 0, _glowPaint);
 
         // Sonra orijinal görüntüyü üzerine çiz
         canvas.DrawBitmap(source, 0, 0);
+
+        // Filter'ı temizle (sonraki kullanımlar için)
+        _glowPaint.ImageFilter = null;
 
         return result;
     }
@@ -213,14 +220,6 @@ public class LedRenderer : ILedRenderer
         int ledDiameter = (int)(pixelSize * ledRatio);
         int gridWidth = (pixelSize - ledDiameter) / 2;
 
-        // Grid çizgisi için siyah paint
-        using var gridPaint = new SKPaint
-        {
-            IsAntialias = false,
-            Style = SKPaintStyle.Fill,
-            Color = SKColors.Black
-        };
-
         // Canvas boyutlarını al
         var canvasInfo = canvas.DeviceClipBounds;
         int canvasWidth = (int)canvasInfo.Width;
@@ -233,14 +232,14 @@ public class LedRenderer : ILedRenderer
         for (int x = 0; x <= matrixWidth; x++)
         {
             float lineX = x * pixelSize - gridWidth / 2f;
-            canvas.DrawRect(lineX, 0, gridWidth, canvasHeight, gridPaint);
+            canvas.DrawRect(lineX, 0, gridWidth, canvasHeight, _gridPaint);
         }
 
         // Yatay grid çizgileri
         for (int y = 0; y <= matrixHeight; y++)
         {
             float lineY = y * pixelSize - gridWidth / 2f;
-            canvas.DrawRect(0, lineY, canvasWidth, gridWidth, gridPaint);
+            canvas.DrawRect(0, lineY, canvasWidth, gridWidth, _gridPaint);
         }
     }
 
@@ -264,12 +263,13 @@ public class LedRenderer : ILedRenderer
 
     /// <summary>
     /// 1R1G1B modunda renk karışımı hesaplar
-    /// Her piksel için basit RGB karışımı (R, G veya B kanallarından biri aktif)
+    /// Gerçek LED panellerde dikey (vertical) strip yapısı kullanılır
+    /// Her sütun tek bir renk kanalına sahiptir (R, G, B döngüsü)
     /// </summary>
     public SKColor GetOneROneGOneBColor(int x, int y)
     {
-        // Basit pattern: x + y mod 3 ile R, G, B döngüsü
-        int channel = (x + y) % 3;
+        // Dikey strip yapısı: x % 3 ile R, G, B döngüsü
+        int channel = x % 3;
         return channel switch
         {
             0 => new SKColor(255, 0, 0),   // Red
@@ -398,5 +398,20 @@ public class LedRenderer : ILedRenderer
             return Math.Clamp(customRatio, 0.3, 0.95);
 
         return pitch.GetLedDiameterRatio();
+    }
+
+    /// <summary>
+    /// Kaynakları temizle
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+        
+        _disposed = true;
+        _ledPaint.Dispose();
+        _gridPaint.Dispose();
+        _glowPaint.Dispose();
+        
+        GC.SuppressFinalize(this);
     }
 }

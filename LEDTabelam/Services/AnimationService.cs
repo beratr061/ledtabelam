@@ -1,5 +1,5 @@
 using System;
-using System.Timers;
+using Avalonia.Threading;
 
 namespace LEDTabelam.Services;
 
@@ -9,7 +9,7 @@ namespace LEDTabelam.Services;
 /// </summary>
 public class AnimationService : IAnimationService, IDisposable
 {
-    private readonly Timer _timer;
+    private readonly DispatcherTimer _timer;
     private AnimationState _state = AnimationState.Stopped;
     private int _currentOffset;
     private int _speed = 20; // Varsayılan: 20 px/s (Requirement 8.5)
@@ -39,9 +39,12 @@ public class AnimationService : IAnimationService, IDisposable
 
     public AnimationService()
     {
-        _timer = new Timer(TimerIntervalMs);
-        _timer.Elapsed += OnTimerElapsed;
-        _timer.AutoReset = true;
+        // DispatcherTimer varsayılan olarak UI Thread üzerinde çalışır
+        _timer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(TimerIntervalMs)
+        };
+        _timer.Tick += OnTimerTick;
     }
 
     /// <inheritdoc/>
@@ -145,7 +148,7 @@ public class AnimationService : IAnimationService, IDisposable
         OnFrameUpdate?.Invoke(_currentOffset);
     }
 
-    private void OnTimerElapsed(object? sender, ElapsedEventArgs e)
+    private void OnTimerTick(object? sender, EventArgs e)
     {
         if (_state != AnimationState.Playing) return;
 
@@ -173,8 +176,7 @@ public class AnimationService : IAnimationService, IDisposable
         
         _disposed = true;
         _timer.Stop();
-        _timer.Elapsed -= OnTimerElapsed;
-        _timer.Dispose();
+        _timer.Tick -= OnTimerTick;
         
         GC.SuppressFinalize(this);
     }

@@ -32,6 +32,7 @@ public partial class App : Application
             var exportService = new ExportService();
             var zoneManager = new ZoneManager();
             var multiLineTextRenderer = new MultiLineTextRenderer(fontLoader);
+            var previewRenderer = new PreviewRenderer(fontLoader, multiLineTextRenderer);
 
             // Varsayılan profili oluştur (yoksa)
             _ = profileManager.GetOrCreateDefaultProfileAsync();
@@ -46,7 +47,8 @@ public partial class App : Application
                     animationService,
                     exportService,
                     zoneManager,
-                    multiLineTextRenderer),
+                    multiLineTextRenderer,
+                    previewRenderer),
             };
             
             // Servisleri MainWindow'a enjekte et (keyboard shortcuts için)

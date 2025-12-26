@@ -22,6 +22,7 @@ public class MainWindowViewModel : ViewModelBase
     private readonly IExportService _exportService;
     private readonly IZoneManager _zoneManager;
     private readonly IMultiLineTextRenderer _multiLineTextRenderer;
+    private readonly IPreviewRenderer _previewRenderer;
 
     private string _title = "LEDTabelam - Otobüs Hat Tabelası Önizleme";
     private string _statusMessage = "Hazır";
@@ -129,7 +130,8 @@ public class MainWindowViewModel : ViewModelBase
         IAnimationService animationService,
         IExportService exportService,
         IZoneManager zoneManager,
-        IMultiLineTextRenderer multiLineTextRenderer)
+        IMultiLineTextRenderer multiLineTextRenderer,
+        IPreviewRenderer previewRenderer)
     {
         _profileManager = profileManager ?? throw new ArgumentNullException(nameof(profileManager));
         _slotManager = slotManager ?? throw new ArgumentNullException(nameof(slotManager));
@@ -139,6 +141,7 @@ public class MainWindowViewModel : ViewModelBase
         _exportService = exportService ?? throw new ArgumentNullException(nameof(exportService));
         _zoneManager = zoneManager ?? throw new ArgumentNullException(nameof(zoneManager));
         _multiLineTextRenderer = multiLineTextRenderer ?? throw new ArgumentNullException(nameof(multiLineTextRenderer));
+        _previewRenderer = previewRenderer ?? throw new ArgumentNullException(nameof(previewRenderer));
 
         // Alt ViewModel'leri oluştur
         ControlPanel = new ControlPanelViewModel(_profileManager, _slotManager, _fontLoader, _zoneManager);
@@ -320,8 +323,9 @@ public class MainWindowViewModel : ViewModelBase
             
             if (simpleTabelaZones.Count > 0 && settings.ColorType == LedColorType.FullRGB)
             {
-                // SimpleTabelaEditor zone'larını kullan
-                RenderSimpleTabelaToPreview(font, simpleTabelaZones, settings);
+                // PreviewRenderer ile zone'ları render et
+                var colorMatrix = _previewRenderer.RenderZonesToColorMatrix(font, simpleTabelaZones, settings);
+                Preview.UpdateColorMatrix(colorMatrix);
             }
             else
             {
@@ -330,8 +334,10 @@ public class MainWindowViewModel : ViewModelBase
                 
                 if (zones.Count > 0 && settings.ColorType == LedColorType.FullRGB)
                 {
-                    // Zone bazlı RGB render
-                    RenderZonesToPreview(font, zones, settings);
+                    // PreviewRenderer ile zone'ları render et
+                    var zoneList = new System.Collections.Generic.List<Zone>(zones);
+                    var colorMatrix = _previewRenderer.RenderZonesToColorMatrix(font, zoneList, settings);
+                    Preview.UpdateColorMatrix(colorMatrix);
                 }
                 else
                 {
@@ -388,300 +394,19 @@ public class MainWindowViewModel : ViewModelBase
             // Display boyutlarını ProgramEditor'a bildir
             ProgramEditor.UpdateDisplaySize(settings.Width, settings.Height);
 
-            int totalWidth = settings.Width;
-            int totalHeight = settings.Height;
-
-            // RGB renk matrisi oluştur
-            var colorMatrix = new SkiaSharp.SKColor[totalWidth, totalHeight];
-
-            // Her öğeyi render et
-            foreach (var item in ProgramEditor.Items)
-            {
-                if (!item.IsVisible || string.IsNullOrEmpty(item.Content))
-                    continue;
-
-                // Öğe için font seç (her öğenin kendi fontu olabilir)
-                var itemFont = ProgramEditor.GetFontByName(item.FontName) ?? defaultFont;
-                if (itemFont == null)
-                    continue;
-
-                var itemColor = new SkiaSharp.SKColor(item.Color.R, item.Color.G, item.Color.B);
-
-                // Metin render et
-                SkiaSharp.SKBitmap? textBitmap = null;
-                try
-                {
-                    int lineCount = _multiLineTextRenderer.GetLineCount(item.Content);
-                    
-                    if (lineCount > 1)
-                    {
-                        textBitmap = _multiLineTextRenderer.RenderMultiLineText(itemFont, item.Content, itemColor, 0);
-                    }
-                    else
-                    {
-                        textBitmap = _fontLoader.RenderText(itemFont, item.Content, itemColor);
-                    }
-
-                    if (textBitmap == null)
-                        continue;
-
-                    int textWidth = textBitmap.Width;
-                    int textHeight = textBitmap.Height;
-
-                    // Öğe sınırları içinde hizalama hesapla
-                    int offsetX = item.HAlign switch
-                    {
-                        Models.HorizontalAlignment.Left => 0,
-                        Models.HorizontalAlignment.Center => Math.Max(0, (item.Width - textWidth) / 2),
-                        Models.HorizontalAlignment.Right => Math.Max(0, item.Width - textWidth),
-                        _ => 0
-                    };
-
-                    int offsetY = item.VAlign switch
-                    {
-                        Models.VerticalAlignment.Top => 0,
-                        Models.VerticalAlignment.Center => Math.Max(0, (item.Height - textHeight) / 2),
-                        Models.VerticalAlignment.Bottom => Math.Max(0, item.Height - textHeight),
-                        _ => 0
-                    };
-
-                    // Pikselleri kopyala
-                    for (int y = 0; y < textHeight; y++)
-                    {
-                        int destY = item.Y + offsetY + y;
-                        if (destY < 0 || destY >= totalHeight) continue;
-
-                        for (int x = 0; x < textWidth; x++)
-                        {
-                            int destX = item.X + offsetX + x;
-                            if (destX < 0 || destX >= totalWidth) continue;
-                            if (destX >= item.X + item.Width) break; // Öğe sınırını aşma
-
-                            var pixel = textBitmap.GetPixel(x, y);
-                            if (pixel.Alpha > 128)
-                            {
-                                colorMatrix[destX, destY] = itemColor;
-                            }
-                        }
-                    }
-                }
-                finally
-                {
-                    textBitmap?.Dispose();
-                }
-            }
+            // PreviewRenderer ile program öğelerini render et
+            var items = new System.Collections.Generic.List<TabelaItem>(ProgramEditor.Items);
+            var colorMatrix = _previewRenderer.RenderProgramToColorMatrix(
+                items,
+                defaultFont,
+                fontName => ProgramEditor.GetFontByName(fontName),
+                settings);
 
             Preview.UpdateColorMatrix(colorMatrix);
         }
         catch (Exception ex)
         {
             StatusMessage = $"Program render hatası: {ex.Message}";
-        }
-    }
-
-    private void RenderSimpleTabelaToPreview(BitmapFont font, System.Collections.Generic.List<Zone> zones, DisplaySettings settings)
-    {
-        try
-        {
-            int totalWidth = settings.Width;
-            int totalHeight = settings.Height;
-
-            // RGB renk matrisi oluştur
-            var colorMatrix = new SkiaSharp.SKColor[totalWidth, totalHeight];
-
-            // Her zone'u render et
-            int currentX = 0;
-            foreach (var zone in zones)
-            {
-                int zoneWidth = (int)(totalWidth * zone.WidthPercent / 100.0);
-                if (zoneWidth <= 0) continue;
-
-                // Zone rengini al
-                var zoneColor = new SkiaSharp.SKColor(zone.TextColor.R, zone.TextColor.G, zone.TextColor.B);
-
-                // Zone içeriğini render et
-                var content = zone.Content;
-                if (!string.IsNullOrEmpty(content))
-                {
-                    // Çok satırlı metin kontrolü
-                    SkiaSharp.SKBitmap textBitmap;
-                    int lineCount = _multiLineTextRenderer.GetLineCount(content);
-                    
-                    if (lineCount > 1)
-                    {
-                        // Çok satırlı metin - satır arası boşluk 0 piksel (sıkı yerleşim)
-                        textBitmap = _multiLineTextRenderer.RenderMultiLineText(font, content, zoneColor, 0);
-                    }
-                    else
-                    {
-                        // Tek satırlı metin
-                        textBitmap = _fontLoader.RenderText(font, content, zoneColor);
-                    }
-                    
-                    using (textBitmap)
-                    {
-                        int textWidth = Math.Min(textBitmap.Width, zoneWidth);
-                        int textHeight = textBitmap.Height; // Tam yüksekliği al, kesme
-
-                        // Yatay hizalama
-                        int offsetX = zone.HAlign switch
-                        {
-                            Models.HorizontalAlignment.Left => 0,
-                            Models.HorizontalAlignment.Center => Math.Max(0, (zoneWidth - textWidth) / 2),
-                            Models.HorizontalAlignment.Right => Math.Max(0, zoneWidth - textWidth),
-                            _ => 0
-                        };
-
-                        // Dikey hizalama - metin yüksekliği display'den büyükse üstten başla
-                        int offsetY;
-                        if (textHeight >= totalHeight)
-                        {
-                            offsetY = 0; // Sığmıyorsa üstten başla
-                        }
-                        else
-                        {
-                            offsetY = zone.VAlign switch
-                            {
-                                Models.VerticalAlignment.Top => 0,
-                                Models.VerticalAlignment.Center => (totalHeight - textHeight) / 2,
-                                Models.VerticalAlignment.Bottom => totalHeight - textHeight,
-                                _ => 0
-                            };
-                        }
-
-                        // Pikselleri kopyala (display sınırları içinde)
-                        for (int y = 0; y < textHeight && (offsetY + y) < totalHeight; y++)
-                        {
-                            if (offsetY + y < 0) continue;
-                            
-                            for (int x = 0; x < textWidth; x++)
-                            {
-                                var pixel = textBitmap.GetPixel(x, y);
-                                if (pixel.Alpha > 128)
-                                {
-                                    int destX = currentX + offsetX + x;
-                                    int destY = offsetY + y;
-                                    if (destX >= 0 && destX < totalWidth && destY >= 0 && destY < totalHeight)
-                                    {
-                                        colorMatrix[destX, destY] = zoneColor;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                currentX += zoneWidth;
-            }
-
-            Preview.UpdateColorMatrix(colorMatrix);
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Tabela render hatası: {ex.Message}";
-        }
-    }
-
-    private void RenderZonesToPreview(BitmapFont font, System.Collections.ObjectModel.ObservableCollection<Zone> zones, DisplaySettings settings)
-    {
-        try
-        {
-            int totalWidth = settings.Width;
-            int totalHeight = settings.Height;
-
-            // RGB renk matrisi oluştur
-            var colorMatrix = new SkiaSharp.SKColor[totalWidth, totalHeight];
-
-            // Her zone'u render et
-            int currentX = 0;
-            foreach (var zone in zones)
-            {
-                int zoneWidth = (int)(totalWidth * zone.WidthPercent / 100.0);
-                if (zoneWidth <= 0) continue;
-
-                // Zone rengini al
-                var zoneColor = new SkiaSharp.SKColor(zone.TextColor.R, zone.TextColor.G, zone.TextColor.B);
-
-                // Zone içeriğini render et
-                var content = zone.Content;
-                if (!string.IsNullOrEmpty(content))
-                {
-                    // Çok satırlı metin kontrolü
-                    SkiaSharp.SKBitmap textBitmap;
-                    int lineCount = _multiLineTextRenderer.GetLineCount(content);
-                    
-                    if (lineCount > 1)
-                    {
-                        // Çok satırlı metin - satır arası boşluk 0 piksel
-                        textBitmap = _multiLineTextRenderer.RenderMultiLineText(font, content, zoneColor, 0);
-                    }
-                    else
-                    {
-                        // Tek satırlı metin
-                        textBitmap = _fontLoader.RenderText(font, content, zoneColor);
-                    }
-                    
-                    using (textBitmap)
-                    {
-                        int textWidth = Math.Min(textBitmap.Width, zoneWidth);
-                        int textHeight = textBitmap.Height;
-
-                        // Yatay hizalama
-                        int offsetX = zone.HAlign switch
-                        {
-                            Models.HorizontalAlignment.Left => 0,
-                            Models.HorizontalAlignment.Center => Math.Max(0, (zoneWidth - textWidth) / 2),
-                            Models.HorizontalAlignment.Right => Math.Max(0, zoneWidth - textWidth),
-                            _ => 0
-                        };
-
-                        // Dikey hizalama
-                        int offsetY;
-                        if (textHeight >= totalHeight)
-                        {
-                            offsetY = 0;
-                        }
-                        else
-                        {
-                            offsetY = zone.VAlign switch
-                            {
-                                Models.VerticalAlignment.Top => 0,
-                                Models.VerticalAlignment.Center => (totalHeight - textHeight) / 2,
-                                Models.VerticalAlignment.Bottom => totalHeight - textHeight,
-                                _ => 0
-                            };
-                        }
-
-                        for (int y = 0; y < textHeight && (offsetY + y) < totalHeight; y++)
-                        {
-                            if (offsetY + y < 0) continue;
-                            
-                            for (int x = 0; x < textWidth; x++)
-                            {
-                                var pixel = textBitmap.GetPixel(x, y);
-                                if (pixel.Alpha > 128)
-                                {
-                                    int destX = currentX + offsetX + x;
-                                    int destY = offsetY + y;
-                                    if (destX >= 0 && destX < totalWidth && destY >= 0 && destY < totalHeight)
-                                    {
-                                        colorMatrix[destX, destY] = zoneColor;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                currentX += zoneWidth;
-            }
-
-            // Renk matrisini Preview'a gönder
-            Preview.UpdateColorMatrix(colorMatrix);
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Zone render hatası: {ex.Message}";
         }
     }
 

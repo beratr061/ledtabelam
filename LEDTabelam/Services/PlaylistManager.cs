@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Timers;
+using Avalonia.Threading;
 using LEDTabelam.Models;
 
 namespace LEDTabelam.Services;
@@ -12,7 +12,7 @@ namespace LEDTabelam.Services;
 public class PlaylistManager : IPlaylistManager, IDisposable
 {
     private readonly List<PlaylistItem> _items = new();
-    private readonly Timer _playlistTimer;
+    private readonly DispatcherTimer _playlistTimer;
     private int _currentIndex = -1;
     private bool _isPlaying;
     private bool _isLoopEnabled = true;
@@ -25,9 +25,9 @@ public class PlaylistManager : IPlaylistManager, IDisposable
     /// </summary>
     public PlaylistManager()
     {
-        _playlistTimer = new Timer();
-        _playlistTimer.Elapsed += OnTimerElapsed;
-        _playlistTimer.AutoReset = false;
+        // DispatcherTimer varsayılan olarak UI Thread üzerinde çalışır
+        _playlistTimer = new DispatcherTimer();
+        _playlistTimer.Tick += OnTimerTick;
     }
 
     #region Properties
@@ -345,7 +345,7 @@ public class PlaylistManager : IPlaylistManager, IDisposable
 
         // Set timer for next item
         _playlistTimer.Stop();
-        _playlistTimer.Interval = currentItem.DurationSeconds * 1000;
+        _playlistTimer.Interval = TimeSpan.FromSeconds(currentItem.DurationSeconds);
         _playlistTimer.Start();
     }
 
@@ -359,10 +359,13 @@ public class PlaylistManager : IPlaylistManager, IDisposable
         }
     }
 
-    private void OnTimerElapsed(object? sender, ElapsedEventArgs e)
+    private void OnTimerTick(object? sender, EventArgs e)
     {
         if (!_isPlaying) return;
 
+        // Timer'ı durdur (AutoReset = false davranışı için)
+        _playlistTimer.Stop();
+        
         // Move to next item
         Next();
     }
@@ -385,8 +388,7 @@ public class PlaylistManager : IPlaylistManager, IDisposable
 
         _disposed = true;
         _playlistTimer.Stop();
-        _playlistTimer.Elapsed -= OnTimerElapsed;
-        _playlistTimer.Dispose();
+        _playlistTimer.Tick -= OnTimerTick;
 
         GC.SuppressFinalize(this);
     }
