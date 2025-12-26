@@ -7,6 +7,23 @@
              x:Class="LEDTabelam.Views.PreviewPanel"
              x:DataType="vm:PreviewViewModel">
 
+    <UserControl.Styles>
+        <!-- Overlay buton stili -->
+        <Style Selector="Button.overlay">
+            <Setter Property="Background" Value="#80000000"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Opacity" Value="0.7"/>
+        </Style>
+        <Style Selector="Button.overlay:pointerover">
+            <Setter Property="Background" Value="#A0000000"/>
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+    </UserControl.Styles>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
@@ -19,29 +36,85 @@
                 CornerRadius="8" 
                 Margin="4"
                 ClipToBounds="True">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                          VerticalScrollBarVisibility="Auto">
-                <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <!-- LED Display Image -->
-                    <Image x:Name="LedDisplayImage"
-                           Source="{Binding DisplayBitmap, Converter={x:Static vm:SkiaBitmapToImageConverter.Instance}}"
-                           Width="{Binding ScaledWidth}"
-                           Height="{Binding ScaledHeight}"
-                           Stretch="None"
-                           RenderOptions.BitmapInterpolationMode="None"/>
-                    
-                    <!-- Placeholder when no image -->
-                    <TextBlock Text="LED Tabela Önizleme"
-                               Foreground="#808080"
-                               FontSize="24"
+            <Grid>
+                <!-- Ana önizleme alanı -->
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto">
+                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <!-- LED Display Image -->
+                        <Image x:Name="LedDisplayImage"
+                               Source="{Binding DisplayBitmap, Converter={x:Static vm:SkiaBitmapToImageConverter.Instance}}"
+                               Width="{Binding ScaledWidth}"
+                               Height="{Binding ScaledHeight}"
+                               Stretch="None"
+                               RenderOptions.BitmapInterpolationMode="None"/>
+                    </Grid>
+                </ScrollViewer>
+                
+                <!-- Boş Durum (Empty State) - İçerik yoksa göster -->
+                <StackPanel HorizontalAlignment="Center" 
+                            VerticalAlignment="Center"
+                            IsVisible="{Binding DisplayBitmap, Converter={x:Static ObjectConverters.IsNull}}">
+                    <TextBlock Text="💡" 
+                               FontSize="48" 
                                HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               IsVisible="{Binding DisplayBitmap, Converter={x:Static ObjectConverters.IsNull}}"/>
-                </Grid>
-            </ScrollViewer>
+                               Opacity="0.5"/>
+                    <TextBlock Text="LED Tabela Önizleme" 
+                               Foreground="#808080"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               Margin="0,8,0,4"/>
+                    <TextBlock Text="Lütfen bir metin girin veya profil seçin" 
+                               Foreground="#606060"
+                               FontSize="12"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+                
+                <!-- Overlay Zoom Kontrolleri (Sağ üst köşe) -->
+                <StackPanel Orientation="Horizontal" 
+                            Spacing="4"
+                            HorizontalAlignment="Right" 
+                            VerticalAlignment="Top"
+                            Margin="8">
+                    <Button Classes="overlay" 
+                            Content="+" 
+                            Width="32" Height="32"
+                            Command="{Binding ZoomInCommand}"
+                            ToolTip.Tip="Yakınlaştır (Ctrl++)"/>
+                    <Button Classes="overlay" 
+                            Content="-" 
+                            Width="32" Height="32"
+                            Command="{Binding ZoomOutCommand}"
+                            ToolTip.Tip="Uzaklaştır (Ctrl+-)"/>
+                    <Button Classes="overlay" 
+                            Content="⊙" 
+                            Width="32" Height="32"
+                            Command="{Binding FitToWindowCommand}"
+                            ToolTip.Tip="Ekrana Sığdır"/>
+                    <Button Classes="overlay" 
+                            Content="100%" 
+                            Height="32"
+                            Command="{Binding ResetZoomCommand}"
+                            ToolTip.Tip="Zoom'u sıfırla"/>
+                </StackPanel>
+                
+                <!-- Zoom seviyesi göstergesi (Sol alt köşe) -->
+                <Border Background="#80000000" 
+                        CornerRadius="4" 
+                        Padding="8,4"
+                        HorizontalAlignment="Left" 
+                        VerticalAlignment="Bottom"
+                        Margin="8"
+                        Opacity="0.8">
+                    <TextBlock Text="{Binding ZoomLevel, StringFormat='%{0}'}" 
+                               Foreground="#FFFFFF"
+                               FontSize="12"/>
+                </Border>
+            </Grid>
         </Border>
         
-        <!-- Zoom Kontrolleri -->
+        <!-- Alt Zoom Kontrolleri (Slider ile detaylı kontrol) -->
         <Border Grid.Row="1" 
                 Background="#2D2D2D" 
                 CornerRadius="8" 
@@ -79,16 +152,19 @@
                         Command="{Binding ZoomInCommand}"
                         ToolTip.Tip="Yakınlaştır (Ctrl++)"/>
                 
-                <!-- Zoom Level Display -->
+                <!-- Zoom Level Display + NumericUpDown -->
                 <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="12,0,0,0">
-                    <TextBlock Text="{Binding ZoomLevel, StringFormat='%{0}'}" 
-                               Foreground="#B0B0B0"
-                               VerticalAlignment="Center"
-                               Width="50"/>
-                    <Button Content="100%" 
-                            Command="{Binding ResetZoomCommand}"
+                    <NumericUpDown Value="{Binding ZoomLevel}" 
+                                   Minimum="50" Maximum="400"
+                                   Increment="25"
+                                   ShowButtonSpinner="False"
+                                   Width="60"
+                                   FormatString="'{0}%'"
+                                   VerticalAlignment="Center"/>
+                    <Button Content="Sığdır" 
+                            Command="{Binding FitToWindowCommand}"
                             Margin="8,0,0,0"
-                            ToolTip.Tip="Zoom'u sıfırla"/>
+                            ToolTip.Tip="Ekrana Sığdır"/>
                 </StackPanel>
             </Grid>
         </Border>

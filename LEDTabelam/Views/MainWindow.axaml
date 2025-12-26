@@ -71,6 +71,14 @@
             <Setter Property="Foreground" Value="#E0E0E0"/>
             <Setter Property="CornerRadius" Value="4"/>
         </Style>
+        <Style Selector="Expander">
+            <Setter Property="Background" Value="#2D2D2D"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="Padding" Value="8"/>
+        </Style>
+        <Style Selector="Expander /template/ ToggleButton">
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+        </Style>
     </Window.Styles>
 
     <Window.KeyBindings>
@@ -147,9 +155,9 @@
             <!-- Sağ Panel: Önizleme ve Düzenleyiciler -->
             <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="*" MinHeight="200"/>
+                    <RowDefinition Height="*" MinHeight="250"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto" MinHeight="150"/>
+                    <RowDefinition Height="200" MinHeight="180"/>
                 </Grid.RowDefinitions>
                 
                 <!-- Önizleme Paneli -->

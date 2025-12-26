@@ -30,7 +30,11 @@ public class PreviewViewModel : ViewModelBase
     public SKBitmap? DisplayBitmap
     {
         get => _displayBitmap;
-        private set => this.RaiseAndSetIfChanged(ref _displayBitmap, value);
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _displayBitmap, value);
+            this.RaisePropertyChanged(nameof(IsEmpty));
+        }
     }
 
     /// <summary>
@@ -81,6 +85,11 @@ public class PreviewViewModel : ViewModelBase
     /// Animasyon oynatılıyor mu
     /// </summary>
     public bool IsAnimating => _animationService.IsPlaying;
+
+    /// <summary>
+    /// İçerik boş mu (empty state göstermek için)
+    /// </summary>
+    public bool IsEmpty => _displayBitmap == null;
 
     #region Commands
 

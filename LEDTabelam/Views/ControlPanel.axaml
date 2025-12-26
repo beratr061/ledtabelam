@@ -8,12 +8,23 @@
              x:Class="LEDTabelam.Views.ControlPanel"
              x:DataType="vm:ControlPanelViewModel">
 
-    <StackPanel Spacing="8">
+    <UserControl.Styles>
+        <Style Selector="Expander">
+            <Setter Property="Background" Value="#2D2D2D"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Padding" Value="8"/>
+        </Style>
+        <Style Selector="Expander /template/ ToggleButton">
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+    </UserControl.Styles>
+
+    <StackPanel Spacing="4">
         
         <!-- Slot Seçici -->
-        <Border Classes="panel">
+        <Expander Header="📍 Slot" IsExpanded="True">
             <StackPanel Spacing="8">
-                <TextBlock Classes="header" Text="Slot"/>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -30,12 +41,22 @@
                 <TextBox Watermark="Slot ara (hat no veya güzergah)..."
                          Text="{Binding SlotSearchQuery}"/>
             </StackPanel>
-        </Border>
+        </Expander>
+        
+        <!-- Metin Girişi - En üstte, kolay erişim için -->
+        <Expander Header="✏️ Metin" IsExpanded="True">
+            <StackPanel Spacing="8">
+                <TextBox AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         Height="80"
+                         Text="{Binding InputText}"
+                         Watermark="Tabela metnini girin..."/>
+            </StackPanel>
+        </Expander>
         
         <!-- Çözünürlük Ayarları -->
-        <Border Classes="panel">
+        <Expander Header="📐 Çözünürlük" IsExpanded="False">
             <StackPanel Spacing="8">
-                <TextBlock Classes="header" Text="Çözünürlük"/>
                 <ComboBox ItemsSource="{Binding Resolutions}"
                           SelectedItem="{Binding SelectedResolution}"
                           HorizontalAlignment="Stretch"/>
@@ -62,37 +83,32 @@
                 <TextBlock Text="{Binding ActualWidth, StringFormat='Gerçek: {0}'}" 
                            Foreground="#808080" FontSize="10"/>
             </StackPanel>
-        </Border>
+        </Expander>
         
         <!-- LED Renk Tipi -->
-        <Border Classes="panel">
-            <StackPanel Spacing="8">
-                <TextBlock Classes="header" Text="LED Tipi"/>
-                <StackPanel Spacing="4">
-                    <RadioButton Content="Amber" 
-                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Amber}}"
-                                 GroupName="ColorType"/>
-                    <RadioButton Content="Kırmızı" 
-                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Red}}"
-                                 GroupName="ColorType"/>
-                    <RadioButton Content="Yeşil" 
-                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Green}}"
-                                 GroupName="ColorType"/>
-                    <RadioButton Content="1R1G1B" 
-                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.OneROneGOneB}}"
-                                 GroupName="ColorType"/>
-                    <RadioButton Content="Full RGB" 
-                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.FullRGB}}"
-                                 GroupName="ColorType"/>
-                </StackPanel>
+        <Expander Header="🎨 LED Tipi" IsExpanded="False">
+            <StackPanel Spacing="4">
+                <RadioButton Content="Amber" 
+                             IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Amber}}"
+                             GroupName="ColorType"/>
+                <RadioButton Content="Kırmızı" 
+                             IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Red}}"
+                             GroupName="ColorType"/>
+                <RadioButton Content="Yeşil" 
+                             IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Green}}"
+                             GroupName="ColorType"/>
+                <RadioButton Content="1R1G1B" 
+                             IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.OneROneGOneB}}"
+                             GroupName="ColorType"/>
+                <RadioButton Content="Full RGB" 
+                             IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.FullRGB}}"
+                             GroupName="ColorType"/>
             </StackPanel>
-        </Border>
+        </Expander>
         
         <!-- Piksel Ayarları -->
-        <Border Classes="panel">
+        <Expander Header="⚙️ Piksel Ayarları" IsExpanded="False">
             <StackPanel Spacing="8">
-                <TextBlock Classes="header" Text="Piksel Ayarları"/>
-                
                 <TextBlock Classes="label" Text="Pitch"/>
                 <ComboBox ItemsSource="{Binding PitchOptions}"
                           SelectedItem="{Binding SelectedPitch}"
@@ -115,12 +131,11 @@
                                  GroupName="PixelShape"/>
                 </StackPanel>
             </StackPanel>
-        </Border>
+        </Expander>
         
         <!-- Font Ayarları -->
-        <Border Classes="panel">
+        <Expander Header="🔤 Font" IsExpanded="False">
             <StackPanel Spacing="8">
-                <TextBlock Classes="header" Text="Font"/>
                 <ComboBox ItemsSource="{Binding Fonts}"
                           SelectedItem="{Binding SelectedFont}"
                           HorizontalAlignment="Stretch">
@@ -134,59 +149,76 @@
                         HorizontalAlignment="Stretch"
                         x:Name="LoadFontButton"/>
             </StackPanel>
-        </Border>
+        </Expander>
         
-        <!-- Görsel Ayarlar -->
-        <Border Classes="panel">
+        <!-- Görsel Ayarlar - Slider + NumericUpDown kombinasyonu -->
+        <Expander Header="🌟 Görsel Ayarlar" IsExpanded="True">
             <StackPanel Spacing="8">
-                <TextBlock Classes="header" Text="Görsel Ayarlar"/>
-                
+                <!-- Parlaklık -->
                 <TextBlock Classes="label" Text="{Binding Brightness, StringFormat='Parlaklık: %{0}'}"/>
-                <Slider Minimum="0" Maximum="100" Value="{Binding Brightness}"/>
+                <Grid ColumnDefinitions="*, Auto">
+                    <Slider Grid.Column="0" Minimum="0" Maximum="100" Value="{Binding Brightness}"/>
+                    <NumericUpDown Grid.Column="1" Value="{Binding Brightness}" 
+                                   Minimum="0" Maximum="100"
+                                   ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
+                </Grid>
                 
+                <!-- Arka Plan -->
                 <TextBlock Classes="label" Text="{Binding BackgroundDarkness, StringFormat='Arka Plan: %{0}'}"/>
-                <Slider Minimum="0" Maximum="100" Value="{Binding BackgroundDarkness}"/>
+                <Grid ColumnDefinitions="*, Auto">
+                    <Slider Grid.Column="0" Minimum="0" Maximum="100" Value="{Binding BackgroundDarkness}"/>
+                    <NumericUpDown Grid.Column="1" Value="{Binding BackgroundDarkness}" 
+                                   Minimum="0" Maximum="100"
+                                   ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
+                </Grid>
                 
+                <!-- Piksel Boyutu -->
                 <TextBlock Classes="label" Text="{Binding PixelSize, StringFormat='Piksel Boyutu: {0} px'}"/>
-                <Slider Minimum="1" Maximum="20" Value="{Binding PixelSize}"/>
+                <Grid ColumnDefinitions="*, Auto">
+                    <Slider Grid.Column="0" Minimum="1" Maximum="20" Value="{Binding PixelSize}"/>
+                    <NumericUpDown Grid.Column="1" Value="{Binding PixelSize}" 
+                                   Minimum="1" Maximum="20"
+                                   ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
+                </Grid>
                 
+                <!-- Satır Arası -->
                 <TextBlock Classes="label" Text="{Binding LineSpacing, StringFormat='Satır Arası: {0} px'}"/>
-                <Slider Minimum="0" Maximum="10" Value="{Binding LineSpacing}"/>
+                <Grid ColumnDefinitions="*, Auto">
+                    <Slider Grid.Column="0" Minimum="0" Maximum="10" Value="{Binding LineSpacing}"/>
+                    <NumericUpDown Grid.Column="1" Value="{Binding LineSpacing}" 
+                                   Minimum="0" Maximum="10"
+                                   ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
+                </Grid>
             </StackPanel>
-        </Border>
+        </Expander>
         
         <!-- Efektler -->
-        <Border Classes="panel">
+        <Expander Header="✨ Efektler" IsExpanded="False">
             <StackPanel Spacing="8">
-                <TextBlock Classes="header" Text="Efektler"/>
-                
                 <CheckBox Content="Ters Renk" IsChecked="{Binding InvertColors}"/>
                 
                 <TextBlock Classes="label" Text="{Binding AgingPercent, StringFormat='Eskime: %{0}'}"/>
-                <Slider Minimum="0" Maximum="5" Value="{Binding AgingPercent}"/>
+                <Grid ColumnDefinitions="*, Auto">
+                    <Slider Grid.Column="0" Minimum="0" Maximum="5" Value="{Binding AgingPercent}"/>
+                    <NumericUpDown Grid.Column="1" Value="{Binding AgingPercent}" 
+                                   Minimum="0" Maximum="5"
+                                   ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
+                </Grid>
             </StackPanel>
-        </Border>
+        </Expander>
         
-        <!-- Metin Girişi -->
-        <Border Classes="panel">
+        <!-- Animasyon -->
+        <Expander Header="🎬 Animasyon" IsExpanded="False">
             <StackPanel Spacing="8">
-                <TextBlock Classes="header" Text="Metin"/>
-                <TextBox AcceptsReturn="True"
-                         TextWrapping="Wrap"
-                         Height="80"
-                         Text="{Binding InputText}"
-                         Watermark="Tabela metnini girin..."/>
-            </StackPanel>
-        </Border>
-        
-        <!-- Animasyon Hızı -->
-        <Border Classes="panel">
-            <StackPanel Spacing="8">
-                <TextBlock Classes="header" Text="Animasyon"/>
                 <TextBlock Classes="label" Text="{Binding AnimationSpeed, StringFormat='Hız: {0} px/s'}"/>
-                <Slider Minimum="1" Maximum="100" Value="{Binding AnimationSpeed}"/>
+                <Grid ColumnDefinitions="*, Auto">
+                    <Slider Grid.Column="0" Minimum="1" Maximum="100" Value="{Binding AnimationSpeed}"/>
+                    <NumericUpDown Grid.Column="1" Value="{Binding AnimationSpeed}" 
+                                   Minimum="1" Maximum="100"
+                                   ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
+                </Grid>
             </StackPanel>
-        </Border>
+        </Expander>
         
     </StackPanel>
 
