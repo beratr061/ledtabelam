@@ -263,10 +263,17 @@ public class FontLoader : IFontLoader
         if (root.TryGetProperty("name", out var nameElement))
             font.Name = nameElement.GetString() ?? font.Name;
 
-        // Get letterspace for character spacing
+        // Get letterspace for character spacing (varsayılan 1px)
+        // Not: Bazı font formatlarında letterspace farklı birimde olabilir
+        // 64 gibi büyük değerler genellikle farklı bir ölçek kullanır
         int letterspace = 1;
         if (root.TryGetProperty("letterspace", out var letterspaceElement))
-            letterspace = letterspaceElement.GetInt32();
+        {
+            int rawLetterspace = letterspaceElement.GetInt32();
+            // Eğer değer çok büyükse (>10), muhtemelen farklı bir birim kullanılıyor
+            // Bu durumda varsayılan 1px kullan
+            letterspace = rawLetterspace > 10 ? 1 : Math.Max(1, rawLetterspace);
+        }
 
         // Parse characters and determine dimensions
         var characterData = new Dictionary<int, int[]>();
@@ -332,12 +339,31 @@ public class FontLoader : IFontLoader
             int startX = col * charCellWidth;
             int startY = row * charCellHeight;
 
-            // Calculate actual character width
-            int charWidth = 0;
+            // Calculate actual character bounds (min and max bit positions)
+            int charMinBit = int.MaxValue;
+            int charMaxBit = 0;
             for (int y = 0; y < pixels.Length; y++)
             {
-                int rowWidth = GetBitWidth(pixels[y]);
-                if (rowWidth > charWidth) charWidth = rowWidth;
+                if (pixels[y] != 0)
+                {
+                    int rowMin = GetMinBit(pixels[y]);
+                    int rowMax = GetBitWidth(pixels[y]) - 1;
+                    if (rowMin < charMinBit) charMinBit = rowMin;
+                    if (rowMax > charMaxBit) charMaxBit = rowMax;
+                }
+            }
+            
+            // Eğer karakter boşsa (space gibi)
+            int charWidth;
+            int xOffset = 0;
+            if (charMinBit == int.MaxValue)
+            {
+                charWidth = 4; // Boşluk için varsayılan genişlik
+            }
+            else
+            {
+                charWidth = charMaxBit - charMinBit + 1;
+                xOffset = charMinBit; // Karakterin başladığı bit pozisyonu
             }
 
             // Draw character pixels
@@ -348,7 +374,8 @@ public class FontLoader : IFontLoader
                 {
                     if ((rowData & (1 << x)) != 0)
                     {
-                        canvas.DrawPoint(startX + x, startY + y, paint);
+                        // Pikseli sola hizala (xOffset kadar kaydır)
+                        canvas.DrawPoint(startX + x - xOffset, startY + y, paint);
                     }
                 }
             }
@@ -361,9 +388,9 @@ public class FontLoader : IFontLoader
                 Y = startY,
                 Width = charWidth > 0 ? charWidth : 1,
                 Height = pixels.Length,
-                XOffset = 0,
+                XOffset = 0, // Artık pikseller zaten sola hizalı
                 YOffset = 0,
-                XAdvance = charWidth + (letterspace > 1 ? 1 : letterspace)
+                XAdvance = charWidth + letterspace // karakter genişliği + boşluk
             };
             font.Characters[charId] = fontChar;
 
@@ -379,13 +406,41 @@ public class FontLoader : IFontLoader
     private static int GetBitWidth(int value)
     {
         if (value == 0) return 0;
-        int width = 0;
-        while (value > 0)
+        
+        // En düşük ve en yüksek set edilmiş bit pozisyonlarını bul
+        int minBit = -1;
+        int maxBit = 0;
+        int temp = value;
+        int bit = 0;
+        
+        while (temp > 0)
         {
-            width++;
-            value >>= 1;
+            if ((temp & 1) != 0)
+            {
+                if (minBit == -1) minBit = bit;
+                maxBit = bit;
+            }
+            temp >>= 1;
+            bit++;
         }
-        return width;
+        
+        // Genişlik = en yüksek bit - en düşük bit + 1
+        // Ama LED fontlarda genellikle 0. bitten başlar, bu yüzden maxBit + 1 döndür
+        return maxBit + 1;
+    }
+    
+    /// <summary>
+    /// Bir satırdaki en soldaki (en düşük) set edilmiş bit pozisyonunu bulur
+    /// </summary>
+    private static int GetMinBit(int value)
+    {
+        if (value == 0) return 0;
+        int bit = 0;
+        while ((value & (1 << bit)) == 0)
+        {
+            bit++;
+        }
+        return bit;
     }
 
 
@@ -435,7 +490,7 @@ public class FontLoader : IFontLoader
     /// Metni bitmap font kullanarak SKBitmap'e render eder
     /// Requirements: 3.2, 3.3, 3.5, 4.8
     /// </summary>
-    public SKBitmap RenderText(BitmapFont font, string text, SKColor color)
+    public SKBitmap RenderText(BitmapFont font, string text, SKColor color, int letterSpacing = 1)
     {
         if (font == null)
             throw new ArgumentNullException(nameof(font));
@@ -452,7 +507,7 @@ public class FontLoader : IFontLoader
         }
 
         // Toplam genişliği hesapla
-        int totalWidth = CalculateTextWidth(font, text);
+        int totalWidth = CalculateTextWidth(font, text, letterSpacing);
         int height = font.LineHeight;
 
         // Minimum genişlik kontrolü
@@ -515,7 +570,9 @@ public class FontLoader : IFontLoader
                 );
 
                 canvas.DrawBitmap(font.FontImage, srcRect, destRect, paint);
-                currentX += fontChar.XAdvance;
+                
+                // Karakter genişliği + kullanıcı tanımlı harf aralığı
+                currentX += fontChar.Width + letterSpacing;
             }
 
             previousChar = c;
@@ -527,7 +584,7 @@ public class FontLoader : IFontLoader
     /// <summary>
     /// Metnin toplam genişliğini hesaplar
     /// </summary>
-    public int CalculateTextWidth(BitmapFont font, string text)
+    public int CalculateTextWidth(BitmapFont font, string text, int letterSpacing = 1)
     {
         if (font == null || string.IsNullOrEmpty(text))
             return 0;
@@ -546,11 +603,15 @@ public class FontLoader : IFontLoader
             FontChar? fontChar = GetFontCharOrPlaceholder(font, c);
             if (fontChar != null)
             {
-                totalWidth += fontChar.XAdvance;
+                totalWidth += fontChar.Width + letterSpacing;
             }
 
             previousChar = c;
         }
+
+        // Son karakterden sonra boşluk ekleme
+        if (totalWidth > 0)
+            totalWidth -= letterSpacing;
 
         return totalWidth;
     }

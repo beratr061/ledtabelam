@@ -22,8 +22,8 @@ public class TabelaItem : ReactiveObject
     
     // Görünüm
     private Color _color = Color.FromRgb(255, 176, 0); // Amber
-    private HorizontalAlignment _hAlign = HorizontalAlignment.Left;
-    private VerticalAlignment _vAlign = VerticalAlignment.Center;
+    private Models.HorizontalAlignment _hAlign = Models.HorizontalAlignment.Left;
+    private Models.VerticalAlignment _vAlign = Models.VerticalAlignment.Center;
     private string _fontName = "PolarisRGB6x10M"; // Varsayılan font
     
     // Animasyon
@@ -119,7 +119,7 @@ public class TabelaItem : ReactiveObject
     /// <summary>
     /// Yatay hizalama
     /// </summary>
-    public HorizontalAlignment HAlign
+    public Models.HorizontalAlignment HAlign
     {
         get => _hAlign;
         set => this.RaiseAndSetIfChanged(ref _hAlign, value);
@@ -128,7 +128,7 @@ public class TabelaItem : ReactiveObject
     /// <summary>
     /// Dikey hizalama
     /// </summary>
-    public VerticalAlignment VAlign
+    public Models.VerticalAlignment VAlign
     {
         get => _vAlign;
         set => this.RaiseAndSetIfChanged(ref _vAlign, value);

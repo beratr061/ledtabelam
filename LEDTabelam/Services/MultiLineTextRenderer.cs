@@ -19,7 +19,7 @@ public class MultiLineTextRenderer : IMultiLineTextRenderer
     }
 
     /// <inheritdoc/>
-    public SKBitmap RenderMultiLineText(BitmapFont font, string text, SKColor color, int lineSpacing)
+    public SKBitmap RenderMultiLineText(BitmapFont font, string text, SKColor color, int lineSpacing, int letterSpacing = 1)
     {
         if (font == null)
             throw new ArgumentNullException(nameof(font));
@@ -50,7 +50,7 @@ public class MultiLineTextRenderer : IMultiLineTextRenderer
         {
             if (!string.IsNullOrEmpty(line))
             {
-                var lineBitmap = RenderSingleLine(font, line, color);
+                var lineBitmap = RenderSingleLine(font, line, color, letterSpacing);
                 lineBitmaps.Add(lineBitmap);
                 maxWidth = Math.Max(maxWidth, lineBitmap.Width);
             }
@@ -222,8 +222,8 @@ public class MultiLineTextRenderer : IMultiLineTextRenderer
     /// <summary>
     /// Tek satır metni render eder
     /// </summary>
-    private SKBitmap RenderSingleLine(BitmapFont font, string line, SKColor color)
+    private SKBitmap RenderSingleLine(BitmapFont font, string line, SKColor color, int letterSpacing = 1)
     {
-        return _fontLoader.RenderText(font, line, color);
+        return _fontLoader.RenderText(font, line, color, letterSpacing);
     }
 }

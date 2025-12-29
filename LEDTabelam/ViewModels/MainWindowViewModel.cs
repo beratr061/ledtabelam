@@ -154,12 +154,6 @@ public class MainWindowViewModel : ViewModelBase
         SaveWebPCommand = ReactiveCommand.CreateFromTask(SaveWebPAsync);
         StopAnimationCommand = ReactiveCommand.Create(StopAnimation);
 
-        // ControlPanel'den Preview'a ayar değişikliklerini bağla
-        ControlPanel.WhenAnyValue(x => x.CurrentSettings)
-            .WhereNotNull()
-            .Subscribe(settings => Preview.UpdateSettings(settings))
-            .DisposeWith(Disposables);
-
         // ControlPanel font listesi değişikliklerini ProgramEditor'a bağla
         ControlPanel.Fonts.CollectionChanged += (s, e) =>
         {
@@ -172,12 +166,13 @@ public class MainWindowViewModel : ViewModelBase
         // ProgramEditor değişikliklerini izle
         ProgramEditor.ItemsChanged += OnProgramItemsChanged;
 
-        // Metin veya font değiştiğinde önizlemeyi güncelle
+        // Font veya ayarlar değiştiğinde önizlemeyi güncelle
+        // Throttle ile çok sık güncellemeyi önle
         ControlPanel.WhenAnyValue(
-            x => x.InputText,
             x => x.SelectedFont,
             x => x.CurrentSettings)
-            .Throttle(TimeSpan.FromMilliseconds(100))
+            .WhereNotNull()
+            .Throttle(TimeSpan.FromMilliseconds(50))
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe(_ => RenderTextToPreview())
             .DisposeWith(Disposables);
@@ -307,6 +302,7 @@ public class MainWindowViewModel : ViewModelBase
 
             if (font == null)
             {
+                // Font yoksa sadece ayarları güncelle, içeriği silme
                 Preview.UpdateSettings(settings);
                 return;
             }
@@ -314,9 +310,11 @@ public class MainWindowViewModel : ViewModelBase
             // SimpleTabelaEditor'dan zone'ları al
             var simpleTabelaZones = SimpleTabelaEditor.GetZones();
             
-            if (simpleTabelaZones.Count > 0 && settings.ColorType == LedColorType.FullRGB)
+            if (simpleTabelaZones.Count > 0)
             {
-                // PreviewRenderer ile zone'ları render et
+                // Önce ayarları güncelle
+                Preview.UpdateSettings(settings);
+                // Zone'ları render et (hem RGB hem tek renk modunda)
                 var colorMatrix = PreviewRenderer.RenderZonesToColorMatrix(font, simpleTabelaZones, settings);
                 Preview.UpdateColorMatrix(colorMatrix);
             }
@@ -325,8 +323,10 @@ public class MainWindowViewModel : ViewModelBase
                 // Zone'ları kontrol et (eski sistem)
                 var zones = SlotEditor.Zones;
                 
-                if (zones.Count > 0 && settings.ColorType == LedColorType.FullRGB)
+                if (zones.Count > 0)
                 {
+                    // Önce ayarları güncelle
+                    Preview.UpdateSettings(settings);
                     // PreviewRenderer ile zone'ları render et
                     var zoneList = new System.Collections.Generic.List<Zone>(zones);
                     var colorMatrix = PreviewRenderer.RenderZonesToColorMatrix(font, zoneList, settings);
@@ -334,22 +334,27 @@ public class MainWindowViewModel : ViewModelBase
                 }
                 else
                 {
-                    // Tek renkli basit render
-                    var text = ControlPanel.InputText;
-                    if (string.IsNullOrEmpty(text))
+                    // Tek renkli basit render - SimpleTabelaEditor'dan metin al
+                    var text = SimpleTabelaEditor.GetDisplayText();
+                    if (!string.IsNullOrEmpty(text))
                     {
+                        // Önce ayarları güncelle
                         Preview.UpdateSettings(settings);
-                        return;
+                        
+                        var ledColor = settings.GetLedColor();
+                        var skColor = new SkiaSharp.SKColor(ledColor.R, ledColor.G, ledColor.B, ledColor.A);
+                        var textBitmap = FontLoader.RenderText(font, text, skColor);
+
+                        if (textBitmap != null)
+                        {
+                            Preview.UpdateFromTextBitmap(textBitmap);
+                            textBitmap.Dispose();
+                        }
                     }
-
-                    var ledColor = settings.GetLedColor();
-                    var skColor = new SkiaSharp.SKColor(ledColor.R, ledColor.G, ledColor.B, ledColor.A);
-                    var textBitmap = FontLoader.RenderText(font, text, skColor);
-
-                    if (textBitmap != null)
+                    else
                     {
-                        Preview.UpdateFromTextBitmap(textBitmap);
-                        textBitmap.Dispose();
+                        // İçerik yok - sadece ayarları güncelle, mevcut görüntüyü koru
+                        Preview.UpdateSettings(settings);
                     }
                 }
             }
@@ -377,10 +382,12 @@ public class MainWindowViewModel : ViewModelBase
             var settings = ControlPanel.CurrentSettings;
             var defaultFont = ControlPanel.SelectedFont;
 
+            // Önce ayarları güncelle
+            Preview.UpdateSettings(settings);
+
             // Font yoksa sadece ayarları güncelle
             if (defaultFont == null && ProgramEditor.AvailableFonts.Count == 0)
             {
-                Preview.UpdateSettings(settings);
                 return;
             }
 

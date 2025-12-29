@@ -146,6 +146,13 @@ public class ProgramEditorViewModel : ViewModelBase
         // IsSelected değişikliği hariç tüm değişikliklerde render'ı tetikle
         if (e.PropertyName != nameof(TabelaItem.IsSelected))
         {
+            // X veya Y değiştiğinde boyutları yeniden hesapla
+            if ((e.PropertyName == nameof(TabelaItem.X) || e.PropertyName == nameof(TabelaItem.Y)) 
+                && sender is TabelaItem item)
+            {
+                RecalculateItemSize(item);
+            }
+            
             OnItemsChanged();
         }
     }
@@ -161,13 +168,12 @@ public class ProgramEditorViewModel : ViewModelBase
             ItemType = TabelaItemType.Text,
             X = 0,
             Y = 0,
-            Width = 30,
-            Height = DisplayHeight,
             Color = Color.FromRgb(255, 0, 0), // Kırmızı
             FontName = "PolarisRGB6x10M",
-            HAlign = HorizontalAlignment.Center,
-            VAlign = VerticalAlignment.Center
+            HAlign = Models.HorizontalAlignment.Center,
+            VAlign = Models.VerticalAlignment.Center
         };
+        RecalculateItemSize(hatKodu);
         Items.Add(hatKodu);
 
         // Güzergah 1. Satır öğesi
@@ -179,13 +185,12 @@ public class ProgramEditorViewModel : ViewModelBase
             ItemType = TabelaItemType.Text,
             X = 30,
             Y = 0,
-            Width = DisplayWidth - 30,
-            Height = DisplayHeight / 2,
             Color = Color.FromRgb(0, 255, 0), // Yeşil
             FontName = "PolarisRGB6x10M",
-            HAlign = HorizontalAlignment.Center,
-            VAlign = VerticalAlignment.Center
+            HAlign = Models.HorizontalAlignment.Center,
+            VAlign = Models.VerticalAlignment.Center
         };
+        RecalculateItemSize(guzergah1);
         Items.Add(guzergah1);
 
         // Güzergah 2. Satır öğesi (ayrı öğe olarak)
@@ -197,13 +202,12 @@ public class ProgramEditorViewModel : ViewModelBase
             ItemType = TabelaItemType.Text,
             X = 30,
             Y = DisplayHeight / 2,
-            Width = DisplayWidth - 30,
-            Height = DisplayHeight / 2,
             Color = Color.FromRgb(0, 255, 0), // Yeşil
             FontName = "PolarisRGB6x10M",
-            HAlign = HorizontalAlignment.Center,
-            VAlign = VerticalAlignment.Center
+            HAlign = Models.HorizontalAlignment.Center,
+            VAlign = Models.VerticalAlignment.Center
         };
+        RecalculateItemSize(guzergah2);
         Items.Add(guzergah2);
 
         SelectedItem = hatKodu;
@@ -220,10 +224,9 @@ public class ProgramEditorViewModel : ViewModelBase
             ItemType = TabelaItemType.Text,
             X = 0,
             Y = 0,
-            Width = 50,
-            Height = DisplayHeight,
             Color = Color.FromRgb(255, 176, 0) // Amber
         };
+        RecalculateItemSize(item);
         Items.Add(item);
         SelectedItem = item;
         OnItemsChanged();
@@ -239,10 +242,9 @@ public class ProgramEditorViewModel : ViewModelBase
             ItemType = TabelaItemType.Symbol,
             X = DisplayWidth - 24,
             Y = 0,
-            Width = 24,
-            Height = DisplayHeight,
             Color = Color.FromRgb(255, 176, 0)
         };
+        RecalculateItemSize(item);
         Items.Add(item);
         SelectedItem = item;
         OnItemsChanged();
@@ -303,8 +305,6 @@ public class ProgramEditorViewModel : ViewModelBase
             ItemType = SelectedItem.ItemType,
             X = SelectedItem.X + 5,
             Y = SelectedItem.Y,
-            Width = SelectedItem.Width,
-            Height = SelectedItem.Height,
             Color = SelectedItem.Color,
             FontName = SelectedItem.FontName,
             HAlign = SelectedItem.HAlign,
@@ -313,6 +313,7 @@ public class ProgramEditorViewModel : ViewModelBase
             ScrollDirection = SelectedItem.ScrollDirection,
             ScrollSpeed = SelectedItem.ScrollSpeed
         };
+        RecalculateItemSize(newItem);
         
         Items.Add(newItem);
         SelectedItem = newItem;
@@ -364,18 +365,46 @@ public class ProgramEditorViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Display boyutlarını günceller (event tetiklemeden)
+    /// Display boyutlarını günceller ve öğelerin boyutlarını yeniden hesaplar
     /// </summary>
     public void UpdateDisplaySize(int width, int height)
     {
-        // Sadece değişiklik varsa güncelle, event tetikleme
+        // Sadece değişiklik varsa güncelle
         if (_displayWidth != width || _displayHeight != height)
         {
             _displayWidth = width;
             _displayHeight = height;
             this.RaisePropertyChanged(nameof(DisplayWidth));
             this.RaisePropertyChanged(nameof(DisplayHeight));
+            
+            // Tüm öğelerin boyutlarını yeniden hesapla
+            RecalculateItemSizes();
         }
+    }
+
+    /// <summary>
+    /// Tüm öğelerin boyutlarını tabela boyutuna göre yeniden hesaplar
+    /// </summary>
+    private void RecalculateItemSizes()
+    {
+        foreach (var item in Items)
+        {
+            // Genişlik: X pozisyonundan tabela sonuna kadar
+            item.Width = Math.Max(1, DisplayWidth - item.X);
+            
+            // Yükseklik: Y pozisyonundan tabela sonuna kadar
+            item.Height = Math.Max(1, DisplayHeight - item.Y);
+        }
+        OnItemsChanged();
+    }
+
+    /// <summary>
+    /// Tek bir öğenin boyutunu pozisyonuna göre hesaplar
+    /// </summary>
+    private void RecalculateItemSize(TabelaItem item)
+    {
+        item.Width = Math.Max(1, DisplayWidth - item.X);
+        item.Height = Math.Max(1, DisplayHeight - item.Y);
     }
 
     /// <summary>

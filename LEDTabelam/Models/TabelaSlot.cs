@@ -15,8 +15,8 @@ public class TabelaSlot : ReactiveObject
     private string? _iconPath;
     private List<Zone> _zones = new();
     private TextStyle _textStyle = new();
-    private HorizontalAlignment _hAlign = HorizontalAlignment.Center;
-    private VerticalAlignment _vAlign = VerticalAlignment.Center;
+    private Models.HorizontalAlignment _hAlign = Models.HorizontalAlignment.Center;
+    private Models.VerticalAlignment _vAlign = Models.VerticalAlignment.Center;
 
     /// <summary>
     /// Slot numarası (1-999)
@@ -75,7 +75,7 @@ public class TabelaSlot : ReactiveObject
     /// <summary>
     /// Yatay hizalama
     /// </summary>
-    public HorizontalAlignment HAlign
+    public Models.HorizontalAlignment HAlign
     {
         get => _hAlign;
         set => this.RaiseAndSetIfChanged(ref _hAlign, value);
@@ -84,7 +84,7 @@ public class TabelaSlot : ReactiveObject
     /// <summary>
     /// Dikey hizalama
     /// </summary>
-    public VerticalAlignment VAlign
+    public Models.VerticalAlignment VAlign
     {
         get => _vAlign;
         set => this.RaiseAndSetIfChanged(ref _vAlign, value);

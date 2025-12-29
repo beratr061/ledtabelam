@@ -16,18 +16,24 @@ public enum LedColorType
 /// <summary>
 /// LED piksel aralığı (pitch) değerleri
 /// Pitch değeri mm cinsinden LED merkezleri arası mesafeyi belirtir
-/// Küçük pitch = daha yüksek çözünürlük (aynı fiziksel boyutta daha fazla piksel)
+/// 
+/// ÖNEMLİ: Pitch değeri çözünürlüğü DEĞİŞTİRMEZ!
+/// Çözünürlük kullanıcının belirlediği piksel sayısıdır (örn: 128x16)
+/// Pitch sadece önizlemede LED'lerin görünümünü etkiler:
+/// - Küçük pitch (P5) = LED'ler birbirine daha yakın görünür
+/// - Büyük pitch (P10) = LED'ler arası daha fazla boşluk görünür
+/// 
 /// Requirements: 5.7
 /// </summary>
 public enum PixelPitch
 {
-    P2_5,   // 2.5mm - en yüksek çözünürlük (P10'a göre 4x)
-    P3,     // 3mm (P10'a göre ~3.3x)
-    P4,     // 4mm (P10'a göre 2.5x)
-    P5,     // 5mm (P10'a göre 2x)
-    P6,     // 6mm (P10'a göre ~1.67x)
-    P7_62,  // 7.62mm (P10'a göre ~1.31x)
-    P10,    // 10mm - referans pitch (1x)
+    P2_5,   // 2.5mm - LED'ler çok sıkı
+    P3,     // 3mm
+    P4,     // 4mm
+    P5,     // 5mm - iç mekan standart
+    P6,     // 6mm
+    P7_62,  // 7.62mm
+    P10,    // 10mm - dış mekan standart
     Custom  // Özel değer
 }
 
@@ -50,49 +56,52 @@ public static class PixelPitchExtensions
             PixelPitch.P6 => 6.0,
             PixelPitch.P7_62 => 7.62,
             PixelPitch.P10 => 10.0,
-            PixelPitch.Custom => 10.0, // Varsayılan
+            PixelPitch.Custom => 10.0,
             _ => 10.0
         };
     }
 
     /// <summary>
-    /// P10'a göre çözünürlük çarpanını döndürür
-    /// Örnek: P5 için 2.0 (P10'un 2 katı çözünürlük)
-    /// </summary>
-    public static double GetResolutionMultiplier(this PixelPitch pitch)
-    {
-        double referencePitch = 10.0; // P10 referans
-        double currentPitch = pitch.GetPitchMm();
-        return referencePitch / currentPitch;
-    }
-
-    /// <summary>
-    /// Verilen panel boyutu için gerçek piksel çözünürlüğünü hesaplar
-    /// panelPixels: P10 referansındaki piksel sayısı
-    /// </summary>
-    public static int GetActualResolution(this PixelPitch pitch, int panelPixels)
-    {
-        return (int)(panelPixels * pitch.GetResolutionMultiplier());
-    }
-
-    /// <summary>
-    /// LED çapı / merkez mesafesi oranını döndürür (görsel render için)
+    /// LED çapı / hücre boyutu oranını döndürür (görsel render için)
+    /// Bu oran LED'in hücre içinde ne kadar yer kapladığını belirler
+    /// 
+    /// Küçük pitch = LED'ler daha sıkı = oran daha yüksek (daha az boşluk)
+    /// Büyük pitch = LED'ler daha aralıklı = oran daha düşük (daha fazla boşluk)
     /// </summary>
     public static double GetLedDiameterRatio(this PixelPitch pitch)
     {
-        // Küçük pitch'lerde LED'ler daha sıkı, oran daha yüksek
         return pitch switch
         {
-            PixelPitch.P2_5 => 0.85,
-            PixelPitch.P3 => 0.82,
-            PixelPitch.P4 => 0.78,
-            PixelPitch.P5 => 0.75,
-            PixelPitch.P6 => 0.72,
-            PixelPitch.P7_62 => 0.68,
-            PixelPitch.P10 => 0.65,
+            PixelPitch.P2_5 => 0.90,  // Çok sıkı, neredeyse bitişik
+            PixelPitch.P3 => 0.85,
+            PixelPitch.P4 => 0.80,
+            PixelPitch.P5 => 0.75,    // İç mekan standart
+            PixelPitch.P6 => 0.70,
+            PixelPitch.P7_62 => 0.65,
+            PixelPitch.P10 => 0.60,   // Dış mekan, belirgin boşluklar
             PixelPitch.Custom => 0.70,
             _ => 0.70
         };
+    }
+
+    /// <summary>
+    /// Pitch için önerilen minimum izleme mesafesini metre cinsinden döndürür
+    /// Kural: P × 1 metre (yaklaşık)
+    /// </summary>
+    public static double GetMinViewingDistanceMeters(this PixelPitch pitch)
+    {
+        return pitch.GetPitchMm() / 10.0; // mm'yi metreye çevir (yaklaşık)
+    }
+
+    /// <summary>
+    /// 1 metrekaredeki piksel sayısını döndürür
+    /// Formül: (1000 / P) × (1000 / P)
+    /// </summary>
+    public static int GetPixelsPerSquareMeter(this PixelPitch pitch)
+    {
+        double p = pitch.GetPitchMm();
+        int pixelsPerMeter = (int)(1000.0 / p);
+        return pixelsPerMeter * pixelsPerMeter;
     }
 }
 

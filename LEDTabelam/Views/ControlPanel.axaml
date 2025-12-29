@@ -18,6 +18,50 @@
             <Setter Property="Foreground" Value="#E0E0E0"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
+        
+        <!-- Segmented Button Stili -->
+        <Style Selector="RadioButton.Segmented">
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="#30FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}" 
+                            CornerRadius="{TemplateBinding CornerRadius}" 
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter Content="{TemplateBinding Content}" 
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="RadioButton.Segmented:checked">
+            <Setter Property="Background" Value="#0078D4"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#0078D4"/>
+        </Style>
+        <Style Selector="RadioButton.Segmented:pointerover">
+            <Setter Property="Background" Value="#404040"/>
+        </Style>
+        <Style Selector="RadioButton.Segmented:checked:pointerover">
+            <Setter Property="Background" Value="#1084D8"/>
+        </Style>
+        
+        <!-- Renk Paleti Stili -->
+        <Style Selector="RadioButton.ColorSwatch">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
     </UserControl.Styles>
 
     <StackPanel Spacing="4">
@@ -43,23 +87,44 @@
             </StackPanel>
         </Expander>
         
-        <!-- Metin Girişi - En üstte, kolay erişim için -->
-        <Expander Header="✏️ Metin" IsExpanded="True">
-            <StackPanel Spacing="8">
-                <TextBox AcceptsReturn="True"
-                         TextWrapping="Wrap"
-                         Height="80"
-                         Text="{Binding InputText}"
-                         Watermark="Tabela metnini girin..."/>
-            </StackPanel>
-        </Expander>
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- DONANIM (Hardware) -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
         
-        <!-- Çözünürlük Ayarları -->
-        <Expander Header="📐 Çözünürlük" IsExpanded="False">
+        <!-- Çözünürlük Ayarları - Segmented Butonlar -->
+        <Expander Header="📐 Panel Boyutu" IsExpanded="True">
             <StackPanel Spacing="8">
-                <ComboBox ItemsSource="{Binding Resolutions}"
-                          SelectedItem="{Binding SelectedResolution}"
-                          HorizontalAlignment="Stretch"/>
+                <TextBlock Text="Hızlı Seçim" Foreground="#808080" FontSize="11"/>
+                <WrapPanel>
+                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="32x16" 
+                                 Command="{Binding SetResolutionCommand}" CommandParameter="32x16"
+                                 IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=32x16}"/>
+                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="64x16" 
+                                 Command="{Binding SetResolutionCommand}" CommandParameter="64x16"
+                                 IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=64x16}"/>
+                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="96x16" 
+                                 Command="{Binding SetResolutionCommand}" CommandParameter="96x16"
+                                 IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=96x16}"/>
+                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="128x16" 
+                                 Command="{Binding SetResolutionCommand}" CommandParameter="128x16"
+                                 IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=128x16}"/>
+                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="144x19" 
+                                 Command="{Binding SetResolutionCommand}" CommandParameter="144x19"
+                                 IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=144x19}"/>
+                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="150x24" 
+                                 Command="{Binding SetResolutionCommand}" CommandParameter="150x24"
+                                 IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=150x24}"/>
+                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="160x16" 
+                                 Command="{Binding SetResolutionCommand}" CommandParameter="160x16"
+                                 IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=160x16}"/>
+                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="192x16" 
+                                 Command="{Binding SetResolutionCommand}" CommandParameter="192x16"
+                                 IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=192x16}"/>
+                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="Özel" 
+                                 IsChecked="{Binding IsCustomResolution}"/>
+                </WrapPanel>
+                
+                <!-- Özel Boyut Girişi -->
                 <Grid IsVisible="{Binding IsCustomResolution}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -80,75 +145,137 @@
                 </Grid>
                 
                 <!-- Gerçek çözünürlük bilgisi -->
-                <TextBlock Text="{Binding ActualWidth, StringFormat='Gerçek: {0}'}" 
+                <TextBlock Text="{Binding ActualResolutionText}" 
                            Foreground="#808080" FontSize="10"/>
             </StackPanel>
         </Expander>
         
-        <!-- LED Renk Tipi -->
-        <Expander Header="🎨 LED Tipi" IsExpanded="False">
-            <StackPanel Spacing="4">
-                <RadioButton Content="Amber" 
-                             IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Amber}}"
-                             GroupName="ColorType"/>
-                <RadioButton Content="Kırmızı" 
-                             IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Red}}"
-                             GroupName="ColorType"/>
-                <RadioButton Content="Yeşil" 
-                             IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Green}}"
-                             GroupName="ColorType"/>
-                <RadioButton Content="1R1G1B" 
-                             IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.OneROneGOneB}}"
-                             GroupName="ColorType"/>
-                <RadioButton Content="Full RGB" 
-                             IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.FullRGB}}"
-                             GroupName="ColorType"/>
+        <!-- Piksel Tipi (Pitch) - Segmented -->
+        <Expander Header="⚙️ LED Görünümü (Pitch)" IsExpanded="False">
+            <StackPanel Spacing="8">
+                <TextBlock Text="LED'ler arası boşluk oranı" Foreground="#808080" FontSize="11"/>
+                <TextBlock Text="(Çözünürlüğü etkilemez, sadece görünümü değiştirir)" Foreground="#606060" FontSize="10"/>
+                <WrapPanel>
+                    <RadioButton Classes="Segmented" GroupName="Pitch" Content="P5 (Sıkı)" 
+                                 IsChecked="{Binding SelectedPitch, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:PixelPitch.P5}}"/>
+                    <RadioButton Classes="Segmented" GroupName="Pitch" Content="P10 (Aralıklı)" 
+                                 IsChecked="{Binding SelectedPitch, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:PixelPitch.P10}}"/>
+                    <RadioButton Classes="Segmented" GroupName="Pitch" Content="Özel" 
+                                 IsChecked="{Binding IsCustomPitch}"/>
+                </WrapPanel>
+                <Grid IsVisible="{Binding IsCustomPitch}" ColumnDefinitions="Auto,*,Auto">
+                    <TextBlock Grid.Column="0" Text="LED Oranı:" Foreground="#808080" FontSize="11" VerticalAlignment="Center"/>
+                    <Slider Grid.Column="1" Minimum="0.5" Maximum="0.95" Value="{Binding CustomPitchRatio}" Margin="8,0"/>
+                    <TextBlock Grid.Column="2" Text="{Binding CustomPitchRatio, StringFormat={}{0:P0}}" 
+                               Foreground="#B0B0B0" FontSize="11" Width="40" VerticalAlignment="Center"/>
+                </Grid>
             </StackPanel>
         </Expander>
         
-        <!-- Piksel Ayarları -->
-        <Expander Header="⚙️ Piksel Ayarları" IsExpanded="False">
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- GÖRÜNÜM (Appearance) -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        
+        <!-- LED Renk Tipi - Renkli Paletler -->
+        <Expander Header="🎨 LED Rengi" IsExpanded="True">
             <StackPanel Spacing="8">
-                <TextBlock Classes="label" Text="Pitch"/>
-                <ComboBox ItemsSource="{Binding PitchOptions}"
-                          SelectedItem="{Binding SelectedPitch}"
-                          HorizontalAlignment="Stretch"/>
-                <NumericUpDown IsVisible="{Binding IsCustomPitch}"
-                               Value="{Binding CustomPitchRatio}"
-                               Minimum="0.1"
-                               Maximum="1.0"
-                               Increment="0.1"
-                               FormatString="0.0"
-                               Watermark="Pitch Oranı"/>
-                
-                <TextBlock Classes="label" Text="Piksel Şekli"/>
-                <StackPanel Orientation="Horizontal" Spacing="16">
-                    <RadioButton Content="Yuvarlak" 
-                                 IsChecked="{Binding SelectedShape, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:PixelShape.Round}}"
-                                 GroupName="PixelShape"/>
-                    <RadioButton Content="Kare" 
-                                 IsChecked="{Binding SelectedShape, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:PixelShape.Square}}"
-                                 GroupName="PixelShape"/>
-                </StackPanel>
+                <TextBlock Text="Renk Seçimi" Foreground="#808080" FontSize="11"/>
+                <WrapPanel>
+                    <!-- Amber -->
+                    <RadioButton Classes="ColorSwatch" GroupName="ColorType"
+                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Amber}}"
+                                 ToolTip.Tip="Amber">
+                        <RadioButton.Template>
+                            <ControlTemplate>
+                                <Border CornerRadius="16" Width="32" Height="32"
+                                        BorderThickness="{Binding $parent[RadioButton].IsChecked, Converter={x:Static vm:BoolToThicknessConverter.Instance}}"
+                                        BorderBrush="White"
+                                        Background="#FFB000"/>
+                            </ControlTemplate>
+                        </RadioButton.Template>
+                    </RadioButton>
+                    <!-- Kırmızı -->
+                    <RadioButton Classes="ColorSwatch" GroupName="ColorType"
+                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Red}}"
+                                 ToolTip.Tip="Kırmızı">
+                        <RadioButton.Template>
+                            <ControlTemplate>
+                                <Border CornerRadius="16" Width="32" Height="32"
+                                        BorderThickness="{Binding $parent[RadioButton].IsChecked, Converter={x:Static vm:BoolToThicknessConverter.Instance}}"
+                                        BorderBrush="White"
+                                        Background="#FF0000"/>
+                            </ControlTemplate>
+                        </RadioButton.Template>
+                    </RadioButton>
+                    <!-- Yeşil -->
+                    <RadioButton Classes="ColorSwatch" GroupName="ColorType"
+                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Green}}"
+                                 ToolTip.Tip="Yeşil">
+                        <RadioButton.Template>
+                            <ControlTemplate>
+                                <Border CornerRadius="16" Width="32" Height="32"
+                                        BorderThickness="{Binding $parent[RadioButton].IsChecked, Converter={x:Static vm:BoolToThicknessConverter.Instance}}"
+                                        BorderBrush="White"
+                                        Background="#00FF00"/>
+                            </ControlTemplate>
+                        </RadioButton.Template>
+                    </RadioButton>
+                    <!-- 1R1G1B -->
+                    <RadioButton Classes="ColorSwatch" GroupName="ColorType"
+                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.OneROneGOneB}}"
+                                 ToolTip.Tip="1R1G1B">
+                        <RadioButton.Template>
+                            <ControlTemplate>
+                                <Border CornerRadius="16" Width="32" Height="32"
+                                        BorderThickness="{Binding $parent[RadioButton].IsChecked, Converter={x:Static vm:BoolToThicknessConverter.Instance}}"
+                                        BorderBrush="White">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                            <GradientStop Color="#FF0000" Offset="0"/>
+                                            <GradientStop Color="#00FF00" Offset="0.5"/>
+                                            <GradientStop Color="#0000FF" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                </Border>
+                            </ControlTemplate>
+                        </RadioButton.Template>
+                    </RadioButton>
+                    <!-- Full RGB -->
+                    <RadioButton Classes="ColorSwatch" GroupName="ColorType"
+                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.FullRGB}}"
+                                 ToolTip.Tip="Full RGB">
+                        <RadioButton.Template>
+                            <ControlTemplate>
+                                <Border CornerRadius="16" Width="32" Height="32"
+                                        BorderThickness="{Binding $parent[RadioButton].IsChecked, Converter={x:Static vm:BoolToThicknessConverter.Instance}}"
+                                        BorderBrush="White">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
+                                            <GradientStop Color="#FF0000" Offset="0"/>
+                                            <GradientStop Color="#FFFF00" Offset="0.17"/>
+                                            <GradientStop Color="#00FF00" Offset="0.33"/>
+                                            <GradientStop Color="#00FFFF" Offset="0.5"/>
+                                            <GradientStop Color="#0000FF" Offset="0.67"/>
+                                            <GradientStop Color="#FF00FF" Offset="0.83"/>
+                                            <GradientStop Color="#FF0000" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                </Border>
+                            </ControlTemplate>
+                        </RadioButton.Template>
+                    </RadioButton>
+                </WrapPanel>
             </StackPanel>
         </Expander>
         
-        <!-- Font Ayarları -->
-        <Expander Header="🔤 Font" IsExpanded="False">
-            <StackPanel Spacing="8">
-                <ComboBox ItemsSource="{Binding Fonts}"
-                          SelectedItem="{Binding SelectedFont}"
-                          HorizontalAlignment="Stretch">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding Name}"/>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-                <Button Content="Font Yükle..." 
-                        HorizontalAlignment="Stretch"
-                        x:Name="LoadFontButton"/>
-            </StackPanel>
+        <!-- Piksel Şekli - Segmented -->
+        <Expander Header="🔲 Piksel Şekli" IsExpanded="False">
+            <WrapPanel>
+                <RadioButton Classes="Segmented" GroupName="PixelShape" Content="⬜ Kare" 
+                             IsChecked="{Binding SelectedShape, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:PixelShape.Square}}"/>
+                <RadioButton Classes="Segmented" GroupName="PixelShape" Content="⚫ Yuvarlak" 
+                             IsChecked="{Binding SelectedShape, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:PixelShape.Round}}"/>
+            </WrapPanel>
         </Expander>
         
         <!-- Görsel Ayarlar - Slider + NumericUpDown kombinasyonu -->
@@ -169,24 +296,6 @@
                     <Slider Grid.Column="0" Minimum="0" Maximum="100" Value="{Binding BackgroundDarkness}"/>
                     <NumericUpDown Grid.Column="1" Value="{Binding BackgroundDarkness}" 
                                    Minimum="0" Maximum="100"
-                                   ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
-                </Grid>
-                
-                <!-- Piksel Boyutu -->
-                <TextBlock Classes="label" Text="{Binding PixelSize, StringFormat='Piksel Boyutu: {0} px'}"/>
-                <Grid ColumnDefinitions="*, Auto">
-                    <Slider Grid.Column="0" Minimum="1" Maximum="20" Value="{Binding PixelSize}"/>
-                    <NumericUpDown Grid.Column="1" Value="{Binding PixelSize}" 
-                                   Minimum="1" Maximum="20"
-                                   ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
-                </Grid>
-                
-                <!-- Satır Arası -->
-                <TextBlock Classes="label" Text="{Binding LineSpacing, StringFormat='Satır Arası: {0} px'}"/>
-                <Grid ColumnDefinitions="*, Auto">
-                    <Slider Grid.Column="0" Minimum="0" Maximum="10" Value="{Binding LineSpacing}"/>
-                    <NumericUpDown Grid.Column="1" Value="{Binding LineSpacing}" 
-                                   Minimum="0" Maximum="10"
                                    ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
                 </Grid>
             </StackPanel>

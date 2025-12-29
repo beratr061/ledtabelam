@@ -9,83 +9,58 @@ namespace LEDTabelam.Models;
 /// </summary>
 public class DisplaySettings : ReactiveObject
 {
-    // Panel boyutu (P10 referansında piksel sayısı)
-    private int _panelWidth = 32;
+    // Panel boyutu (piksel sayısı) - kullanıcının belirlediği çözünürlük
+    private int _panelWidth = 128;
     private int _panelHeight = 16;
-    
-    // Hesaplanmış çözünürlük (pitch'e göre)
-    private int _width = 32;
-    private int _height = 16;
-    
-    // Width/Height'ın manuel olarak set edilip edilmediğini takip et
-    private bool _widthManuallySet = false;
-    private bool _heightManuallySet = false;
     
     private LedColorType _colorType = LedColorType.Amber;
     private Color _customColor = Color.FromArgb(255, 255, 176, 0);
     private int _brightness = 100;
     private int _backgroundDarkness = 100;
-    private int _pixelSize = 8;
-    private PixelPitch _pitch = PixelPitch.P10;
+    private int _pixelSize = 4;
+    private PixelPitch _pitch = PixelPitch.P5;
     private double _customPitchRatio = 0.7;
     private PixelShape _shape = PixelShape.Round;
     private int _zoomLevel = 100;
     private bool _invertColors = false;
     private int _agingPercent = 0;
-    private int _lineSpacing = 2;
 
     /// <summary>
-    /// Panel genişliği (P10 referansında piksel sayısı)
-    /// Fiziksel panel boyutunu temsil eder
+    /// Panel genişliği (piksel sayısı)
+    /// Bu değer doğrudan LED matris genişliğidir
     /// </summary>
     public int PanelWidth
     {
         get => _panelWidth;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref _panelWidth, value);
-            UpdateResolution();
-        }
+        set => this.RaiseAndSetIfChanged(ref _panelWidth, value);
     }
 
     /// <summary>
-    /// Panel yüksekliği (P10 referansında piksel sayısı)
-    /// Fiziksel panel boyutunu temsil eder
+    /// Panel yüksekliği (piksel sayısı)
+    /// Bu değer doğrudan LED matris yüksekliğidir
     /// </summary>
     public int PanelHeight
     {
         get => _panelHeight;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref _panelHeight, value);
-            UpdateResolution();
-        }
+        set => this.RaiseAndSetIfChanged(ref _panelHeight, value);
     }
 
     /// <summary>
-    /// LED matris genişliği (piksel) - pitch'e göre hesaplanır
+    /// LED matris genişliği (piksel) - PanelWidth ile aynı
     /// </summary>
     public int Width
     {
-        get => _width;
-        set
-        {
-            _widthManuallySet = true;
-            this.RaiseAndSetIfChanged(ref _width, value);
-        }
+        get => _panelWidth;
+        set => PanelWidth = value;
     }
 
     /// <summary>
-    /// LED matris yüksekliği (piksel) - pitch'e göre hesaplanır
+    /// LED matris yüksekliği (piksel) - PanelHeight ile aynı
     /// </summary>
     public int Height
     {
-        get => _height;
-        set
-        {
-            _heightManuallySet = true;
-            this.RaiseAndSetIfChanged(ref _height, value);
-        }
+        get => _panelHeight;
+        set => PanelHeight = value;
     }
 
     /// <summary>
@@ -125,7 +100,7 @@ public class DisplaySettings : ReactiveObject
     }
 
     /// <summary>
-    /// Piksel boyutu (1-20 piksel) - önizleme için render boyutu
+    /// Piksel boyutu - önizleme için render boyutu
     /// </summary>
     public int PixelSize
     {
@@ -135,20 +110,17 @@ public class DisplaySettings : ReactiveObject
 
     /// <summary>
     /// LED piksel aralığı (pitch)
-    /// Pitch değiştiğinde çözünürlük otomatik güncellenir
+    /// Sadece görsel render'ı etkiler (LED'ler arası boşluk oranı)
+    /// Çözünürlüğü DEĞİŞTİRMEZ!
     /// </summary>
     public PixelPitch Pitch
     {
         get => _pitch;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref _pitch, value);
-            UpdateResolution();
-        }
+        set => this.RaiseAndSetIfChanged(ref _pitch, value);
     }
 
     /// <summary>
-    /// Özel pitch oranı (LED çapı / merkez mesafesi)
+    /// Özel pitch oranı (LED çapı / hücre boyutu)
     /// </summary>
     public double CustomPitchRatio
     {
@@ -190,33 +162,6 @@ public class DisplaySettings : ReactiveObject
     {
         get => _agingPercent;
         set => this.RaiseAndSetIfChanged(ref _agingPercent, value);
-    }
-
-    /// <summary>
-    /// Satır arası boşluk (piksel)
-    /// </summary>
-    public int LineSpacing
-    {
-        get => _lineSpacing;
-        set => this.RaiseAndSetIfChanged(ref _lineSpacing, value);
-    }
-
-    /// <summary>
-    /// Pitch'e göre çözünürlüğü günceller
-    /// Sadece Width/Height manuel olarak set edilmediyse günceller
-    /// </summary>
-    private void UpdateResolution()
-    {
-        if (!_widthManuallySet)
-        {
-            _width = Pitch.GetActualResolution(PanelWidth);
-            this.RaisePropertyChanged(nameof(Width));
-        }
-        if (!_heightManuallySet)
-        {
-            _height = Pitch.GetActualResolution(PanelHeight);
-            this.RaisePropertyChanged(nameof(Height));
-        }
     }
 
     /// <summary>

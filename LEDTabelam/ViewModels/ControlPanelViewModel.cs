@@ -34,7 +34,7 @@ public class ControlPanelViewModel : ViewModelBase
     /// </summary>
     public ObservableCollection<string> Resolutions { get; } = new()
     {
-        "32x16", "64x16", "96x16", "128x16", "160x16", "192x16", "Özel"
+        "32x16", "64x16", "96x16", "128x16", "144x19", "150x24", "160x16", "192x16", "Özel"
     };
 
     /// <summary>
@@ -85,14 +85,14 @@ public class ControlPanelViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Gerçek çözünürlük genişliği (pitch'e göre hesaplanmış)
+    /// Çözünürlük genişliği (piksel) - PanelWidth ile aynı
     /// </summary>
-    public int ActualWidth => SelectedPitch.GetActualResolution(PanelWidth);
+    public int ActualWidth => PanelWidth;
 
     /// <summary>
-    /// Gerçek çözünürlük yüksekliği (pitch'e göre hesaplanmış)
+    /// Çözünürlük yüksekliği (piksel) - PanelHeight ile aynı
     /// </summary>
-    public int ActualHeight => SelectedPitch.GetActualResolution(PanelHeight);
+    public int ActualHeight => PanelHeight;
 
     /// <summary>
     /// Özel çözünürlük modu aktif mi
@@ -132,7 +132,6 @@ public class ControlPanelViewModel : ViewModelBase
     #region Font Properties
 
     private BitmapFont? _selectedFont;
-    private string _inputText = string.Empty;
 
     /// <summary>
     /// Yüklenmiş fontlar
@@ -153,13 +152,9 @@ public class ControlPanelViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Metin girişi
+    /// Çözünürlük bilgisi metni
     /// </summary>
-    public string InputText
-    {
-        get => _inputText;
-        set => this.RaiseAndSetIfChanged(ref _inputText, value);
-    }
+    public string ActualResolutionText => $"Çözünürlük: {PanelWidth}x{PanelHeight} piksel";
 
     #endregion
 
@@ -167,13 +162,11 @@ public class ControlPanelViewModel : ViewModelBase
 
     private int _brightness = 100;
     private int _backgroundDarkness = 100;
-    private int _pixelSize = 8;
     private PixelPitch _selectedPitch = PixelPitch.P10;
     private double _customPitchRatio = 0.7;
     private PixelShape _selectedShape = PixelShape.Round;
     private bool _invertColors = false;
     private int _agingPercent = 0;
-    private int _lineSpacing = 2;
 
     /// <summary>
     /// Parlaklık seviyesi (%0-100)
@@ -204,20 +197,6 @@ public class ControlPanelViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Piksel boyutu (1-20)
-    /// </summary>
-    public int PixelSize
-    {
-        get => _pixelSize;
-        set
-        {
-            var validValue = Math.Clamp(value, 1, 20);
-            this.RaiseAndSetIfChanged(ref _pixelSize, validValue);
-            UpdateCurrentSettings();
-        }
-    }
-
-    /// <summary>
     /// Seçili piksel pitch değeri
     /// </summary>
     public PixelPitch SelectedPitch
@@ -227,9 +206,7 @@ public class ControlPanelViewModel : ViewModelBase
         {
             this.RaiseAndSetIfChanged(ref _selectedPitch, value);
             IsCustomPitch = value == PixelPitch.Custom;
-            // Pitch değiştiğinde gerçek çözünürlüğü güncelle
-            this.RaisePropertyChanged(nameof(ActualWidth));
-            this.RaisePropertyChanged(nameof(ActualHeight));
+            // Pitch değiştiğinde sadece görsel render'ı etkiler
             UpdateCurrentSettings();
         }
     }
@@ -305,20 +282,6 @@ public class ControlPanelViewModel : ViewModelBase
         {
             var validValue = Math.Clamp(value, 0, 5);
             this.RaiseAndSetIfChanged(ref _agingPercent, validValue);
-            UpdateCurrentSettings();
-        }
-    }
-
-    /// <summary>
-    /// Satır arası boşluk
-    /// </summary>
-    public int LineSpacing
-    {
-        get => _lineSpacing;
-        set
-        {
-            var validValue = Math.Clamp(value, 0, 10);
-            this.RaiseAndSetIfChanged(ref _lineSpacing, validValue);
             UpdateCurrentSettings();
         }
     }
@@ -447,6 +410,11 @@ public class ControlPanelViewModel : ViewModelBase
     /// </summary>
     public ReactiveCommand<Unit, Unit> SearchSlotsCommand { get; }
 
+    /// <summary>
+    /// Çözünürlük ayarlama komutu
+    /// </summary>
+    public ReactiveCommand<string, Unit> SetResolutionCommand { get; }
+
     #endregion
 
     /// <summary>
@@ -469,13 +437,7 @@ public class ControlPanelViewModel : ViewModelBase
         CreateProfileCommand = ReactiveCommand.CreateFromTask<string>(CreateProfileAsync);
         DeleteProfileCommand = ReactiveCommand.CreateFromTask(DeleteProfileAsync);
         SearchSlotsCommand = ReactiveCommand.Create(SearchSlots);
-
-        // Metin değişikliklerini debounce ile izle (250ms)
-        this.WhenAnyValue(x => x.InputText)
-            .Throttle(TimeSpan.FromMilliseconds(250))
-            .ObserveOn(RxApp.MainThreadScheduler)
-            .Subscribe(_ => OnInputTextChanged())
-            .DisposeWith(Disposables);
+        SetResolutionCommand = ReactiveCommand.Create<string>(SetResolution);
 
         // Slot arama sorgusunu izle
         this.WhenAnyValue(x => x.SlotSearchQuery)
@@ -503,7 +465,26 @@ public class ControlPanelViewModel : ViewModelBase
             this.RaisePropertyChanged(nameof(PanelHeight));
             this.RaisePropertyChanged(nameof(ActualWidth));
             this.RaisePropertyChanged(nameof(ActualHeight));
+            this.RaisePropertyChanged(nameof(ActualResolutionText));
             UpdateCurrentSettings();
+        }
+    }
+
+    /// <summary>
+    /// Çözünürlük ayarlar (buton komutu için)
+    /// </summary>
+    private void SetResolution(string resolution)
+    {
+        if (resolution == "Özel")
+        {
+            IsCustomResolution = true;
+            SelectedResolution = "Özel";
+        }
+        else
+        {
+            IsCustomResolution = false;
+            SelectedResolution = resolution;
+            ParseResolution(resolution);
         }
     }
 
@@ -517,13 +498,12 @@ public class ControlPanelViewModel : ViewModelBase
             ColorType = SelectedColorType,
             Brightness = Brightness,
             BackgroundDarkness = BackgroundDarkness,
-            PixelSize = PixelSize,
+            PixelSize = 4, // Sabit değer - zoom ile ölçeklenir
             Pitch = SelectedPitch,
             CustomPitchRatio = CustomPitchRatio,
             Shape = SelectedShape,
             InvertColors = InvertColors,
-            AgingPercent = AgingPercent,
-            LineSpacing = LineSpacing
+            AgingPercent = AgingPercent
         };
     }
 
@@ -550,13 +530,12 @@ public class ControlPanelViewModel : ViewModelBase
         // Görsel ayarlar
         Brightness = settings.Brightness;
         BackgroundDarkness = settings.BackgroundDarkness;
-        PixelSize = settings.PixelSize;
+        // PixelSize artık sabit, yükleme gerekmiyor
         SelectedPitch = settings.Pitch;
         CustomPitchRatio = settings.CustomPitchRatio;
         SelectedShape = settings.Shape;
         InvertColors = settings.InvertColors;
         AgingPercent = settings.AgingPercent;
-        LineSpacing = settings.LineSpacing;
 
         // Zone'ları yükle
         _zoneManager.LoadZones(profile.DefaultZones);
@@ -647,12 +626,6 @@ public class ControlPanelViewModel : ViewModelBase
                 SearchResults.Add(slot);
             }
         }
-    }
-
-    private void OnInputTextChanged()
-    {
-        // Metin değişikliği bildirimi - Preview tarafından dinlenecek
-        this.RaisePropertyChanged(nameof(InputText));
     }
 
     #endregion

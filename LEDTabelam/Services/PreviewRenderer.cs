@@ -27,13 +27,24 @@ public class PreviewRenderer : IPreviewRenderer
         int totalHeight = settings.Height;
         var colorMatrix = new SKColor[totalWidth, totalHeight];
 
+        // Tek renk modunda mı kontrol et
+        bool isRgbMode = settings.ColorType == LedColorType.OneROneGOneB ||
+                         settings.ColorType == LedColorType.FullRGB;
+        
+        // Tek renk modunda kullanılacak varsayılan renk
+        var defaultLedColor = settings.GetLedColor();
+        var defaultSkColor = new SKColor(defaultLedColor.R, defaultLedColor.G, defaultLedColor.B);
+
         int currentX = 0;
         foreach (var zone in zones)
         {
             int zoneWidth = (int)(totalWidth * zone.WidthPercent / 100.0);
             if (zoneWidth <= 0) continue;
 
-            var zoneColor = new SKColor(zone.TextColor.R, zone.TextColor.G, zone.TextColor.B);
+            // RGB modunda zone rengini, tek renk modunda varsayılan rengi kullan
+            var zoneColor = isRgbMode 
+                ? new SKColor(zone.TextColor.R, zone.TextColor.G, zone.TextColor.B)
+                : defaultSkColor;
             var content = zone.Content;
 
             if (!string.IsNullOrEmpty(content))
@@ -59,13 +70,15 @@ public class PreviewRenderer : IPreviewRenderer
         SKColor[,] colorMatrix)
     {
         int lineCount = _multiLineTextRenderer.GetLineCount(content);
+        int letterSpacing = zone.LetterSpacing;
+        int lineSpacing = zone.LineSpacing;
         SKBitmap? textBitmap = null;
 
         try
         {
             textBitmap = lineCount > 1
-                ? _multiLineTextRenderer.RenderMultiLineText(font, content, zoneColor, 0)
-                : _fontLoader.RenderText(font, content, zoneColor);
+                ? _multiLineTextRenderer.RenderMultiLineText(font, content, zoneColor, lineSpacing, letterSpacing)
+                : _fontLoader.RenderText(font, content, zoneColor, letterSpacing);
 
             if (textBitmap == null) return;
 
@@ -135,13 +148,15 @@ public class PreviewRenderer : IPreviewRenderer
         SKColor[,] colorMatrix)
     {
         SKBitmap? textBitmap = null;
+        int letterSpacing = 1; // Varsayılan
+        int lineSpacing = 2;   // Varsayılan
 
         try
         {
             int lineCount = _multiLineTextRenderer.GetLineCount(item.Content);
             textBitmap = lineCount > 1
-                ? _multiLineTextRenderer.RenderMultiLineText(font, item.Content, itemColor, 0)
-                : _fontLoader.RenderText(font, item.Content, itemColor);
+                ? _multiLineTextRenderer.RenderMultiLineText(font, item.Content, itemColor, lineSpacing, letterSpacing)
+                : _fontLoader.RenderText(font, item.Content, itemColor, letterSpacing);
 
             if (textBitmap == null) return;
 
@@ -201,7 +216,7 @@ public class PreviewRenderer : IPreviewRenderer
         var ledColor = settings.GetLedColor();
         var skColor = new SKColor(ledColor.R, ledColor.G, ledColor.B, ledColor.A);
 
-        using var textBitmap = _fontLoader.RenderText(font, text, skColor);
+        using var textBitmap = _fontLoader.RenderText(font, text, skColor, 1); // Varsayılan letterSpacing
         if (textBitmap == null) return pixelMatrix;
 
         int width = Math.Min(textBitmap.Width, settings.Width);

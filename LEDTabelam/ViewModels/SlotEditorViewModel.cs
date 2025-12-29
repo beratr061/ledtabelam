@@ -20,8 +20,8 @@ public class SlotEditorViewModel : ViewModelBase
     private string _routeNumber = string.Empty;
     private string _routeText = string.Empty;
     private string? _iconPath;
-    private HorizontalAlignment _horizontalAlignment = HorizontalAlignment.Center;
-    private VerticalAlignment _verticalAlignment = VerticalAlignment.Center;
+    private Models.HorizontalAlignment _horizontalAlignment = Models.HorizontalAlignment.Center;
+    private Models.VerticalAlignment _verticalAlignment = Models.VerticalAlignment.Center;
     private bool _hasBackground = false;
     private Color _backgroundColor = Colors.Black;
     private bool _hasStroke = false;
@@ -106,7 +106,7 @@ public class SlotEditorViewModel : ViewModelBase
     /// <summary>
     /// Yatay hizalama
     /// </summary>
-    public HorizontalAlignment HorizontalAlignment
+    public Models.HorizontalAlignment HorizontalAlignment
     {
         get => _horizontalAlignment;
         set
@@ -119,7 +119,7 @@ public class SlotEditorViewModel : ViewModelBase
     /// <summary>
     /// Dikey hizalama
     /// </summary>
-    public VerticalAlignment VerticalAlignment
+    public Models.VerticalAlignment VerticalAlignment
     {
         get => _verticalAlignment;
         set
@@ -132,12 +132,12 @@ public class SlotEditorViewModel : ViewModelBase
     /// <summary>
     /// Yatay hizalama seçenekleri
     /// </summary>
-    public HorizontalAlignment[] HorizontalAlignmentOptions { get; } = Enum.GetValues<HorizontalAlignment>();
+    public Models.HorizontalAlignment[] HorizontalAlignmentOptions { get; } = Enum.GetValues<Models.HorizontalAlignment>();
 
     /// <summary>
     /// Dikey hizalama seçenekleri
     /// </summary>
-    public VerticalAlignment[] VerticalAlignmentOptions { get; } = Enum.GetValues<VerticalAlignment>();
+    public Models.VerticalAlignment[] VerticalAlignmentOptions { get; } = Enum.GetValues<Models.VerticalAlignment>();
 
     #endregion
 
@@ -334,8 +334,8 @@ public class SlotEditorViewModel : ViewModelBase
         RouteNumber = string.Empty;
         RouteText = string.Empty;
         IconPath = null;
-        HorizontalAlignment = HorizontalAlignment.Center;
-        VerticalAlignment = VerticalAlignment.Center;
+        HorizontalAlignment = Models.HorizontalAlignment.Center;
+        VerticalAlignment = Models.VerticalAlignment.Center;
         HasBackground = false;
         BackgroundColor = Colors.Black;
         HasStroke = false;
@@ -424,8 +424,8 @@ public class SlotEditorViewModel : ViewModelBase
             Index = Zones.Count,
             WidthPercent = 100.0 / (Zones.Count + 1),
             ContentType = ZoneContentType.Text,
-            HAlign = HorizontalAlignment.Center,
-            VAlign = VerticalAlignment.Center
+            HAlign = Models.HorizontalAlignment.Center,
+            VAlign = Models.VerticalAlignment.Center
         };
 
         // Mevcut zone'ların genişliklerini yeniden hesapla

@@ -1,5 +1,7 @@
 using Avalonia.Media;
 using ReactiveUI;
+using AvaloniaHAlign = Avalonia.Layout.HorizontalAlignment;
+using AvaloniaVAlign = Avalonia.Layout.VerticalAlignment;
 
 namespace LEDTabelam.Models;
 
@@ -17,11 +19,13 @@ public class Zone : ReactiveObject
     private double _widthPercent = 100;
     private ZoneContentType _contentType = ZoneContentType.Text;
     private string _content = string.Empty;
-    private HorizontalAlignment _hAlign = HorizontalAlignment.Center;
-    private VerticalAlignment _vAlign = VerticalAlignment.Center;
+    private Models.HorizontalAlignment _hAlign = Models.HorizontalAlignment.Center;
+    private Models.VerticalAlignment _vAlign = Models.VerticalAlignment.Center;
     private bool _isScrolling = false;
     private int _scrollSpeed = 20;
     private Color _textColor = Color.FromRgb(255, 176, 0); // Varsayılan Amber
+    private int _letterSpacing = 1;
+    private int _lineSpacing = 2;
     
     // Zone-specific animasyon state'i
     private double _currentOffset;
@@ -66,7 +70,7 @@ public class Zone : ReactiveObject
     /// <summary>
     /// Yatay hizalama
     /// </summary>
-    public HorizontalAlignment HAlign
+    public Models.HorizontalAlignment HAlign
     {
         get => _hAlign;
         set => this.RaiseAndSetIfChanged(ref _hAlign, value);
@@ -75,7 +79,7 @@ public class Zone : ReactiveObject
     /// <summary>
     /// Dikey hizalama
     /// </summary>
-    public VerticalAlignment VAlign
+    public Models.VerticalAlignment VAlign
     {
         get => _vAlign;
         set => this.RaiseAndSetIfChanged(ref _vAlign, value);
@@ -107,6 +111,24 @@ public class Zone : ReactiveObject
     {
         get => _textColor;
         set => this.RaiseAndSetIfChanged(ref _textColor, value);
+    }
+
+    /// <summary>
+    /// Harf arası boşluk (piksel, 1-10)
+    /// </summary>
+    public int LetterSpacing
+    {
+        get => _letterSpacing;
+        set => this.RaiseAndSetIfChanged(ref _letterSpacing, value);
+    }
+
+    /// <summary>
+    /// Satır arası boşluk (piksel, 0-10)
+    /// </summary>
+    public int LineSpacing
+    {
+        get => _lineSpacing;
+        set => this.RaiseAndSetIfChanged(ref _lineSpacing, value);
     }
     
     /// <summary>

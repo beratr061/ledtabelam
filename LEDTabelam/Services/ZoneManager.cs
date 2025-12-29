@@ -184,8 +184,8 @@ public class ZoneManager : IZoneManager
             WidthPercent = 100,
             ContentType = ZoneContentType.Text,
             Content = string.Empty,
-            HAlign = HorizontalAlignment.Center,
-            VAlign = VerticalAlignment.Center,
+            HAlign = Models.HorizontalAlignment.Center,
+            VAlign = Models.VerticalAlignment.Center,
             IsScrolling = false,
             ScrollSpeed = 20
         };
@@ -205,8 +205,8 @@ public class ZoneManager : IZoneManager
                 WidthPercent = 15,
                 ContentType = ZoneContentType.Image,
                 Content = string.Empty,
-                HAlign = HorizontalAlignment.Center,
-                VAlign = VerticalAlignment.Center
+                HAlign = Models.HorizontalAlignment.Center,
+                VAlign = Models.VerticalAlignment.Center
             },
             new Zone
             {
@@ -214,8 +214,8 @@ public class ZoneManager : IZoneManager
                 WidthPercent = 70,
                 ContentType = ZoneContentType.ScrollingText,
                 Content = string.Empty,
-                HAlign = HorizontalAlignment.Left,
-                VAlign = VerticalAlignment.Center,
+                HAlign = Models.HorizontalAlignment.Left,
+                VAlign = Models.VerticalAlignment.Center,
                 IsScrolling = true,
                 ScrollSpeed = 20
             },
@@ -225,8 +225,8 @@ public class ZoneManager : IZoneManager
                 WidthPercent = 15,
                 ContentType = ZoneContentType.Text,
                 Content = string.Empty,
-                HAlign = HorizontalAlignment.Center,
-                VAlign = VerticalAlignment.Center
+                HAlign = Models.HorizontalAlignment.Center,
+                VAlign = Models.VerticalAlignment.Center
             }
         };
     }

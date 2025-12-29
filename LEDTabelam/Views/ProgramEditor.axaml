@@ -105,24 +105,16 @@
                         <Border Height="1" Background="#3D3D3D"/>
                         
                         <!-- Pozisyon -->
-                        <TextBlock Text="Pozisyon ve Boyut" FontWeight="SemiBold" Foreground="#E0E0E0" FontSize="12"/>
+                        <TextBlock Text="Pozisyon" FontWeight="SemiBold" Foreground="#E0E0E0" FontSize="12"/>
                         
-                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" Margin="0,4,0,0">
-                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2" Margin="0,0,4,0">
+                        <Grid ColumnDefinitions="*,*" Margin="0,4,0,0">
+                            <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,4,0">
                                 <TextBlock Text="X" Foreground="#808080" FontSize="10"/>
                                 <NumericUpDown Value="{Binding X}" Minimum="0" Maximum="512" Increment="1"/>
                             </StackPanel>
-                            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="2" Margin="4,0,0,0">
+                            <StackPanel Grid.Column="1" Spacing="2" Margin="4,0,0,0">
                                 <TextBlock Text="Y" Foreground="#808080" FontSize="10"/>
                                 <NumericUpDown Value="{Binding Y}" Minimum="0" Maximum="512" Increment="1"/>
-                            </StackPanel>
-                            <StackPanel Grid.Row="1" Grid.Column="0" Spacing="2" Margin="0,8,4,0">
-                                <TextBlock Text="Genişlik" Foreground="#808080" FontSize="10"/>
-                                <NumericUpDown Value="{Binding Width}" Minimum="1" Maximum="512" Increment="1"/>
-                            </StackPanel>
-                            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2" Margin="4,8,0,0">
-                                <TextBlock Text="Yükseklik" Foreground="#808080" FontSize="10"/>
-                                <NumericUpDown Value="{Binding Height}" Minimum="1" Maximum="512" Increment="1"/>
                             </StackPanel>
                         </Grid>
                         

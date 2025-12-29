@@ -146,6 +146,37 @@
                     </StackPanel>
                 </Border>
                 
+                <!-- Harf ve Satır Aralığı -->
+                <Border Background="#252525" CornerRadius="6" Padding="12">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Aralık Ayarları" FontWeight="SemiBold" Foreground="#E0E0E0" FontSize="13"/>
+                        
+                        <!-- Hat Kodu Harf Aralığı -->
+                        <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,4,0,0">
+                            <TextBlock Grid.Column="0" Text="Hat Harf:" Foreground="#808080" FontSize="11" VerticalAlignment="Center"/>
+                            <Slider Grid.Column="1" Minimum="1" Maximum="10" Value="{Binding HatKoduHarfAraligi}" Margin="8,0"/>
+                            <TextBlock Grid.Column="2" Text="{Binding HatKoduHarfAraligi, StringFormat={}{0}px}" 
+                                       Foreground="#B0B0B0" FontSize="11" Width="30" VerticalAlignment="Center"/>
+                        </Grid>
+                        
+                        <!-- Güzergah Harf Aralığı -->
+                        <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,4,0,0">
+                            <TextBlock Grid.Column="0" Text="Güz. Harf:" Foreground="#808080" FontSize="11" VerticalAlignment="Center"/>
+                            <Slider Grid.Column="1" Minimum="1" Maximum="10" Value="{Binding GuzergahHarfAraligi}" Margin="8,0"/>
+                            <TextBlock Grid.Column="2" Text="{Binding GuzergahHarfAraligi, StringFormat={}{0}px}" 
+                                       Foreground="#B0B0B0" FontSize="11" Width="30" VerticalAlignment="Center"/>
+                        </Grid>
+                        
+                        <!-- Güzergah Satır Aralığı -->
+                        <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,4,0,0" IsVisible="{Binding IkiSatirGuzergah}">
+                            <TextBlock Grid.Column="0" Text="Satır:" Foreground="#808080" FontSize="11" VerticalAlignment="Center"/>
+                            <Slider Grid.Column="1" Minimum="0" Maximum="10" Value="{Binding GuzergahSatirAraligi}" Margin="8,0"/>
+                            <TextBlock Grid.Column="2" Text="{Binding GuzergahSatirAraligi, StringFormat={}{0}px}" 
+                                       Foreground="#B0B0B0" FontSize="11" Width="30" VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                
                 <!-- Hızlı Renk Seçimi -->
                 <Border Background="#252525" CornerRadius="6" Padding="12">
                     <StackPanel Spacing="8">

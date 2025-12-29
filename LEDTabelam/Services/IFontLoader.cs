@@ -42,6 +42,7 @@ public interface IFontLoader
     /// <param name="font">Kullanılacak font</param>
     /// <param name="text">Render edilecek metin</param>
     /// <param name="color">Metin rengi</param>
+    /// <param name="letterSpacing">Harf arası boşluk (piksel, varsayılan 1)</param>
     /// <returns>Render edilmiş bitmap</returns>
-    SKBitmap RenderText(BitmapFont font, string text, SKColor color);
+    SKBitmap RenderText(BitmapFont font, string text, SKColor color, int letterSpacing = 1);
 }

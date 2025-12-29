@@ -23,6 +23,13 @@ public class LedRenderer : ILedRenderer, IDisposable
         Style = SKPaintStyle.Fill
     };
 
+    // Yanmayan (off) LED'ler için paint - gerçekçi görünüm
+    private readonly SKPaint _offLedPaint = new SKPaint
+    {
+        IsAntialias = false,
+        Style = SKPaintStyle.Fill
+    };
+
     private readonly SKPaint _gridPaint = new SKPaint
     {
         IsAntialias = false,
@@ -58,20 +65,32 @@ public class LedRenderer : ILedRenderer, IDisposable
         int matrixWidth = pixelMatrix.GetLength(0);
         int matrixHeight = pixelMatrix.GetLength(1);
 
+        // Boş matrix kontrolü
+        if (matrixWidth == 0 || matrixHeight == 0)
+        {
+            return new SKBitmap(1, 1, SKColorType.Rgba8888, SKAlphaType.Premul);
+        }
+
         // Piksel boyutu - pitch'e göre ayarlanmış
-        int pixelSize = settings.PixelSize;
+        int pixelSize = Math.Max(1, settings.PixelSize);
         double ledRatio = settings.Pitch.GetLedDiameterRatio();
         if (settings.Pitch == PixelPitch.Custom)
             ledRatio = settings.CustomPitchRatio;
         
-        int ledDiameter = (int)(pixelSize * ledRatio);
+        int ledDiameter = Math.Max(1, (int)(pixelSize * ledRatio));
 
         // Bitmap boyutları
-        int bitmapWidth = matrixWidth * pixelSize;
-        int bitmapHeight = matrixHeight * pixelSize;
+        int bitmapWidth = Math.Max(1, matrixWidth * pixelSize);
+        int bitmapHeight = Math.Max(1, matrixHeight * pixelSize);
 
-        // Bitmap reuse - boyut değişmediyse mevcut bitmap'i kullan
-        var bitmap = GetOrCreateRenderTarget(bitmapWidth, bitmapHeight);
+        // Her seferinde yeni bitmap oluştur (thread safety için)
+        var bitmap = new SKBitmap(bitmapWidth, bitmapHeight, SKColorType.Rgba8888, SKAlphaType.Premul);
+        
+        if (bitmap.Handle == IntPtr.Zero)
+        {
+            return new SKBitmap(1, 1, SKColorType.Rgba8888, SKAlphaType.Premul);
+        }
+        
         using var canvas = new SKCanvas(bitmap);
 
         // Arka plan rengi
@@ -86,6 +105,10 @@ public class LedRenderer : ILedRenderer, IDisposable
 
         // Önbelleğe alınmış paint'i güncelle
         _ledPaint.Color = ledColor;
+        
+        // Yanmayan LED rengi - arka plandan biraz daha açık, gerçekçi görünüm
+        SKColor offLedColor = GetOffLedColor(settings);
+        _offLedPaint.Color = offLedColor;
 
         for (int x = 0; x < matrixWidth; x++)
         {
@@ -103,6 +126,11 @@ public class LedRenderer : ILedRenderer, IDisposable
                 {
                     DrawLedPixel(canvas, x, y, pixelSize, ledDiameter, settings.Shape, _ledPaint);
                 }
+                else
+                {
+                    // Yanmayan pikseli de çiz - gerçekçi LED panel görünümü
+                    DrawLedPixel(canvas, x, y, pixelSize, ledDiameter, settings.Shape, _offLedPaint);
+                }
             }
         }
 
@@ -115,16 +143,27 @@ public class LedRenderer : ILedRenderer, IDisposable
     /// </summary>
     private SKBitmap GetOrCreateRenderTarget(int width, int height)
     {
+        // Minimum boyut kontrolü - 0 veya negatif boyut SkiaSharp'ı çökertir
+        width = Math.Max(1, width);
+        height = Math.Max(1, height);
+        
         lock (_bitmapLock)
         {
             // Boyut değiştiyse yeni bitmap oluştur
             if (_renderTarget == null || _cachedWidth != width || _cachedHeight != height)
             {
                 _renderTarget?.Dispose();
-                _renderTarget = new SKBitmap(width, height);
+                _renderTarget = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
                 _cachedWidth = width;
                 _cachedHeight = height;
             }
+            
+            // Bitmap geçerli değilse yeniden oluştur
+            if (_renderTarget.Handle == IntPtr.Zero)
+            {
+                _renderTarget = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
+            }
+            
             return _renderTarget;
         }
     }
@@ -134,6 +173,10 @@ public class LedRenderer : ILedRenderer, IDisposable
     /// </summary>
     private SKBitmap GetOrCreateGlowTarget(int width, int height)
     {
+        // Minimum boyut kontrolü
+        width = Math.Max(1, width);
+        height = Math.Max(1, height);
+        
         lock (_bitmapLock)
         {
             if (_glowTarget == null || _glowCachedWidth != width || _glowCachedHeight != height)
@@ -166,25 +209,41 @@ public class LedRenderer : ILedRenderer, IDisposable
         int matrixWidth = pixelMatrix.GetLength(0);
         int matrixHeight = pixelMatrix.GetLength(1);
 
+        // Boş matrix kontrolü
+        if (matrixWidth == 0 || matrixHeight == 0)
+        {
+            return new SKBitmap(1, 1, SKColorType.Rgba8888, SKAlphaType.Premul);
+        }
+
         // Piksel boyutu - pitch'e göre ayarlanmış
-        int pixelSize = settings.PixelSize;
+        int pixelSize = Math.Max(1, settings.PixelSize);
         double ledRatio = settings.Pitch.GetLedDiameterRatio();
         if (settings.Pitch == PixelPitch.Custom)
             ledRatio = settings.CustomPitchRatio;
         
-        int ledDiameter = (int)(pixelSize * ledRatio);
+        int ledDiameter = Math.Max(1, (int)(pixelSize * ledRatio));
 
         // Bitmap boyutları
-        int bitmapWidth = matrixWidth * pixelSize;
-        int bitmapHeight = matrixHeight * pixelSize;
+        int bitmapWidth = Math.Max(1, matrixWidth * pixelSize);
+        int bitmapHeight = Math.Max(1, matrixHeight * pixelSize);
 
-        // Bitmap reuse - boyut değişmediyse mevcut bitmap'i kullan
-        var bitmap = GetOrCreateRenderTarget(bitmapWidth, bitmapHeight);
+        // Her seferinde yeni bitmap oluştur (thread safety için)
+        var bitmap = new SKBitmap(bitmapWidth, bitmapHeight, SKColorType.Rgba8888, SKAlphaType.Premul);
+        
+        if (bitmap.Handle == IntPtr.Zero)
+        {
+            return new SKBitmap(1, 1, SKColorType.Rgba8888, SKAlphaType.Premul);
+        }
+        
         using var canvas = new SKCanvas(bitmap);
 
         // Arka plan rengi
         SKColor backgroundColor = GetBackgroundColor(settings);
         canvas.Clear(backgroundColor);
+
+        // Yanmayan LED rengi
+        SKColor offLedColor = GetOffLedColor(settings);
+        _offLedPaint.Color = offLedColor;
 
         for (int x = 0; x < matrixWidth; x++)
         {
@@ -206,14 +265,17 @@ public class LedRenderer : ILedRenderer, IDisposable
                     }
                     else
                     {
-                        // Aktif pikseli pasif yap (çizme)
+                        // Aktif pikseli pasif yap - yanmayan LED olarak çiz
+                        DrawLedPixel(canvas, x, y, pixelSize, ledDiameter, settings.Shape, _offLedPaint);
                         continue;
                     }
                 }
                 else if (pixelColor.Alpha == 0 || 
                          (pixelColor.Red == 0 && pixelColor.Green == 0 && pixelColor.Blue == 0))
                 {
-                    continue; // Pasif piksel
+                    // Yanmayan pikseli de çiz - gerçekçi LED panel görünümü
+                    DrawLedPixel(canvas, x, y, pixelSize, ledDiameter, settings.Shape, _offLedPaint);
+                    continue;
                 }
 
                 // Parlaklık uygula
@@ -253,11 +315,23 @@ public class LedRenderer : ILedRenderer, IDisposable
     /// <inheritdoc/>
     public SKBitmap RenderWithGlow(SKBitmap source, DisplaySettings settings)
     {
+        // Source bitmap kontrolü
+        if (source == null || source.Handle == IntPtr.Zero || source.Width <= 0 || source.Height <= 0)
+        {
+            return new SKBitmap(1, 1, SKColorType.Rgba8888, SKAlphaType.Premul);
+        }
+        
         // Glow yarıçapı parlaklığa göre 2-10 piksel
         float glowRadius = 2 + (settings.Brightness / 100f) * 8;
         
-        // Bitmap reuse - glow target
-        var result = GetOrCreateGlowTarget(source.Width, source.Height);
+        // Her seferinde yeni bitmap oluştur
+        var result = new SKBitmap(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
+        
+        if (result.Handle == IntPtr.Zero)
+        {
+            return new SKBitmap(1, 1, SKColorType.Rgba8888, SKAlphaType.Premul);
+        }
+        
         using var canvas = new SKCanvas(result);
 
         // Arka plan rengi
@@ -366,6 +440,20 @@ public class LedRenderer : ILedRenderer, IDisposable
         // BackgroundDarkness değeri arttıkça arka plan daha açık olur
         byte intensity = (byte)(settings.BackgroundDarkness * 10 / 100); // 0-10 arası
         return new SKColor(intensity, intensity, intensity);
+    }
+
+    /// <summary>
+    /// Yanmayan LED'lerin rengini döndürür
+    /// Gerçek LED panellerde yanmayan LED'ler tamamen görünmez değildir,
+    /// hafif koyu bir renkte görünürler
+    /// </summary>
+    public SKColor GetOffLedColor(DisplaySettings settings)
+    {
+        // Arka plan renginden biraz daha açık - LED'in fiziksel varlığını gösterir
+        // Gerçek panellerde yanmayan LED'ler koyu gri/kahverengi tonlarında görünür
+        byte baseIntensity = (byte)(settings.BackgroundDarkness * 10 / 100);
+        byte offIntensity = (byte)Math.Min(255, baseIntensity + 15); // Arka plandan 15 birim daha açık
+        return new SKColor(offIntensity, offIntensity, offIntensity);
     }
 
     /// <summary>
@@ -497,6 +585,7 @@ public class LedRenderer : ILedRenderer, IDisposable
         }
         
         _ledPaint.Dispose();
+        _offLedPaint.Dispose();
         _gridPaint.Dispose();
         _glowPaint.Dispose();
         _cachedGlowFilter?.Dispose();

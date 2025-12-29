@@ -16,8 +16,9 @@ public interface IMultiLineTextRenderer
     /// <param name="text">Render edilecek metin (satırlar \n ile ayrılmış)</param>
     /// <param name="color">Metin rengi</param>
     /// <param name="lineSpacing">Satır arası boşluk (piksel)</param>
+    /// <param name="letterSpacing">Harf arası boşluk (piksel, varsayılan 1)</param>
     /// <returns>Render edilmiş bitmap</returns>
-    SKBitmap RenderMultiLineText(BitmapFont font, string text, SKColor color, int lineSpacing);
+    SKBitmap RenderMultiLineText(BitmapFont font, string text, SKColor color, int lineSpacing, int letterSpacing = 1);
 
     /// <summary>
     /// Çoklu satır metnin toplam yüksekliğini hesaplar

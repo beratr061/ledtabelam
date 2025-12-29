@@ -20,8 +20,8 @@ public class SimpleTabelaViewModel : ViewModelBase
     private int _hatKoduGenislik = 15;
     private Color _hatKoduRenk = Color.FromRgb(255, 176, 0); // Amber
     private Color _guzergahRenk = Color.FromRgb(0, 255, 0); // Yeşil
-    private HorizontalAlignment _hAlign = HorizontalAlignment.Center;
-    private VerticalAlignment _vAlign = VerticalAlignment.Center;
+    private Models.HorizontalAlignment _hAlign = Models.HorizontalAlignment.Center;
+    private Models.VerticalAlignment _vAlign = Models.VerticalAlignment.Center;
     
     // Sembol ve Kayan özellikleri
     private bool _hatKoduSembol = false;
@@ -30,6 +30,11 @@ public class SimpleTabelaViewModel : ViewModelBase
     private bool _guzergah1Kayan = false;
     private bool _guzergah2Sembol = false;
     private bool _guzergah2Kayan = false;
+    
+    // Harf ve satır aralığı
+    private int _hatKoduHarfAraligi = 1;
+    private int _guzergahHarfAraligi = 1;
+    private int _guzergahSatirAraligi = 2;
 
     /// <summary>
     /// Slot numarası (1-999)
@@ -145,7 +150,7 @@ public class SimpleTabelaViewModel : ViewModelBase
     /// <summary>
     /// Yatay hizalama
     /// </summary>
-    public HorizontalAlignment HAlign
+    public Models.HorizontalAlignment HAlign
     {
         get => _hAlign;
         set
@@ -158,7 +163,7 @@ public class SimpleTabelaViewModel : ViewModelBase
     /// <summary>
     /// Dikey hizalama
     /// </summary>
-    public VerticalAlignment VAlign
+    public Models.VerticalAlignment VAlign
     {
         get => _vAlign;
         set
@@ -209,6 +214,48 @@ public class SimpleTabelaViewModel : ViewModelBase
         set
         {
             this.RaiseAndSetIfChanged(ref _guzergah2Kayan, value);
+            OnTabelaChanged();
+        }
+    }
+
+    /// <summary>
+    /// Hat kodu harf aralığı (1-10 piksel)
+    /// </summary>
+    public int HatKoduHarfAraligi
+    {
+        get => _hatKoduHarfAraligi;
+        set
+        {
+            var validValue = Math.Clamp(value, 1, 10);
+            this.RaiseAndSetIfChanged(ref _hatKoduHarfAraligi, validValue);
+            OnTabelaChanged();
+        }
+    }
+
+    /// <summary>
+    /// Güzergah harf aralığı (1-10 piksel)
+    /// </summary>
+    public int GuzergahHarfAraligi
+    {
+        get => _guzergahHarfAraligi;
+        set
+        {
+            var validValue = Math.Clamp(value, 1, 10);
+            this.RaiseAndSetIfChanged(ref _guzergahHarfAraligi, validValue);
+            OnTabelaChanged();
+        }
+    }
+
+    /// <summary>
+    /// Güzergah satır aralığı (0-10 piksel)
+    /// </summary>
+    public int GuzergahSatirAraligi
+    {
+        get => _guzergahSatirAraligi;
+        set
+        {
+            var validValue = Math.Clamp(value, 0, 10);
+            this.RaiseAndSetIfChanged(ref _guzergahSatirAraligi, validValue);
             OnTabelaChanged();
         }
     }
@@ -269,7 +316,9 @@ public class SimpleTabelaViewModel : ViewModelBase
                 HAlign = HAlign,
                 VAlign = VAlign,
                 TextColor = HatKoduRenk,
-                IsScrolling = HatKoduKayan
+                IsScrolling = HatKoduKayan,
+                LetterSpacing = HatKoduHarfAraligi,
+                LineSpacing = 2 // Hat kodu genellikle tek satır
             });
         }
 
@@ -297,7 +346,9 @@ public class SimpleTabelaViewModel : ViewModelBase
                 HAlign = HAlign,
                 VAlign = VAlign,
                 TextColor = GuzergahRenk,
-                IsScrolling = isScrolling
+                IsScrolling = isScrolling,
+                LetterSpacing = GuzergahHarfAraligi,
+                LineSpacing = GuzergahSatirAraligi
             });
         }
 
@@ -338,6 +389,34 @@ public class SimpleTabelaViewModel : ViewModelBase
         Guzergah1Kayan = false;
         Guzergah2Sembol = false;
         Guzergah2Kayan = false;
+        HatKoduHarfAraligi = 1;
+        GuzergahHarfAraligi = 1;
+        GuzergahSatirAraligi = 2;
+    }
+
+    /// <summary>
+    /// Görüntülenecek metni döndürür (tek renkli render için)
+    /// </summary>
+    public string GetDisplayText()
+    {
+        var parts = new System.Collections.Generic.List<string>();
+        
+        if (!string.IsNullOrEmpty(HatKodu))
+        {
+            parts.Add(HatKodu);
+        }
+        
+        if (!string.IsNullOrEmpty(GuzergahSatir1))
+        {
+            parts.Add(GuzergahSatir1);
+        }
+        
+        if (IkiSatirGuzergah && !string.IsNullOrEmpty(GuzergahSatir2))
+        {
+            parts.Add(GuzergahSatir2);
+        }
+        
+        return string.Join(" ", parts);
     }
 
     /// <summary>
@@ -374,6 +453,7 @@ public class SimpleTabelaViewModel : ViewModelBase
                 HatKoduRenk = hatKoduZone.TextColor;
                 HatKoduGenislik = (int)hatKoduZone.WidthPercent;
                 HatKoduKayan = hatKoduZone.IsScrolling;
+                HatKoduHarfAraligi = hatKoduZone.LetterSpacing;
             }
 
             var guzergahZone = slot.Zones.Find(z => z.Index == 1);
@@ -381,6 +461,8 @@ public class SimpleTabelaViewModel : ViewModelBase
             {
                 GuzergahRenk = guzergahZone.TextColor;
                 Guzergah1Kayan = guzergahZone.IsScrolling;
+                GuzergahHarfAraligi = guzergahZone.LetterSpacing;
+                GuzergahSatirAraligi = guzergahZone.LineSpacing;
             }
         }
 

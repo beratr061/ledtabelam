@@ -46,9 +46,14 @@ public class PreviewViewModel : ViewModelBase
         set
         {
             var validValue = Math.Clamp(value, 50, 400);
-            this.RaiseAndSetIfChanged(ref _zoomLevel, validValue);
-            _settings.ZoomLevel = validValue;
-            RenderDisplay();
+            if (_zoomLevel != validValue)
+            {
+                this.RaiseAndSetIfChanged(ref _zoomLevel, validValue);
+                _settings.ZoomLevel = validValue;
+                // Zoom değiştiğinde boyutları güncelle
+                this.RaisePropertyChanged(nameof(ScaledWidth));
+                this.RaisePropertyChanged(nameof(ScaledHeight));
+            }
         }
     }
 
@@ -132,30 +137,83 @@ public class PreviewViewModel : ViewModelBase
         // Animasyon frame güncellemelerini dinle
         _animationService.OnFrameUpdate += OnAnimationFrameUpdate;
 
-        // Başlangıç render'ı
-        InitializePixelMatrix();
-        RenderDisplay();
+        // Başlangıç matrisini oluştur - render'ı UpdateSettings'e bırak
+        // RenderDisplay() burada çağrılmıyor çünkü settings henüz geçerli değil
     }
 
     #region Public Methods
 
     /// <summary>
     /// Görüntüleme ayarlarını günceller
+    /// İçeriği silmez, sadece render ayarlarını günceller
     /// </summary>
     public void UpdateSettings(DisplaySettings settings)
     {
+        var oldWidth = _settings.Width;
+        var oldHeight = _settings.Height;
+        
         _settings = settings;
         _isRgbMode = settings.ColorType == LedColorType.OneROneGOneB ||
                      settings.ColorType == LedColorType.FullRGB;
 
-        // Matris boyutu değiştiyse yeniden oluştur
-        if (_pixelMatrix == null ||
-            _pixelMatrix.GetLength(0) != settings.Width ||
-            _pixelMatrix.GetLength(1) != settings.Height)
+        // Geçersiz boyut kontrolü
+        if (settings.Width <= 0 || settings.Height <= 0)
         {
-            InitializePixelMatrix();
+            return;
         }
 
+        // Matris boyutu değiştiyse yeniden oluştur
+        bool sizeChanged = oldWidth != settings.Width || oldHeight != settings.Height;
+            
+        if (sizeChanged)
+        {
+            // Eski içeriği yeni boyuta kopyala
+            var oldPixelMatrix = _pixelMatrix;
+            var oldColorMatrix = _colorMatrix;
+            
+            // Yeni matrisler oluştur
+            _pixelMatrix = new bool[settings.Width, settings.Height];
+            _colorMatrix = new SKColor[settings.Width, settings.Height];
+            
+            // Eski içeriği kopyala (mümkün olduğunca)
+            if (oldPixelMatrix != null)
+            {
+                int copyWidth = Math.Min(oldPixelMatrix.GetLength(0), settings.Width);
+                int copyHeight = Math.Min(oldPixelMatrix.GetLength(1), settings.Height);
+                for (int x = 0; x < copyWidth; x++)
+                {
+                    for (int y = 0; y < copyHeight; y++)
+                    {
+                        _pixelMatrix[x, y] = oldPixelMatrix[x, y];
+                    }
+                }
+            }
+            
+            if (oldColorMatrix != null)
+            {
+                int copyWidth = Math.Min(oldColorMatrix.GetLength(0), settings.Width);
+                int copyHeight = Math.Min(oldColorMatrix.GetLength(1), settings.Height);
+                for (int x = 0; x < copyWidth; x++)
+                {
+                    for (int y = 0; y < copyHeight; y++)
+                    {
+                        _colorMatrix[x, y] = oldColorMatrix[x, y];
+                    }
+                }
+            }
+        }
+        
+        // Matris yoksa oluştur (ilk çağrı için) - ama boş bırak
+        if (_pixelMatrix == null)
+        {
+            _pixelMatrix = new bool[settings.Width, settings.Height];
+        }
+        if (_colorMatrix == null)
+        {
+            _colorMatrix = new SKColor[settings.Width, settings.Height];
+        }
+
+        // Mevcut içerikle yeniden render et (ayarlar değişmiş olabilir - parlaklık, renk vs.)
         RenderDisplay();
 
         this.RaisePropertyChanged(nameof(DisplayWidth));
@@ -259,14 +317,42 @@ public class PreviewViewModel : ViewModelBase
 
     private void InitializePixelMatrix()
     {
-        _pixelMatrix = new bool[_settings.Width, _settings.Height];
-        _colorMatrix = new SKColor[_settings.Width, _settings.Height];
+        // Minimum boyut kontrolü - 0 boyut SkiaSharp'ı çökertir
+        var width = Math.Max(1, _settings.Width);
+        var height = Math.Max(1, _settings.Height);
+        
+        _pixelMatrix = new bool[width, height];
+        _colorMatrix = new SKColor[width, height];
     }
 
     private void RenderDisplay()
     {
         try
         {
+            // Boyut kontrolü - geçersiz boyutlarda render yapma
+            if (_settings.Width <= 0 || _settings.Height <= 0)
+            {
+                return;
+            }
+            
+            // Matrix kontrolü - matrix yoksa render yapma
+            if (_pixelMatrix == null && _colorMatrix == null)
+            {
+                return;
+            }
+            
+            // Matrix boyut kontrolü
+            if (_isRgbMode && _colorMatrix != null)
+            {
+                if (_colorMatrix.GetLength(0) == 0 || _colorMatrix.GetLength(1) == 0)
+                    return;
+            }
+            else if (_pixelMatrix != null)
+            {
+                if (_pixelMatrix.GetLength(0) == 0 || _pixelMatrix.GetLength(1) == 0)
+                    return;
+            }
+            
             // Eski bitmap'i dispose et
             DisplayBitmap?.Dispose();
 

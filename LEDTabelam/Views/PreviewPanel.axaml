@@ -37,17 +37,23 @@
                 Margin="4"
                 ClipToBounds="True">
             <Grid>
-                <!-- Ana önizleme alanı -->
-                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                <!-- Ana önizleme alanı - Mouse ile pan için event handler'lar -->
+                <ScrollViewer x:Name="PreviewScrollViewer"
+                              HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Auto">
-                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center"
+                          x:Name="PreviewContainer"
+                          Cursor="Hand"
+                          PointerPressed="OnPreviewPointerPressed"
+                          PointerMoved="OnPreviewPointerMoved"
+                          PointerReleased="OnPreviewPointerReleased">
                         <!-- LED Display Image -->
                         <Image x:Name="LedDisplayImage"
                                Source="{Binding DisplayBitmap, Converter={x:Static vm:SkiaBitmapToImageConverter.Instance}}"
                                Width="{Binding ScaledWidth}"
                                Height="{Binding ScaledHeight}"
-                               Stretch="None"
-                               RenderOptions.BitmapInterpolationMode="None"/>
+                               Stretch="Fill"
+                               RenderOptions.BitmapInterpolationMode="LowQuality"/>
                     </Grid>
                 </ScrollViewer>
                 
