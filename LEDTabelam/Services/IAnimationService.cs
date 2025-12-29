@@ -1,50 +1,85 @@
 using System;
+using SkiaSharp;
 
 namespace LEDTabelam.Services;
 
 /// <summary>
+/// Animasyon tick verisi - Her zone kendi hızıyla offset hesaplar
+/// </summary>
+public readonly struct AnimationTick
+{
+    /// <summary>
+    /// Son frame'den bu yana geçen süre (saniye)
+    /// </summary>
+    public double DeltaTime { get; init; }
+    
+    /// <summary>
+    /// Toplam geçen süre (saniye)
+    /// </summary>
+    public double TotalTime { get; init; }
+    
+    /// <summary>
+    /// Frame numarası
+    /// </summary>
+    public long FrameNumber { get; init; }
+}
+
+/// <summary>
+/// Render edilmiş frame verisi - UI thread'e gönderilir
+/// </summary>
+public sealed class RenderedFrame : IDisposable
+{
+    /// <summary>
+    /// Render edilmiş bitmap (thread-safe, UI'da kullanılabilir)
+    /// </summary>
+    public SKBitmap? Bitmap { get; init; }
+    
+    /// <summary>
+    /// Frame numarası
+    /// </summary>
+    public long FrameNumber { get; init; }
+    
+    /// <summary>
+    /// Render süresi (ms)
+    /// </summary>
+    public double RenderTimeMs { get; init; }
+    
+    private bool _disposed;
+    
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        Bitmap?.Dispose();
+    }
+}
+
+/// <summary>
 /// Animasyon servisi interface'i - Kayan yazı ve geçiş animasyonları
 /// Requirements: 8.1, 8.2, 8.3
+/// DeltaTime tabanlı: Her zone kendi hızıyla offset hesaplar
 /// </summary>
 public interface IAnimationService
 {
     /// <summary>
-    /// Kayan yazı animasyonunu başlatır
+    /// Animasyonu başlatır (global tick yayını)
     /// </summary>
-    /// <param name="speed">Hız (piksel/saniye, 1-100)</param>
-    void StartScrollAnimation(int speed);
+    void Start();
 
     /// <summary>
-    /// Animasyonu durdurur ve başa döner
+    /// Animasyonu durdurur ve sıfırlar
     /// </summary>
-    void StopAnimation();
+    void Stop();
 
     /// <summary>
-    /// Animasyonu duraklatır (mevcut pozisyonda kalır)
+    /// Animasyonu duraklatır
     /// </summary>
-    void PauseAnimation();
+    void Pause();
 
     /// <summary>
     /// Duraklatılmış animasyonu devam ettirir
     /// </summary>
-    void ResumeAnimation();
-
-    /// <summary>
-    /// Animasyon hızını ayarlar
-    /// </summary>
-    /// <param name="speed">Hız (piksel/saniye, 1-100)</param>
-    void SetSpeed(int speed);
-
-    /// <summary>
-    /// Animasyonu belirtilen offset'e ayarlar
-    /// </summary>
-    /// <param name="offset">Piksel offset değeri</param>
-    void SetOffset(int offset);
-
-    /// <summary>
-    /// Mevcut scroll offset değeri (piksel)
-    /// </summary>
-    int CurrentOffset { get; }
+    void Resume();
 
     /// <summary>
     /// Animasyon oynatılıyor mu
@@ -55,11 +90,11 @@ public interface IAnimationService
     /// Animasyon duraklatılmış mı
     /// </summary>
     bool IsPaused { get; }
-
+    
     /// <summary>
-    /// Mevcut animasyon hızı (piksel/saniye)
+    /// Toplam geçen süre (saniye)
     /// </summary>
-    int Speed { get; }
+    double TotalTime { get; }
 
     /// <summary>
     /// Animasyon durumu değiştiğinde tetiklenir
@@ -67,8 +102,49 @@ public interface IAnimationService
     event Action<AnimationState>? StateChanged;
 
     /// <summary>
-    /// Her frame güncellemesinde tetiklenir
+    /// Her frame'de tetiklenir - Zone'lar bu tick ile kendi offset'lerini hesaplar
+    /// Background thread'de çağrılır
     /// </summary>
+    event Action<AnimationTick>? OnTick;
+    
+    /// <summary>
+    /// Render edilmiş frame hazır olduğunda tetiklenir
+    /// UI thread'de çağrılır - doğrudan görüntülenebilir
+    /// </summary>
+    event Action<RenderedFrame>? OnFrameReady;
+    
+    /// <summary>
+    /// Render callback'i ayarlar - Background thread'de çağrılır
+    /// </summary>
+    /// <param name="renderCallback">Tick alıp bitmap döndüren fonksiyon</param>
+    void SetRenderCallback(Func<AnimationTick, SKBitmap?>? renderCallback);
+    
+    // Legacy uyumluluk için (deprecated)
+    [Obsolete("Use OnTick event instead. Each zone should calculate its own offset.")]
+    int CurrentOffset { get; }
+    
+    [Obsolete("Use Start() instead")]
+    void StartScrollAnimation(int speed);
+    
+    [Obsolete("Use Stop() instead")]
+    void StopAnimation();
+    
+    [Obsolete("Use Pause() instead")]
+    void PauseAnimation();
+    
+    [Obsolete("Use Resume() instead")]
+    void ResumeAnimation();
+    
+    [Obsolete("Zone-specific speed should be used instead")]
+    void SetSpeed(int speed);
+    
+    [Obsolete("Zone-specific offset should be used instead")]
+    void SetOffset(int offset);
+    
+    [Obsolete("Zone-specific speed should be used instead")]
+    int Speed { get; }
+    
+    [Obsolete("Use OnTick event instead")]
     event Action<int>? OnFrameUpdate;
 }
 

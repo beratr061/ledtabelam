@@ -6,6 +6,10 @@ namespace LEDTabelam.Models;
 /// <summary>
 /// Tabela bölge (zone) tanımı
 /// Requirements: 17.1, 17.2, 17.3
+/// 
+/// Her zone kendi animasyon state'ini tutar:
+/// - ScrollSpeed: Zone'a özel kayan yazı hızı
+/// - CurrentOffset: Zone'un mevcut scroll pozisyonu (DeltaTime ile hesaplanır)
 /// </summary>
 public class Zone : ReactiveObject
 {
@@ -18,6 +22,10 @@ public class Zone : ReactiveObject
     private bool _isScrolling = false;
     private int _scrollSpeed = 20;
     private Color _textColor = Color.FromRgb(255, 176, 0); // Varsayılan Amber
+    
+    // Zone-specific animasyon state'i
+    private double _currentOffset;
+    private double _accumulatedOffset;
 
     /// <summary>
     /// Zone sıra numarası
@@ -84,6 +92,7 @@ public class Zone : ReactiveObject
 
     /// <summary>
     /// Kayan yazı hızı (piksel/saniye)
+    /// Her zone kendi hızında bağımsız olarak kayar
     /// </summary>
     public int ScrollSpeed
     {
@@ -98,5 +107,52 @@ public class Zone : ReactiveObject
     {
         get => _textColor;
         set => this.RaiseAndSetIfChanged(ref _textColor, value);
+    }
+    
+    /// <summary>
+    /// Zone'un mevcut scroll offset'i (piksel)
+    /// DeltaTime * ScrollSpeed ile hesaplanır
+    /// </summary>
+    public double CurrentOffset
+    {
+        get => _currentOffset;
+        private set => this.RaiseAndSetIfChanged(ref _currentOffset, value);
+    }
+    
+    /// <summary>
+    /// Tam piksel offset değeri (render için)
+    /// </summary>
+    public int PixelOffset => (int)_currentOffset;
+
+    /// <summary>
+    /// AnimationService'den gelen tick ile offset'i günceller
+    /// Her zone kendi hızıyla bağımsız olarak ilerler
+    /// </summary>
+    /// <param name="deltaTime">Son frame'den bu yana geçen süre (saniye)</param>
+    public void UpdateOffset(double deltaTime)
+    {
+        if (!IsScrolling) return;
+        
+        // Offset += DeltaTime * ZoneSpeed
+        _accumulatedOffset += deltaTime * ScrollSpeed;
+        CurrentOffset = _accumulatedOffset;
+    }
+    
+    /// <summary>
+    /// Offset'i sıfırlar (animasyon durdurulduğunda)
+    /// </summary>
+    public void ResetOffset()
+    {
+        _accumulatedOffset = 0;
+        CurrentOffset = 0;
+    }
+    
+    /// <summary>
+    /// Offset'i belirli bir değere ayarlar
+    /// </summary>
+    public void SetOffset(double offset)
+    {
+        _accumulatedOffset = offset;
+        CurrentOffset = offset;
     }
 }

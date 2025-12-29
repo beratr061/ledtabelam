@@ -773,6 +773,35 @@ private void OnTimerElapsed(object? sender, ElapsedEventArgs e)
 - Parlaklık, Arka Plan, Piksel Boyutu, Satır Arası, Eskime, Animasyon Hızı
 - Hassas değer girişi artık mümkün
 
+### 8. Zone Bağımsız Animasyon - DeltaTime Tabanlı Mimari ✅
+**Dosyalar:** `Services/IAnimationService.cs`, `Services/AnimationService.cs`, `Models/Zone.cs`
+**Sorun:** Tek global `_currentOffset` ve `_speed` değişkeni tüm zone'ları aynı hızda kaydırıyordu.
+**Çözüm:**
+- AnimationService artık `AnimationTick` (DeltaTime, TotalTime, FrameNumber) yayınlıyor
+- Her Zone kendi `ScrollSpeed` ile offset hesaplıyor: `Offset += DeltaTime * ZoneSpeed`
+- Zone modeline `UpdateOffset(deltaTime)`, `ResetOffset()`, `SetOffset()` metodları eklendi
+- İki farklı hızda kayan zone artık bağımsız çalışabiliyor
+
+### 9. Bitmap Reuse - GC Pressure Azaltma ✅
+**Dosya:** `Services/LedRenderer.cs`
+**Sorun:** Her frame'de `new SKBitmap()` çağrısı saniyede 60 allocation yapıyordu.
+**Çözüm:**
+- `_renderTarget` ve `_glowTarget` önbellek bitmap'leri eklendi
+- `GetOrCreateRenderTarget()` metodu boyut değişmedikçe aynı bitmap'i yeniden kullanıyor
+- Thread-safe `_bitmapLock` ile senkronizasyon
+- `CreateFrameCopy()` metodu UI thread'e gönderilecek frame'ler için kopya oluşturuyor
+- Micro-stuttering ve GC pause'ları önemli ölçüde azaldı
+
+### 10. Off-Thread Rendering - UI Donmalarını Önleme ✅
+**Dosya:** `Services/AnimationService.cs`
+**Sorun:** Render işlemi UI thread'de yapılıyordu, büyük panellerde arayüz donuyordu.
+**Çözüm:**
+- `SetRenderCallback(Func<AnimationTick, SKBitmap?>)` metodu eklendi
+- Render callback background thread'de çağrılıyor
+- `OnFrameReady` event'i ile bitmiş bitmap UI thread'e gönderiliyor
+- `RenderedFrame` sınıfı render süresi ve frame numarası bilgisi içeriyor
+- 256x64 gibi büyük panellerde bile arayüz akıcı kalıyor
+
 ---
 
 ## 📋 BOZUK ÖZELLİKLER ÖNCELİK SIRASI

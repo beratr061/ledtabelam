@@ -8,6 +8,11 @@ namespace LEDTabelam.Services;
 /// <summary>
 /// LED render servisi implementasyonu
 /// Requirements: 6.1, 6.2, 6.5, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 19.1, 19.2, 19.3, 19.4, 19.5, 19.6
+/// 
+/// Performans optimizasyonları:
+/// - Bitmap Reuse: Panel boyutu değişmedikçe aynı bitmap yeniden kullanılır (GC pressure azaltılır)
+/// - Paint Caching: SKPaint nesneleri önbelleğe alınır
+/// - Thread-safe: Bitmap'ler background thread'de oluşturulabilir
 /// </summary>
 public class LedRenderer : ILedRenderer, IDisposable
 {
@@ -34,6 +39,17 @@ public class LedRenderer : ILedRenderer, IDisposable
     private SKImageFilter? _cachedGlowFilter;
     private float _cachedGlowRadius = -1;
 
+    // Bitmap reuse için render target önbelleği
+    private SKBitmap? _renderTarget;
+    private int _cachedWidth;
+    private int _cachedHeight;
+    private readonly object _bitmapLock = new();
+
+    // Glow için ikinci buffer
+    private SKBitmap? _glowTarget;
+    private int _glowCachedWidth;
+    private int _glowCachedHeight;
+
     private bool _disposed;
 
     /// <inheritdoc/>
@@ -54,7 +70,8 @@ public class LedRenderer : ILedRenderer, IDisposable
         int bitmapWidth = matrixWidth * pixelSize;
         int bitmapHeight = matrixHeight * pixelSize;
 
-        var bitmap = new SKBitmap(bitmapWidth, bitmapHeight);
+        // Bitmap reuse - boyut değişmediyse mevcut bitmap'i kullan
+        var bitmap = GetOrCreateRenderTarget(bitmapWidth, bitmapHeight);
         using var canvas = new SKCanvas(bitmap);
 
         // Arka plan rengi
@@ -92,6 +109,56 @@ public class LedRenderer : ILedRenderer, IDisposable
         return bitmap;
     }
 
+    /// <summary>
+    /// Bitmap reuse için render target al veya oluştur
+    /// Thread-safe: Background thread'den çağrılabilir
+    /// </summary>
+    private SKBitmap GetOrCreateRenderTarget(int width, int height)
+    {
+        lock (_bitmapLock)
+        {
+            // Boyut değiştiyse yeni bitmap oluştur
+            if (_renderTarget == null || _cachedWidth != width || _cachedHeight != height)
+            {
+                _renderTarget?.Dispose();
+                _renderTarget = new SKBitmap(width, height);
+                _cachedWidth = width;
+                _cachedHeight = height;
+            }
+            return _renderTarget;
+        }
+    }
+
+    /// <summary>
+    /// Glow için render target al veya oluştur
+    /// </summary>
+    private SKBitmap GetOrCreateGlowTarget(int width, int height)
+    {
+        lock (_bitmapLock)
+        {
+            if (_glowTarget == null || _glowCachedWidth != width || _glowCachedHeight != height)
+            {
+                _glowTarget?.Dispose();
+                _glowTarget = new SKBitmap(width, height);
+                _glowCachedWidth = width;
+                _glowCachedHeight = height;
+            }
+            return _glowTarget;
+        }
+    }
+
+    /// <summary>
+    /// Yeni bir bitmap kopyası oluşturur (UI thread'e gönderilecek frame'ler için)
+    /// Background thread'de render edilen bitmap'in kopyasını alır
+    /// </summary>
+    public SKBitmap CreateFrameCopy(SKBitmap source)
+    {
+        var copy = new SKBitmap(source.Width, source.Height);
+        using var canvas = new SKCanvas(copy);
+        canvas.DrawBitmap(source, 0, 0);
+        return copy;
+    }
+
 
     /// <inheritdoc/>
     public SKBitmap RenderDisplay(SKColor[,] pixelMatrix, DisplaySettings settings)
@@ -111,7 +178,8 @@ public class LedRenderer : ILedRenderer, IDisposable
         int bitmapWidth = matrixWidth * pixelSize;
         int bitmapHeight = matrixHeight * pixelSize;
 
-        var bitmap = new SKBitmap(bitmapWidth, bitmapHeight);
+        // Bitmap reuse - boyut değişmediyse mevcut bitmap'i kullan
+        var bitmap = GetOrCreateRenderTarget(bitmapWidth, bitmapHeight);
         using var canvas = new SKCanvas(bitmap);
 
         // Arka plan rengi
@@ -188,8 +256,8 @@ public class LedRenderer : ILedRenderer, IDisposable
         // Glow yarıçapı parlaklığa göre 2-10 piksel
         float glowRadius = 2 + (settings.Brightness / 100f) * 8;
         
-        // Sonuç bitmap'i oluştur
-        var result = new SKBitmap(source.Width, source.Height);
+        // Bitmap reuse - glow target
+        var result = GetOrCreateGlowTarget(source.Width, source.Height);
         using var canvas = new SKCanvas(result);
 
         // Arka plan rengi
@@ -419,6 +487,15 @@ public class LedRenderer : ILedRenderer, IDisposable
         if (_disposed) return;
         
         _disposed = true;
+        
+        lock (_bitmapLock)
+        {
+            _renderTarget?.Dispose();
+            _renderTarget = null;
+            _glowTarget?.Dispose();
+            _glowTarget = null;
+        }
+        
         _ledPaint.Dispose();
         _gridPaint.Dispose();
         _glowPaint.Dispose();
