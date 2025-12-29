@@ -171,7 +171,14 @@ public class MainWindowViewModel : ViewModelBase
         ControlPanel.WhenAnyValue(
             x => x.SelectedFont,
             x => x.CurrentSettings)
-            .WhereNotNull()
+            .Throttle(TimeSpan.FromMilliseconds(50))
+            .ObserveOn(RxApp.MainThreadScheduler)
+            .Subscribe(_ => RenderTextToPreview())
+            .DisposeWith(Disposables);
+
+        // LetterSpacing değişikliklerini ayrıca izle
+        ControlPanel.WhenAnyValue(x => x.LetterSpacing)
+            .Skip(1) // İlk değeri atla
             .Throttle(TimeSpan.FromMilliseconds(50))
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe(_ => RenderTextToPreview())
@@ -300,10 +307,12 @@ public class MainWindowViewModel : ViewModelBase
             var font = ControlPanel.SelectedFont;
             var settings = ControlPanel.CurrentSettings;
 
+            // Önce ayarları güncelle - bu mevcut içeriği koruyarak yeniden render eder
+            Preview.UpdateSettings(settings);
+
             if (font == null)
             {
-                // Font yoksa sadece ayarları güncelle, içeriği silme
-                Preview.UpdateSettings(settings);
+                // Font yoksa sadece ayarlar güncellendi, içerik korundu
                 return;
             }
 
@@ -312,11 +321,20 @@ public class MainWindowViewModel : ViewModelBase
             
             if (simpleTabelaZones.Count > 0)
             {
-                // Önce ayarları güncelle
-                Preview.UpdateSettings(settings);
+                // Zone'ların LetterSpacing'ini ControlPanel'den al
+                foreach (var zone in simpleTabelaZones)
+                {
+                    zone.LetterSpacing = settings.LetterSpacing;
+                }
+                
                 // Zone'ları render et (hem RGB hem tek renk modunda)
                 var colorMatrix = PreviewRenderer.RenderZonesToColorMatrix(font, simpleTabelaZones, settings);
                 Preview.UpdateColorMatrix(colorMatrix);
+            }
+            else if (ProgramEditor.Items.Count > 0)
+            {
+                // ProgramEditor'dan öğeleri render et
+                RenderProgramToPreview();
             }
             else
             {
@@ -325,10 +343,13 @@ public class MainWindowViewModel : ViewModelBase
                 
                 if (zones.Count > 0)
                 {
-                    // Önce ayarları güncelle
-                    Preview.UpdateSettings(settings);
                     // PreviewRenderer ile zone'ları render et
                     var zoneList = new System.Collections.Generic.List<Zone>(zones);
+                    // Zone'ların LetterSpacing'ini ControlPanel'den al
+                    foreach (var zone in zoneList)
+                    {
+                        zone.LetterSpacing = settings.LetterSpacing;
+                    }
                     var colorMatrix = PreviewRenderer.RenderZonesToColorMatrix(font, zoneList, settings);
                     Preview.UpdateColorMatrix(colorMatrix);
                 }
@@ -338,12 +359,9 @@ public class MainWindowViewModel : ViewModelBase
                     var text = SimpleTabelaEditor.GetDisplayText();
                     if (!string.IsNullOrEmpty(text))
                     {
-                        // Önce ayarları güncelle
-                        Preview.UpdateSettings(settings);
-                        
                         var ledColor = settings.GetLedColor();
                         var skColor = new SkiaSharp.SKColor(ledColor.R, ledColor.G, ledColor.B, ledColor.A);
-                        var textBitmap = FontLoader.RenderText(font, text, skColor);
+                        var textBitmap = FontLoader.RenderText(font, text, skColor, settings.LetterSpacing);
 
                         if (textBitmap != null)
                         {
@@ -351,11 +369,7 @@ public class MainWindowViewModel : ViewModelBase
                             textBitmap.Dispose();
                         }
                     }
-                    else
-                    {
-                        // İçerik yok - sadece ayarları güncelle, mevcut görüntüyü koru
-                        Preview.UpdateSettings(settings);
-                    }
+                    // İçerik yoksa - ayarlar zaten güncellendi, mevcut görüntü korundu
                 }
             }
         }

@@ -1,3 +1,4 @@
+using System;
 using Avalonia.Media;
 using ReactiveUI;
 
@@ -24,6 +25,7 @@ public class DisplaySettings : ReactiveObject
     private int _zoomLevel = 100;
     private bool _invertColors = false;
     private int _agingPercent = 0;
+    private int _letterSpacing = 1;
 
     /// <summary>
     /// Panel genişliği (piksel sayısı)
@@ -46,22 +48,36 @@ public class DisplaySettings : ReactiveObject
     }
 
     /// <summary>
-    /// LED matris genişliği (piksel) - PanelWidth ile aynı
+    /// LED matris genişliği (piksel) - Pitch çarpanı uygulanmış gerçek çözünürlük
+    /// P10 referansında girilen PanelWidth, Pitch'e göre çarpılır
+    /// Örnek: PanelWidth=150, P5 seçili → Width=300
     /// </summary>
     public int Width
     {
-        get => _panelWidth;
-        set => PanelWidth = value;
+        get => _panelWidth * Pitch.GetResolutionMultiplier();
+        set => PanelWidth = value / Math.Max(1, Pitch.GetResolutionMultiplier());
     }
 
     /// <summary>
-    /// LED matris yüksekliği (piksel) - PanelHeight ile aynı
+    /// LED matris yüksekliği (piksel) - Pitch çarpanı uygulanmış gerçek çözünürlük
+    /// P10 referansında girilen PanelHeight, Pitch'e göre çarpılır
+    /// Örnek: PanelHeight=24, P5 seçili → Height=48
     /// </summary>
     public int Height
     {
-        get => _panelHeight;
-        set => PanelHeight = value;
+        get => _panelHeight * Pitch.GetResolutionMultiplier();
+        set => PanelHeight = value / Math.Max(1, Pitch.GetResolutionMultiplier());
     }
+
+    /// <summary>
+    /// Gerçek çözünürlük genişliği (Width ile aynı, okunabilirlik için alias)
+    /// </summary>
+    public int ActualWidth => Width;
+
+    /// <summary>
+    /// Gerçek çözünürlük yüksekliği (Height ile aynı, okunabilirlik için alias)
+    /// </summary>
+    public int ActualHeight => Height;
 
     /// <summary>
     /// LED renk tipi
@@ -162,6 +178,15 @@ public class DisplaySettings : ReactiveObject
     {
         get => _agingPercent;
         set => this.RaiseAndSetIfChanged(ref _agingPercent, value);
+    }
+
+    /// <summary>
+    /// Harf aralığı (0-10 piksel)
+    /// </summary>
+    public int LetterSpacing
+    {
+        get => _letterSpacing;
+        set => this.RaiseAndSetIfChanged(ref _letterSpacing, value);
     }
 
     /// <summary>

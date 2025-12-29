@@ -153,8 +153,8 @@ public class PreviewViewModel : ViewModelBase
         var oldHeight = _settings.Height;
         
         _settings = settings;
-        _isRgbMode = settings.ColorType == LedColorType.OneROneGOneB ||
-                     settings.ColorType == LedColorType.FullRGB;
+        // NOT: _isRgbMode'u burada değiştirmiyoruz - mevcut içerik modunu koruyoruz
+        // _isRgbMode sadece UpdateColorMatrix veya UpdatePixelMatrix çağrıldığında değişir
 
         // Geçersiz boyut kontrolü
         if (settings.Width <= 0 || settings.Height <= 0)

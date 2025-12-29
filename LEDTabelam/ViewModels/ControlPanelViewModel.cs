@@ -85,14 +85,14 @@ public class ControlPanelViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Çözünürlük genişliği (piksel) - PanelWidth ile aynı
+    /// Çözünürlük genişliği (piksel) - Pitch çarpanı uygulanmış
     /// </summary>
-    public int ActualWidth => PanelWidth;
+    public int ActualWidth => PanelWidth * SelectedPitch.GetResolutionMultiplier();
 
     /// <summary>
-    /// Çözünürlük yüksekliği (piksel) - PanelHeight ile aynı
+    /// Çözünürlük yüksekliği (piksel) - Pitch çarpanı uygulanmış
     /// </summary>
-    public int ActualHeight => PanelHeight;
+    public int ActualHeight => PanelHeight * SelectedPitch.GetResolutionMultiplier();
 
     /// <summary>
     /// Özel çözünürlük modu aktif mi
@@ -107,7 +107,7 @@ public class ControlPanelViewModel : ViewModelBase
 
     #region Color Properties
 
-    private LedColorType _selectedColorType = LedColorType.Amber;
+    private LedColorType _selectedColorType = LedColorType.FullRGB;
 
     /// <summary>
     /// Seçili LED renk tipi
@@ -152,9 +152,9 @@ public class ControlPanelViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Çözünürlük bilgisi metni
+    /// Çözünürlük bilgisi metni - Pitch çarpanı uygulanmış gerçek değeri gösterir
     /// </summary>
-    public string ActualResolutionText => $"Çözünürlük: {PanelWidth}x{PanelHeight} piksel";
+    public string ActualResolutionText => $"Çözünürlük: {ActualWidth}x{ActualHeight} piksel";
 
     #endregion
 
@@ -162,6 +162,7 @@ public class ControlPanelViewModel : ViewModelBase
 
     private int _brightness = 100;
     private int _backgroundDarkness = 100;
+    private int _letterSpacing = 1;
     private PixelPitch _selectedPitch = PixelPitch.P10;
     private double _customPitchRatio = 0.7;
     private PixelShape _selectedShape = PixelShape.Round;
@@ -197,6 +198,20 @@ public class ControlPanelViewModel : ViewModelBase
     }
 
     /// <summary>
+    /// Harf aralığı (0-10 piksel)
+    /// </summary>
+    public int LetterSpacing
+    {
+        get => _letterSpacing;
+        set
+        {
+            var validValue = Math.Clamp(value, 0, 10);
+            this.RaiseAndSetIfChanged(ref _letterSpacing, validValue);
+            UpdateCurrentSettings();
+        }
+    }
+
+    /// <summary>
     /// Seçili piksel pitch değeri
     /// </summary>
     public PixelPitch SelectedPitch
@@ -206,7 +221,10 @@ public class ControlPanelViewModel : ViewModelBase
         {
             this.RaiseAndSetIfChanged(ref _selectedPitch, value);
             IsCustomPitch = value == PixelPitch.Custom;
-            // Pitch değiştiğinde sadece görsel render'ı etkiler
+            // Pitch değiştiğinde gerçek çözünürlük de değişir
+            this.RaisePropertyChanged(nameof(ActualWidth));
+            this.RaisePropertyChanged(nameof(ActualHeight));
+            this.RaisePropertyChanged(nameof(ActualResolutionText));
             UpdateCurrentSettings();
         }
     }
@@ -498,6 +516,7 @@ public class ControlPanelViewModel : ViewModelBase
             ColorType = SelectedColorType,
             Brightness = Brightness,
             BackgroundDarkness = BackgroundDarkness,
+            LetterSpacing = LetterSpacing,
             PixelSize = 4, // Sabit değer - zoom ile ölçeklenir
             Pitch = SelectedPitch,
             CustomPitchRatio = CustomPitchRatio,

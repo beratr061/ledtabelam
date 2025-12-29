@@ -1,125 +1,87 @@
-1. "Dropdown Cehennemi"nden Kurtulma Planı
-Kullanıcının tek tıkla erişmesi gereken ayarları Görünür Seçimlere (Segmented Control / Chips) dönüştürelim.
+Sorun şu: Hesaplama yapılıyor ama çizim (render) sırasında kullanılmıyor.
 
-A. Çözünürlük Seçimi: Buton Grubu
-Açılır liste yerine, en sık kullanılan boyutları "Hızlı Seçim Butonları" olarak gösterelim.
+Sorunun Teknik Analizi
+ViewModel Tarafı (Doğru Hesaplıyor ama Saklıyor): ControlPanelViewModel.cs dosyasında ActualWidth diye bir özellik var. Sen P5 seçtiğinde bu özellik gerçekten 2 katına çıkıyor (örneğin 150 -> 300 oluyor). ANCAK, bu hesaplanan "Gerçek Çözünürlük" değeri, DisplaySettings nesnesine aktarılmıyor veya aktarılsa bile LedRenderer bunu kullanmıyor.
 
-Öneri: ComboBox yerine ItemsControl veya yan yana RadioButton kullan.
+Model Tarafı (Hata Burada): DisplaySettings sınıfı sadece ham PanelWidth (150) ve PanelHeight (24) değerlerini taşıyor. "Hesaplanmış/Çarpılmış Çözünürlük" (ActualWidth) bu ayar paketinin içinde yok veya renderer bunu dikkate almıyor.
 
-Mevcut (ComboBox):
+Render Tarafı (Çizim Hatası): LedRenderer.RenderDisplay metoduna bakıldığında:
 
-XML
+C#
 
-<ComboBox ItemsSource="{Binding Resolutions}" SelectedItem="{Binding SelectedResolution}"/>
-Yeni (Görsel Butonlar): Bunun için RadioButton'u normal bir buton gibi görünecek şekilde stillendirebiliriz.
+// LedRenderer.cs
+public SKBitmap RenderDisplay(bool[,] pixelMatrix, DisplaySettings settings)
+{
+    // Matrix boyutu ne gelirse onu çiziyor.
+    int matrixWidth = pixelMatrix.GetLength(0);
+    int matrixHeight = pixelMatrix.GetLength(1);
 
-XML
+    // ÖNEMLİ HATA: P5 veya P10 olması, matrisin boyutunu değiştirmiyor!
+    // Sadece LED'in (dairenin) çapını değiştiriyor (ledRatio).
+    double ledRatio = settings.Pitch.GetLedDiameterRatio();
+    // ...
+}
+Yani renderer, "Ben P5'im, o zaman çözünürlüğü 2 ile çarpayım" demiyor. Ona 150x24'lük bir matris gelirse, 150x24 çiziyor. Sadece P5 seçili olduğu için ledRatio değişiyor ve piksellerin çapı (görsel boyutu) değişiyor. Bu yüzden sen "çözünürlük aynı kalıyor, pikseller büyüyor/küçülüyor" diyorsun.
 
-<UserControl.Styles>
-    <Style Selector="RadioButton.Segmented">
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border Background="{TemplateBinding Background}" 
-                        BorderBrush="#30FFFFFF" 
-                        BorderThickness="1" 
-                        CornerRadius="4" 
-                        Padding="12,6">
-                    <ContentPresenter Content="{TemplateBinding Content}" 
-                                      HorizontalAlignment="Center"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
-    </Style>
-    <Style Selector="RadioButton.Segmented:checked">
-        <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAccentBrush}"/>
-        <Setter Property="Foreground" Value="White"/>
-    </Style>
-    <Style Selector="RadioButton.Segmented:unchecked">
-        <Setter Property="Background" Value="Transparent"/>
-    </Style>
-</UserControl.Styles>
+Çözüm: "Sanal Matris" Yerine "Gerçek Matris" Kullanımı
+Bu mantığı düzeltmek için ControlPanelViewModel ve DisplaySettings arasındaki veri akışını değiştirmemiz lazım. "Panel Boyutu" dediğimiz şey Modül Sayısı (Kasa Boyutu) olmalı, Piksel Sayısı ise hesaplanmalı.
 
-<StackPanel Spacing="5">
-    <TextBlock Text="Panel Boyutu" Classes="h3"/>
-    <WrapPanel>
-        <RadioButton Classes="Segmented" GroupName="Res" Content="128x16" 
-                     Command="{Binding SetResolutionCommand}" CommandParameter="128x16"/>
-        <RadioButton Classes="Segmented" GroupName="Res" Content="192x16" 
-                     Command="{Binding SetResolutionCommand}" CommandParameter="192x16"/>
-        <RadioButton Classes="Segmented" GroupName="Res" Content="Özel" 
-                     IsChecked="{Binding IsCustomResolution}"/>
-    </WrapPanel>
-</StackPanel>
-Not: ViewModel'e SetResolutionCommand ekleyerek string parametre (örn: "128x16") alıp PanelWidth ve PanelHeight değerlerini set etmesini sağlayabilirsin.
+Şu anki yapıda "Panel Boyutu" doğrudan "Piksel Sayısı" olarak kullanılıyor.
 
-B. Renk Seçimi: Renk Paleti (Color Swatches)
-Renk ismini okumak yerine rengin kendisini görmek çok daha hızlıdır.
+Düzeltme Planı:
 
-Öneri: Renkli yuvarlak butonlar kullan.
+DisplaySettings.cs içine ActualWidth ve ActualHeight özelliklerini ekle (veya hesaplanmış halini gönder).
 
-XML
+ControlPanelViewModel.cs içinde CurrentSettings oluşturulurken, PanelWidth yerine P değeriyle çarpılmış ActualWidth gönderilmemeli, fakat matris oluşturulurken bu dikkate alınmalı.
 
-<ItemsControl ItemsSource="{Binding ColorTypes}">
-    <ItemsControl.ItemsPanel>
-        <ItemsPanelTemplate>
-            <WrapPanel />
-        </ItemsPanelTemplate>
-    </ItemsControl.ItemsPanel>
-    <ItemsControl.ItemTemplate>
-        <DataTemplate>
-            <RadioButton GroupName="Colors" 
-                         IsChecked="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ContentPresenter}}"
-                         Margin="0,0,8,8"
-                         Width="32" Height="32">
-                <RadioButton.Template>
-                    <ControlTemplate>
-                        <Border CornerRadius="16" Width="32" Height="32"
-                                BorderBrush="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                                BorderThickness="{Binding IsChecked, Converter={StaticResource BoolToThicknessConverter}}">
-                            <Border.Background>
-                                <SolidColorBrush Color="{Binding Converter={StaticResource EnumToColorConverter}}"/>
-                            </Border.Background>
-                        </Border>
-                    </ControlTemplate>
-                </RadioButton.Template>
-            </RadioButton>
-        </DataTemplate>
-    </ItemsControl.ItemTemplate>
-</ItemsControl>
-2. Tekrarlayan Metin Alanını Kaldırma (Duplicate Content)
-Sorun: ControlPanel içinde bir InputText var, ancak asıl içerik yönetimi SlotEditor (veya Playlist) üzerinden yapılıyor.
+Asıl sorun şu: ControlPanelViewModel içinde UpdateCurrentSettings metodu, DisplaySettings objesini oluştururken PanelWidth'i (150) olduğu gibi gönderiyor.
 
-Control Panel'in Görevi: Donanım ve global ayarlar (Parlaklık, Boyut, Bağlantı Tipi).
+Düzeltilmiş Kod Önerisi (ControlPanelViewModel.cs):
 
-Editor Panel'in Görevi: İçerik (Metin, Animasyon, Süre).
+Şu anki UpdateCurrentSettings metodunu şöyle güncellemelisin. Bu sayede P5 seçtiğinde renderer'a giden bilgi 2 katı büyüklüğünde olacak.
 
-Çözüm: Sol paneldeki metin giriş alanını tamamen kaldır.
+C#
 
-View (ControlPanel.axaml): TextBox ve ona bağlı "Metin Gönder" butonunu sil.
+// ControlPanelViewModel.cs içindeki metodun düzeltilmiş hali
+private void UpdateCurrentSettings()
+{
+    // P değerine göre çarpanı al (P10=1, P5=2, P2.5=4 gibi)
+    // Eğer GetMultiplier gibi bir metodun yoksa manuel hesaplayabiliriz veya GetActualResolution mantığını kullanırız.
+    
+    // NOT: Senin ActualWidth property'n zaten hesaplıyordu, onu kullanalım.
+    // Ancak DisplaySettings modelin sadece PanelWidth tutuyor olabilir. 
+    // Eğer DisplaySettings.PanelWidth "Piksel Sayısı" demekse, ona ActualWidth'i atamalıyız.
+    
+    CurrentSettings = new DisplaySettings
+    {
+        // BURASI KRİTİK DEĞİŞİKLİK:
+        // Eskiden: PanelWidth = PanelWidth (yani 150)
+        // Şimdi: PanelWidth = ActualWidth (yani P5 ise 300)
+        PanelWidth = ActualWidth,   
+        PanelHeight = ActualHeight, 
 
-ViewModel (ControlPanelViewModel.cs): InputText özelliğini sil.
+        ColorType = SelectedColorType,
+        Brightness = Brightness,
+        BackgroundDarkness = BackgroundDarkness,
+        PixelSize = PixelSize,
+        Pitch = SelectedPitch,
+        CustomPitchRatio = CustomPitchRatio,
+        Shape = SelectedShape,
+        InvertColors = InvertColors,
+        AgingPercent = AgingPercent,
+        LineSpacing = LineSpacing
+    };
+}
+Bunu yaptığında ne olacak?
 
-Mantık: Kullanıcıyı, metin değiştirmek için sağdaki/alttaki Slot Editor veya Playlist paneline yönlendir. Bu, "Tabelamda ne görünüyor?" sorusunun tek bir cevabı olmasını sağlar.
+Sen arayüzde 150x24 yazacaksın (Bu senin fiziksel P10 referansın).
 
-3. Özet: Yeni Sol Panel Yapısı
-Sol paneli (ControlPanel) şu mantıksal gruplara ayırarak temizleyebilirsin:
+P5 seçtiğinde ActualWidth 300 olacak.
 
-1. Donanım (Hardware):
+DisplaySettings içine 300x48 olarak gidecek.
 
-Çözünürlük (Butonlar)
+LedRenderer 300x48'lik bir matris çizecek.
 
-Piksel Tipi (Segmented Switch: P10 | P5 | Özel)
+Ekranda pikseller daha sıklaşacak (çözünürlük artacak).
 
-2. Görünüm (Appearance):
-
-Renk (Yuvarlak Paletler)
-
-Parlaklık (Slider - zaten var)
-
-Pixel Shape (Segmented Switch: Kare | Yuvarlak)
-
-3. Font (Font):
-
-Font Seçimi (Burası Dropdown kalabilir çünkü liste uzundur)
-
-İyileştirme: Dropdown item'larının içinde fontun önizlemesini (kendi stiliyle adını) gösterebilirsin.
+Bu değişikliği ControlPanelViewModel.cs dosyasında UpdateCurrentSettings metoduna uygularsan sorunun çözülecektir. Piksellerin sadece büyümesi değil, sayısının artması sağlanacaktır.

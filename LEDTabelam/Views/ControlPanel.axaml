@@ -176,98 +176,6 @@
         <!-- GÖRÜNÜM (Appearance) -->
         <!-- ═══════════════════════════════════════════════════════════════ -->
         
-        <!-- LED Renk Tipi - Renkli Paletler -->
-        <Expander Header="🎨 LED Rengi" IsExpanded="True">
-            <StackPanel Spacing="8">
-                <TextBlock Text="Renk Seçimi" Foreground="#808080" FontSize="11"/>
-                <WrapPanel>
-                    <!-- Amber -->
-                    <RadioButton Classes="ColorSwatch" GroupName="ColorType"
-                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Amber}}"
-                                 ToolTip.Tip="Amber">
-                        <RadioButton.Template>
-                            <ControlTemplate>
-                                <Border CornerRadius="16" Width="32" Height="32"
-                                        BorderThickness="{Binding $parent[RadioButton].IsChecked, Converter={x:Static vm:BoolToThicknessConverter.Instance}}"
-                                        BorderBrush="White"
-                                        Background="#FFB000"/>
-                            </ControlTemplate>
-                        </RadioButton.Template>
-                    </RadioButton>
-                    <!-- Kırmızı -->
-                    <RadioButton Classes="ColorSwatch" GroupName="ColorType"
-                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Red}}"
-                                 ToolTip.Tip="Kırmızı">
-                        <RadioButton.Template>
-                            <ControlTemplate>
-                                <Border CornerRadius="16" Width="32" Height="32"
-                                        BorderThickness="{Binding $parent[RadioButton].IsChecked, Converter={x:Static vm:BoolToThicknessConverter.Instance}}"
-                                        BorderBrush="White"
-                                        Background="#FF0000"/>
-                            </ControlTemplate>
-                        </RadioButton.Template>
-                    </RadioButton>
-                    <!-- Yeşil -->
-                    <RadioButton Classes="ColorSwatch" GroupName="ColorType"
-                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.Green}}"
-                                 ToolTip.Tip="Yeşil">
-                        <RadioButton.Template>
-                            <ControlTemplate>
-                                <Border CornerRadius="16" Width="32" Height="32"
-                                        BorderThickness="{Binding $parent[RadioButton].IsChecked, Converter={x:Static vm:BoolToThicknessConverter.Instance}}"
-                                        BorderBrush="White"
-                                        Background="#00FF00"/>
-                            </ControlTemplate>
-                        </RadioButton.Template>
-                    </RadioButton>
-                    <!-- 1R1G1B -->
-                    <RadioButton Classes="ColorSwatch" GroupName="ColorType"
-                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.OneROneGOneB}}"
-                                 ToolTip.Tip="1R1G1B">
-                        <RadioButton.Template>
-                            <ControlTemplate>
-                                <Border CornerRadius="16" Width="32" Height="32"
-                                        BorderThickness="{Binding $parent[RadioButton].IsChecked, Converter={x:Static vm:BoolToThicknessConverter.Instance}}"
-                                        BorderBrush="White">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                                            <GradientStop Color="#FF0000" Offset="0"/>
-                                            <GradientStop Color="#00FF00" Offset="0.5"/>
-                                            <GradientStop Color="#0000FF" Offset="1"/>
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
-                            </ControlTemplate>
-                        </RadioButton.Template>
-                    </RadioButton>
-                    <!-- Full RGB -->
-                    <RadioButton Classes="ColorSwatch" GroupName="ColorType"
-                                 IsChecked="{Binding SelectedColorType, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:LedColorType.FullRGB}}"
-                                 ToolTip.Tip="Full RGB">
-                        <RadioButton.Template>
-                            <ControlTemplate>
-                                <Border CornerRadius="16" Width="32" Height="32"
-                                        BorderThickness="{Binding $parent[RadioButton].IsChecked, Converter={x:Static vm:BoolToThicknessConverter.Instance}}"
-                                        BorderBrush="White">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
-                                            <GradientStop Color="#FF0000" Offset="0"/>
-                                            <GradientStop Color="#FFFF00" Offset="0.17"/>
-                                            <GradientStop Color="#00FF00" Offset="0.33"/>
-                                            <GradientStop Color="#00FFFF" Offset="0.5"/>
-                                            <GradientStop Color="#0000FF" Offset="0.67"/>
-                                            <GradientStop Color="#FF00FF" Offset="0.83"/>
-                                            <GradientStop Color="#FF0000" Offset="1"/>
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
-                            </ControlTemplate>
-                        </RadioButton.Template>
-                    </RadioButton>
-                </WrapPanel>
-            </StackPanel>
-        </Expander>
-        
         <!-- Piksel Şekli - Segmented -->
         <Expander Header="🔲 Piksel Şekli" IsExpanded="False">
             <WrapPanel>
@@ -284,7 +192,8 @@
                 <!-- Parlaklık -->
                 <TextBlock Classes="label" Text="{Binding Brightness, StringFormat='Parlaklık: %{0}'}"/>
                 <Grid ColumnDefinitions="*, Auto">
-                    <Slider Grid.Column="0" Minimum="0" Maximum="100" Value="{Binding Brightness}"/>
+                    <Slider Grid.Column="0" Minimum="0" Maximum="100" Value="{Binding Brightness}"
+                            TickFrequency="1" IsSnapToTickEnabled="True"/>
                     <NumericUpDown Grid.Column="1" Value="{Binding Brightness}" 
                                    Minimum="0" Maximum="100"
                                    ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
@@ -293,9 +202,20 @@
                 <!-- Arka Plan -->
                 <TextBlock Classes="label" Text="{Binding BackgroundDarkness, StringFormat='Arka Plan: %{0}'}"/>
                 <Grid ColumnDefinitions="*, Auto">
-                    <Slider Grid.Column="0" Minimum="0" Maximum="100" Value="{Binding BackgroundDarkness}"/>
+                    <Slider Grid.Column="0" Minimum="0" Maximum="100" Value="{Binding BackgroundDarkness}"
+                            TickFrequency="1" IsSnapToTickEnabled="True"/>
                     <NumericUpDown Grid.Column="1" Value="{Binding BackgroundDarkness}" 
                                    Minimum="0" Maximum="100"
+                                   ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
+                </Grid>
+                
+                <!-- Harf Aralığı -->
+                <TextBlock Classes="label" Text="{Binding LetterSpacing, StringFormat='Harf Aralığı: {0} px'}"/>
+                <Grid ColumnDefinitions="*, Auto">
+                    <Slider Grid.Column="0" Minimum="0" Maximum="10" Value="{Binding LetterSpacing}" 
+                            TickFrequency="1" IsSnapToTickEnabled="True"/>
+                    <NumericUpDown Grid.Column="1" Value="{Binding LetterSpacing}" 
+                                   Minimum="0" Maximum="10"
                                    ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
                 </Grid>
             </StackPanel>
@@ -308,7 +228,8 @@
                 
                 <TextBlock Classes="label" Text="{Binding AgingPercent, StringFormat='Eskime: %{0}'}"/>
                 <Grid ColumnDefinitions="*, Auto">
-                    <Slider Grid.Column="0" Minimum="0" Maximum="5" Value="{Binding AgingPercent}"/>
+                    <Slider Grid.Column="0" Minimum="0" Maximum="5" Value="{Binding AgingPercent}"
+                            TickFrequency="1" IsSnapToTickEnabled="True"/>
                     <NumericUpDown Grid.Column="1" Value="{Binding AgingPercent}" 
                                    Minimum="0" Maximum="5"
                                    ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
@@ -321,7 +242,8 @@
             <StackPanel Spacing="8">
                 <TextBlock Classes="label" Text="{Binding AnimationSpeed, StringFormat='Hız: {0} px/s'}"/>
                 <Grid ColumnDefinitions="*, Auto">
-                    <Slider Grid.Column="0" Minimum="1" Maximum="100" Value="{Binding AnimationSpeed}"/>
+                    <Slider Grid.Column="0" Minimum="1" Maximum="100" Value="{Binding AnimationSpeed}"
+                            TickFrequency="1" IsSnapToTickEnabled="True"/>
                     <NumericUpDown Grid.Column="1" Value="{Binding AnimationSpeed}" 
                                    Minimum="1" Maximum="100"
                                    ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>

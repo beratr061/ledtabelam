@@ -381,6 +381,7 @@ public class FontLoader : IFontLoader
             }
 
             // Create FontChar entry
+            // XAdvance sadece karakter genişliği - letterSpacing render sırasında eklenir
             var fontChar = new FontChar
             {
                 Id = charId,
@@ -390,7 +391,7 @@ public class FontLoader : IFontLoader
                 Height = pixels.Length,
                 XOffset = 0, // Artık pikseller zaten sola hizalı
                 YOffset = 0,
-                XAdvance = charWidth + letterspace // karakter genişliği + boşluk
+                XAdvance = charWidth > 0 ? charWidth : 4 // Boşluk için varsayılan 4px
             };
             font.Characters[charId] = fontChar;
 
@@ -571,8 +572,10 @@ public class FontLoader : IFontLoader
 
                 canvas.DrawBitmap(font.FontImage, srcRect, destRect, paint);
                 
-                // Karakter genişliği + kullanıcı tanımlı harf aralığı
-                currentX += fontChar.Width + letterSpacing;
+                // XAdvance kullan - bu değer bir sonraki karakterin başlangıç pozisyonunu belirler
+                // Boşluk gibi görünmez karakterler için de doğru çalışır
+                // letterSpacing ek olarak eklenir
+                currentX += fontChar.XAdvance + letterSpacing;
             }
 
             previousChar = c;
@@ -603,7 +606,8 @@ public class FontLoader : IFontLoader
             FontChar? fontChar = GetFontCharOrPlaceholder(font, c);
             if (fontChar != null)
             {
-                totalWidth += fontChar.Width + letterSpacing;
+                // XAdvance kullan - boşluk gibi görünmez karakterler için de doğru çalışır
+                totalWidth += fontChar.XAdvance + letterSpacing;
             }
 
             previousChar = c;

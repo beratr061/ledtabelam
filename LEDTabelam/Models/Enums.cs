@@ -103,6 +103,27 @@ public static class PixelPitchExtensions
         int pixelsPerMeter = (int)(1000.0 / p);
         return pixelsPerMeter * pixelsPerMeter;
     }
+
+    /// <summary>
+    /// P10 referansına göre çözünürlük çarpanını döndürür
+    /// P10 = 1x (referans), P5 = 2x, P2.5 = 4x
+    /// Aynı fiziksel boyutta daha küçük pitch = daha fazla piksel
+    /// </summary>
+    public static int GetResolutionMultiplier(this PixelPitch pitch)
+    {
+        return pitch switch
+        {
+            PixelPitch.P2_5 => 4,   // 10 / 2.5 = 4
+            PixelPitch.P3 => 3,     // 10 / 3 ≈ 3
+            PixelPitch.P4 => 2,     // 10 / 4 ≈ 2 (yuvarlama)
+            PixelPitch.P5 => 2,     // 10 / 5 = 2
+            PixelPitch.P6 => 1,     // 10 / 6 ≈ 1 (yuvarlama)
+            PixelPitch.P7_62 => 1,  // 10 / 7.62 ≈ 1
+            PixelPitch.P10 => 1,    // Referans
+            PixelPitch.Custom => 1, // Özel için varsayılan
+            _ => 1
+        };
+    }
 }
 
 /// <summary>

@@ -123,6 +123,7 @@ public class PreviewRenderer : IPreviewRenderer
         int totalWidth = settings.Width;
         int totalHeight = settings.Height;
         var colorMatrix = new SKColor[totalWidth, totalHeight];
+        int letterSpacing = settings.LetterSpacing;
 
         foreach (var item in items)
         {
@@ -133,7 +134,7 @@ public class PreviewRenderer : IPreviewRenderer
             if (itemFont == null) continue;
 
             var itemColor = new SKColor(item.Color.R, item.Color.G, item.Color.B);
-            RenderProgramItem(itemFont, item, itemColor, totalWidth, totalHeight, colorMatrix);
+            RenderProgramItem(itemFont, item, itemColor, totalWidth, totalHeight, colorMatrix, letterSpacing);
         }
 
         return colorMatrix;
@@ -145,10 +146,10 @@ public class PreviewRenderer : IPreviewRenderer
         SKColor itemColor,
         int totalWidth,
         int totalHeight,
-        SKColor[,] colorMatrix)
+        SKColor[,] colorMatrix,
+        int letterSpacing)
     {
         SKBitmap? textBitmap = null;
-        int letterSpacing = 1; // Varsayılan
         int lineSpacing = 2;   // Varsayılan
 
         try
