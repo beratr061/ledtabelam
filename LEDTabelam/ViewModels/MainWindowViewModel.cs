@@ -233,24 +233,24 @@ public class MainWindowViewModel : ViewModelBase
     {
         if (AnimationService.IsPlaying)
         {
-            AnimationService.PauseAnimation();
+            AnimationService.Pause();
             StatusMessage = "Animasyon duraklatıldı";
         }
         else if (AnimationService.IsPaused)
         {
-            AnimationService.ResumeAnimation();
+            AnimationService.Resume();
             StatusMessage = "Animasyon devam ediyor";
         }
         else
         {
-            AnimationService.StartScrollAnimation(ControlPanel.AnimationSpeed);
+            AnimationService.Start();
             StatusMessage = "Animasyon başlatıldı";
         }
     }
 
     private void StopAnimation()
     {
-        AnimationService.StopAnimation();
+        AnimationService.Stop();
         StatusMessage = "Animasyon durduruldu";
     }
 

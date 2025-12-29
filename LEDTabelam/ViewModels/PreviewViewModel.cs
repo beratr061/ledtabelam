@@ -134,8 +134,8 @@ public class PreviewViewModel : ViewModelBase
         ResetZoomCommand = ReactiveCommand.Create(ResetZoom);
         FitToWindowCommand = ReactiveCommand.Create(FitToWindow);
 
-        // Animasyon frame güncellemelerini dinle
-        _animationService.OnFrameUpdate += OnAnimationFrameUpdate;
+        // Animasyon tick güncellemelerini dinle (yeni API)
+        _animationService.OnTick += OnAnimationTick;
 
         // Başlangıç matrisini oluştur - render'ı UpdateSettings'e bırak
         // RenderDisplay() burada çağrılmıyor çünkü settings henüz geçerli değil
@@ -423,11 +423,35 @@ public class PreviewViewModel : ViewModelBase
         ZoomLevel = 100;
     }
 
-    private void OnAnimationFrameUpdate(int offset)
+    // Animasyon hızı (piksel/saniye) - varsayılan 20
+    private int _animationSpeed = 20;
+    private double _accumulatedOffset = 0;
+
+    /// <summary>
+    /// Animasyon hızını ayarlar
+    /// </summary>
+    public void SetAnimationSpeed(int speed)
     {
-        ScrollOffset = offset;
-        // Scroll offset'e göre piksel matrisini kaydır ve render et
-        ApplyScrollOffset(offset);
+        _animationSpeed = Math.Clamp(speed, 1, 100);
+    }
+
+    private void OnAnimationTick(AnimationTick tick)
+    {
+        // DeltaTime tabanlı offset hesaplama
+        _accumulatedOffset += _animationSpeed * tick.DeltaTime;
+        
+        if (_accumulatedOffset >= 1.0)
+        {
+            int pixels = (int)_accumulatedOffset;
+            _accumulatedOffset -= pixels;
+            
+            // UI thread'de güncelle
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                ScrollOffset += pixels;
+                ApplyScrollOffset(ScrollOffset);
+            });
+        }
     }
 
     private void ApplyScrollOffset(int offset)
@@ -463,7 +487,7 @@ public class PreviewViewModel : ViewModelBase
     {
         if (disposing)
         {
-            _animationService.OnFrameUpdate -= OnAnimationFrameUpdate;
+            _animationService.OnTick -= OnAnimationTick;
             DisplayBitmap?.Dispose();
         }
         base.Dispose(disposing);
