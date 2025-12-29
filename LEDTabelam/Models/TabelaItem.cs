@@ -1,3 +1,4 @@
+using System;
 using Avalonia.Media;
 using ReactiveUI;
 
@@ -25,6 +26,11 @@ public class TabelaItem : ReactiveObject
     private Models.HorizontalAlignment _hAlign = Models.HorizontalAlignment.Left;
     private Models.VerticalAlignment _vAlign = Models.VerticalAlignment.Center;
     private string _fontName = "PolarisRGB6x10M"; // Varsayılan font
+    private int _letterSpacing = 1; // Harf aralığı (piksel)
+    
+    // Sembol özellikleri
+    private string _symbolName = string.Empty; // AssetLibrary'deki sembol adı
+    private int _symbolSize = 16; // Sembol boyutu (16 veya 32)
     
     // Animasyon
     private bool _isScrolling = false;
@@ -141,6 +147,33 @@ public class TabelaItem : ReactiveObject
     {
         get => _fontName;
         set => this.RaiseAndSetIfChanged(ref _fontName, value);
+    }
+
+    /// <summary>
+    /// Harf aralığı (piksel)
+    /// </summary>
+    public int LetterSpacing
+    {
+        get => _letterSpacing;
+        set => this.RaiseAndSetIfChanged(ref _letterSpacing, Math.Clamp(value, 0, 20));
+    }
+
+    /// <summary>
+    /// Sembol adı (AssetLibrary'deki ikon adı)
+    /// </summary>
+    public string SymbolName
+    {
+        get => _symbolName;
+        set => this.RaiseAndSetIfChanged(ref _symbolName, value);
+    }
+
+    /// <summary>
+    /// Sembol boyutu (16 veya 32 piksel)
+    /// </summary>
+    public int SymbolSize
+    {
+        get => _symbolSize;
+        set => this.RaiseAndSetIfChanged(ref _symbolSize, Math.Clamp(value, 16, 32));
     }
 
     /// <summary>

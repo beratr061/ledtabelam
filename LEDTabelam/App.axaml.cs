@@ -33,6 +33,13 @@ public partial class App : Application
             var zoneManager = new ZoneManager();
             var multiLineTextRenderer = new MultiLineTextRenderer(fontLoader);
             var previewRenderer = new PreviewRenderer(fontLoader, multiLineTextRenderer);
+            
+            // SVG Renderer ve Asset Library oluştur
+            var svgRenderer = new SvgRenderer();
+            var assetLibrary = new AssetLibrary(svgRenderer);
+            
+            // PreviewRenderer'a AssetLibrary'yi bağla (sembol render için)
+            previewRenderer.SetAssetLibrary(assetLibrary);
 
             // Engine servisleri Facade'ı oluştur
             var engineServices = new EngineServices(
@@ -46,13 +53,18 @@ public partial class App : Application
             // Varsayılan profili oluştur (yoksa)
             _ = profileManager.GetOrCreateDefaultProfileAsync();
 
+            var mainWindowViewModel = new MainWindowViewModel(
+                profileManager,
+                slotManager,
+                zoneManager,
+                engineServices);
+            
+            // ProgramEditor ViewModel'e AssetLibrary'yi bağla
+            mainWindowViewModel.ProgramEditor.SetAssetLibrary(assetLibrary);
+
             var mainWindow = new MainWindow
             {
-                DataContext = new MainWindowViewModel(
-                    profileManager,
-                    slotManager,
-                    zoneManager,
-                    engineServices),
+                DataContext = mainWindowViewModel,
             };
             
             // Servisleri MainWindow'a enjekte et (keyboard shortcuts için)

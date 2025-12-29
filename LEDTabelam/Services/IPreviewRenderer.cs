@@ -11,6 +11,11 @@ namespace LEDTabelam.Services;
 public interface IPreviewRenderer
 {
     /// <summary>
+    /// AssetLibrary'yi ayarlar (sembol render için gerekli)
+    /// </summary>
+    void SetAssetLibrary(IAssetLibrary assetLibrary);
+
+    /// <summary>
     /// Zone listesini renk matrisine render eder
     /// </summary>
     /// <param name="font">Kullanılacak font</param>

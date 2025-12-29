@@ -5,6 +5,7 @@ using System.Reactive;
 using Avalonia.Media;
 using ReactiveUI;
 using LEDTabelam.Models;
+using LEDTabelam.Services;
 
 namespace LEDTabelam.ViewModels;
 
@@ -19,6 +20,8 @@ public class ProgramEditorViewModel : ViewModelBase
     private int _displayWidth = 192;
     private int _displayHeight = 24;
     private int _nextItemId = 1;
+    private AssetInfo? _selectedSymbol;
+    private string _selectedCategory = "all";
 
     /// <summary>
     /// Kullanılabilir fontlar (ControlPanel'den alınır)
@@ -29,6 +32,55 @@ public class ProgramEditorViewModel : ViewModelBase
     /// Font adları listesi (ComboBox için)
     /// </summary>
     public ObservableCollection<string> FontNames { get; } = new();
+
+    /// <summary>
+    /// Kullanılabilir semboller
+    /// </summary>
+    public ObservableCollection<AssetInfo> AvailableSymbols { get; } = new();
+
+    /// <summary>
+    /// Sembol kategorileri
+    /// </summary>
+    public ObservableCollection<AssetCategory> SymbolCategories { get; } = new();
+
+    /// <summary>
+    /// Seçili sembol kategorisi
+    /// </summary>
+    public string SelectedCategory
+    {
+        get => _selectedCategory;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedCategory, value);
+            FilterSymbolsByCategory();
+        }
+    }
+
+    /// <summary>
+    /// Seçili sembol (sembol seçici için)
+    /// </summary>
+    public AssetInfo? SelectedSymbol
+    {
+        get => _selectedSymbol;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedSymbol, value);
+            // Seçili öğe sembol ise, sembol adını güncelle
+            if (value != null && SelectedItem?.ItemType == TabelaItemType.Symbol)
+            {
+                SelectedItem.SymbolName = value.Name;
+                SelectedItem.Content = value.DisplayName; // Görüntüleme için
+                OnItemsChanged();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Filtrelenmiş semboller (kategoriye göre)
+    /// </summary>
+    public ObservableCollection<AssetInfo> FilteredSymbols { get; } = new();
+
+    private IAssetLibrary? _assetLibrary;
 
     /// <summary>
     /// Program numarası (1-999)
@@ -63,6 +115,15 @@ public class ProgramEditorViewModel : ViewModelBase
                 _selectedItem.IsSelected = true;
             
             this.RaisePropertyChanged(nameof(HasSelection));
+            this.RaisePropertyChanged(nameof(IsTextItemSelected));
+            this.RaisePropertyChanged(nameof(IsSymbolItemSelected));
+            
+            // Sembol seçiliyse, mevcut sembolü seç
+            if (_selectedItem?.ItemType == TabelaItemType.Symbol && !string.IsNullOrEmpty(_selectedItem.SymbolName))
+            {
+                _selectedSymbol = AvailableSymbols.FirstOrDefault(s => s.Name == _selectedItem.SymbolName);
+                this.RaisePropertyChanged(nameof(SelectedSymbol));
+            }
         }
     }
 
@@ -70,6 +131,16 @@ public class ProgramEditorViewModel : ViewModelBase
     /// Seçili öğe var mı
     /// </summary>
     public bool HasSelection => SelectedItem != null;
+
+    /// <summary>
+    /// Seçili öğe metin mi
+    /// </summary>
+    public bool IsTextItemSelected => SelectedItem?.ItemType == TabelaItemType.Text;
+
+    /// <summary>
+    /// Seçili öğe sembol mü
+    /// </summary>
+    public bool IsSymbolItemSelected => SelectedItem?.ItemType == TabelaItemType.Symbol;
 
     /// <summary>
     /// Display genişliği
@@ -240,11 +311,16 @@ public class ProgramEditorViewModel : ViewModelBase
             Name = $"Sembol {Items.Count + 1}",
             Content = "",
             ItemType = TabelaItemType.Symbol,
-            X = DisplayWidth - 24,
-            Y = 0,
-            Color = Color.FromRgb(255, 176, 0)
+            SymbolName = "", // Boş başla, kullanıcı seçecek
+            SymbolSize = 16,
+            X = DisplayWidth - 20,
+            Y = (DisplayHeight - 16) / 2, // Dikey ortala
+            Width = 16,
+            Height = 16,
+            Color = Color.FromRgb(255, 176, 0),
+            HAlign = Models.HorizontalAlignment.Center,
+            VAlign = Models.VerticalAlignment.Center
         };
-        RecalculateItemSize(item);
         Items.Add(item);
         SelectedItem = item;
         OnItemsChanged();
@@ -307,6 +383,9 @@ public class ProgramEditorViewModel : ViewModelBase
             Y = SelectedItem.Y,
             Color = SelectedItem.Color,
             FontName = SelectedItem.FontName,
+            LetterSpacing = SelectedItem.LetterSpacing,
+            SymbolName = SelectedItem.SymbolName,
+            SymbolSize = SelectedItem.SymbolSize,
             HAlign = SelectedItem.HAlign,
             VAlign = SelectedItem.VAlign,
             IsScrolling = SelectedItem.IsScrolling,
@@ -428,6 +507,79 @@ public class ProgramEditorViewModel : ViewModelBase
     public BitmapFont? GetFontByName(string fontName)
     {
         return AvailableFonts.FirstOrDefault(f => f.Name == fontName);
+    }
+
+    /// <summary>
+    /// AssetLibrary'yi ayarlar ve sembolleri yükler
+    /// </summary>
+    public void SetAssetLibrary(IAssetLibrary assetLibrary)
+    {
+        _assetLibrary = assetLibrary;
+        LoadSymbols();
+    }
+
+    /// <summary>
+    /// Sembolleri AssetLibrary'den yükler
+    /// </summary>
+    private void LoadSymbols()
+    {
+        if (_assetLibrary == null) return;
+
+        AvailableSymbols.Clear();
+        SymbolCategories.Clear();
+        FilteredSymbols.Clear();
+
+        // Kategorileri yükle
+        var categories = _assetLibrary.GetCategories();
+        foreach (var cat in categories)
+        {
+            SymbolCategories.Add(cat);
+        }
+
+        // Tüm sembolleri yükle
+        var allAssets = _assetLibrary.GetAllAssets();
+        foreach (var asset in allAssets)
+        {
+            AvailableSymbols.Add(asset);
+            FilteredSymbols.Add(asset);
+        }
+    }
+
+    /// <summary>
+    /// Sembolleri kategoriye göre filtreler
+    /// </summary>
+    private void FilterSymbolsByCategory()
+    {
+        FilteredSymbols.Clear();
+
+        if (_selectedCategory == "all" || string.IsNullOrEmpty(_selectedCategory))
+        {
+            foreach (var symbol in AvailableSymbols)
+            {
+                FilteredSymbols.Add(symbol);
+            }
+        }
+        else
+        {
+            foreach (var symbol in AvailableSymbols.Where(s => s.Category == _selectedCategory))
+            {
+                FilteredSymbols.Add(symbol);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Seçili sembol öğesinin boyutunu değiştirir
+    /// </summary>
+    public void SetSymbolSize(int size)
+    {
+        if (SelectedItem?.ItemType == TabelaItemType.Symbol)
+        {
+            SelectedItem.SymbolSize = size;
+            SelectedItem.Width = size;
+            SelectedItem.Height = size;
+            OnItemsChanged();
+        }
     }
 
     private void OnItemsChanged()

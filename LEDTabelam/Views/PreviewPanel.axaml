@@ -53,7 +53,8 @@
                                Width="{Binding ScaledWidth}"
                                Height="{Binding ScaledHeight}"
                                Stretch="Fill"
-                               RenderOptions.BitmapInterpolationMode="LowQuality"/>
+                               RenderOptions.BitmapInterpolationMode="None"
+                               UseLayoutRounding="True"/>
                     </Grid>
                 </ScrollViewer>
                 

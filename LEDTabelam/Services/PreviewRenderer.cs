@@ -13,11 +13,20 @@ public class PreviewRenderer : IPreviewRenderer
 {
     private readonly IFontLoader _fontLoader;
     private readonly IMultiLineTextRenderer _multiLineTextRenderer;
+    private IAssetLibrary? _assetLibrary;
 
     public PreviewRenderer(IFontLoader fontLoader, IMultiLineTextRenderer multiLineTextRenderer)
     {
         _fontLoader = fontLoader ?? throw new ArgumentNullException(nameof(fontLoader));
         _multiLineTextRenderer = multiLineTextRenderer ?? throw new ArgumentNullException(nameof(multiLineTextRenderer));
+    }
+
+    /// <summary>
+    /// AssetLibrary'yi ayarlar (sembol render için gerekli)
+    /// </summary>
+    public void SetAssetLibrary(IAssetLibrary assetLibrary)
+    {
+        _assetLibrary = assetLibrary;
     }
 
     /// <inheritdoc/>
@@ -123,21 +132,86 @@ public class PreviewRenderer : IPreviewRenderer
         int totalWidth = settings.Width;
         int totalHeight = settings.Height;
         var colorMatrix = new SKColor[totalWidth, totalHeight];
-        int letterSpacing = settings.LetterSpacing;
 
         foreach (var item in items)
         {
-            if (!item.IsVisible || string.IsNullOrEmpty(item.Content))
+            if (!item.IsVisible)
+                continue;
+
+            // Sembol öğesi için farklı render
+            if (item.ItemType == TabelaItemType.Symbol)
+            {
+                RenderSymbolItem(item, totalWidth, totalHeight, colorMatrix);
+                continue;
+            }
+
+            // Metin öğesi için normal render
+            if (string.IsNullOrEmpty(item.Content))
                 continue;
 
             var itemFont = fontResolver(item.FontName) ?? defaultFont;
             if (itemFont == null) continue;
 
             var itemColor = new SKColor(item.Color.R, item.Color.G, item.Color.B);
-            RenderProgramItem(itemFont, item, itemColor, totalWidth, totalHeight, colorMatrix, letterSpacing);
+            // Her öğenin kendi harf aralığını kullan
+            RenderProgramItem(itemFont, item, itemColor, totalWidth, totalHeight, colorMatrix, item.LetterSpacing);
         }
 
         return colorMatrix;
+    }
+
+    private void RenderSymbolItem(
+        TabelaItem item,
+        int totalWidth,
+        int totalHeight,
+        SKColor[,] colorMatrix)
+    {
+        if (_assetLibrary == null || string.IsNullOrEmpty(item.SymbolName))
+            return;
+
+        var itemColor = new SKColor(item.Color.R, item.Color.G, item.Color.B);
+        
+        using var symbolBitmap = _assetLibrary.RenderAsset(item.SymbolName, item.SymbolSize, itemColor);
+        if (symbolBitmap == null) return;
+
+        int symbolWidth = symbolBitmap.Width;
+        int symbolHeight = symbolBitmap.Height;
+
+        // Sembol pozisyonunu hesapla (hizalama ile)
+        int offsetX = item.HAlign switch
+        {
+            HorizontalAlignment.Left => 0,
+            HorizontalAlignment.Center => Math.Max(0, (item.Width - symbolWidth) / 2),
+            HorizontalAlignment.Right => Math.Max(0, item.Width - symbolWidth),
+            _ => 0
+        };
+
+        int offsetY = item.VAlign switch
+        {
+            VerticalAlignment.Top => 0,
+            VerticalAlignment.Center => Math.Max(0, (item.Height - symbolHeight) / 2),
+            VerticalAlignment.Bottom => Math.Max(0, item.Height - symbolHeight),
+            _ => 0
+        };
+
+        // Pikselleri kopyala
+        for (int y = 0; y < symbolHeight; y++)
+        {
+            int destY = item.Y + offsetY + y;
+            if (destY < 0 || destY >= totalHeight) continue;
+
+            for (int x = 0; x < symbolWidth; x++)
+            {
+                int destX = item.X + offsetX + x;
+                if (destX < 0 || destX >= totalWidth) continue;
+
+                var pixel = symbolBitmap.GetPixel(x, y);
+                if (pixel.Alpha > 128)
+                {
+                    colorMatrix[destX, destY] = itemColor;
+                }
+            }
+        }
     }
 
     private void RenderProgramItem(

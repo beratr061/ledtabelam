@@ -1,7 +1,9 @@
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using LEDTabelam.ViewModels;
+using LEDTabelam.Services;
 
 namespace LEDTabelam.Views;
 
@@ -13,6 +15,31 @@ public partial class ProgramEditor : UserControl
     }
 
     private ProgramEditorViewModel? ViewModel => DataContext as ProgramEditorViewModel;
+
+    // Sembol Kategori Değişikliği
+    private void OnSymbolCategoryChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox combo && combo.SelectedItem is ComboBoxItem item && item.Tag is string category)
+        {
+            if (ViewModel != null)
+            {
+                ViewModel.SelectedCategory = category;
+            }
+        }
+    }
+
+    // Sembol Seçimi
+    private void OnSymbolSelected(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string symbolName && ViewModel != null)
+        {
+            var symbol = ViewModel.AvailableSymbols.FirstOrDefault(s => s.Name == symbolName);
+            if (symbol != null)
+            {
+                ViewModel.SelectedSymbol = symbol;
+            }
+        }
+    }
 
     // Renk Butonları
     private void OnColorRed(object? sender, RoutedEventArgs e) => ViewModel?.SetSelectedColor(Color.FromRgb(255, 0, 0));

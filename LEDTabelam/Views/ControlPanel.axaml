@@ -208,16 +208,6 @@
                                    Minimum="0" Maximum="100"
                                    ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
                 </Grid>
-                
-                <!-- Harf Aralığı -->
-                <TextBlock Classes="label" Text="{Binding LetterSpacing, StringFormat='Harf Aralığı: {0} px'}"/>
-                <Grid ColumnDefinitions="*, Auto">
-                    <Slider Grid.Column="0" Minimum="0" Maximum="10" Value="{Binding LetterSpacing}" 
-                            TickFrequency="1" IsSnapToTickEnabled="True"/>
-                    <NumericUpDown Grid.Column="1" Value="{Binding LetterSpacing}" 
-                                   Minimum="0" Maximum="10"
-                                   ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
-                </Grid>
             </StackPanel>
         </Expander>
         

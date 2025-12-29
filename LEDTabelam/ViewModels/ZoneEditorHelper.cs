@@ -266,3 +266,59 @@ public class ScrollDirToIndexConverter : IValueConverter
         return Models.ScrollDirection.Left;
     }
 }
+
+/// <summary>
+/// TabelaItemType'ı ikon karakterine dönüştüren converter
+/// </summary>
+public class ItemTypeToIconConverter : IValueConverter
+{
+    public static readonly ItemTypeToIconConverter Instance = new();
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is TabelaItemType itemType)
+        {
+            return itemType switch
+            {
+                TabelaItemType.Text => "T",
+                TabelaItemType.Symbol => "◆",
+                TabelaItemType.Image => "🖼",
+                TabelaItemType.Clock => "⏰",
+                TabelaItemType.Date => "📅",
+                _ => "?"
+            };
+        }
+        return "?";
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// TabelaItem içeriğini görüntüleme için dönüştüren multi-value converter
+/// </summary>
+public class ItemContentDisplayConverter : IMultiValueConverter
+{
+    public static readonly ItemContentDisplayConverter Instance = new();
+
+    public object? Convert(System.Collections.Generic.IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (values.Count >= 3)
+        {
+            var itemType = values[0] as TabelaItemType? ?? TabelaItemType.Text;
+            var content = values[1] as string ?? "";
+            var symbolName = values[2] as string ?? "";
+
+            if (itemType == TabelaItemType.Symbol)
+            {
+                return string.IsNullOrEmpty(symbolName) ? "(sembol seçilmedi)" : $"[{symbolName}]";
+            }
+            
+            return string.IsNullOrEmpty(content) ? "(boş)" : content;
+        }
+        return "";
+    }
+}
