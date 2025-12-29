@@ -1,8 +1,15 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using SkiaSharp;
 
 namespace LEDTabelam.Services;
+
+/// <summary>
+/// Frame üretici delegate - streaming export için
+/// Her çağrıda bir sonraki frame'i üretir, null dönerse animasyon biter
+/// </summary>
+public delegate SKBitmap? FrameGenerator(int frameIndex);
 
 /// <summary>
 /// Dışa aktarma servisi interface'i - PNG, GIF, WebP export
@@ -28,6 +35,18 @@ public interface IExportService
     /// <param name="fps">Frame per second (1-60)</param>
     /// <returns>Başarılı ise true</returns>
     Task<bool> ExportGifAsync(IReadOnlyList<SKBitmap> frames, string filePath, int fps = 30);
+
+    /// <summary>
+    /// Streaming yaklaşımı ile GIF dışa aktarır - bellek dostu
+    /// Frame'ler üretildikçe diske yazılır ve bellekten atılır
+    /// </summary>
+    /// <param name="frameGenerator">Her çağrıda bir frame üreten fonksiyon</param>
+    /// <param name="totalFrames">Toplam frame sayısı</param>
+    /// <param name="filePath">Hedef dosya yolu</param>
+    /// <param name="fps">Frame per second (1-60)</param>
+    /// <param name="progress">İlerleme callback'i (0-100)</param>
+    /// <returns>Başarılı ise true</returns>
+    Task<bool> ExportGifStreamingAsync(FrameGenerator frameGenerator, int totalFrames, string filePath, int fps = 30, Action<int>? progress = null);
 
     /// <summary>
     /// Frame listesini WebP formatında dışa aktarır

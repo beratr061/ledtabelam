@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive;
@@ -679,54 +680,28 @@ public class ControlPanelViewModel : ViewModelBase
 
     /// <summary>
     /// Dahili fontları yükler (Assets/Fonts klasöründen)
+    /// Önce embedded resource olarak, sonra fiziksel dosya olarak dener
     /// </summary>
     public async Task LoadBuiltInFontsAsync()
     {
+        var loadedFonts = new List<string>();
+        var errors = new List<string>();
+
         try
         {
-            // Uygulama dizinini bul
+            // Önce fiziksel dosya yolunu dene (publish sonrası)
             var appDir = AppDomain.CurrentDomain.BaseDirectory;
             var fontsDir = System.IO.Path.Combine(appDir, "Assets", "Fonts");
 
-            if (!System.IO.Directory.Exists(fontsDir))
+            if (System.IO.Directory.Exists(fontsDir))
             {
-                return;
+                await LoadFontsFromDirectoryAsync(fontsDir, loadedFonts, errors);
             }
 
-            // .fnt dosyalarını yükle
-            var fntFiles = System.IO.Directory.GetFiles(fontsDir, "*.fnt");
-            foreach (var fntFile in fntFiles)
+            // Eğer hiç font yüklenemezse, embedded resource olarak dene
+            if (Fonts.Count == 0)
             {
-                try
-                {
-                    var font = await _fontLoader.LoadBMFontAsync(fntFile);
-                    if (_fontLoader.ValidateFont(font))
-                    {
-                        Fonts.Add(font);
-                    }
-                }
-                catch (Exception)
-                {
-                    // Tek font yüklenemezse devam et
-                }
-            }
-
-            // .json dosyalarını yükle
-            var jsonFiles = System.IO.Directory.GetFiles(fontsDir, "*.json");
-            foreach (var jsonFile in jsonFiles)
-            {
-                try
-                {
-                    var font = await _fontLoader.LoadJsonFontAsync(jsonFile);
-                    if (_fontLoader.ValidateFont(font))
-                    {
-                        Fonts.Add(font);
-                    }
-                }
-                catch (Exception)
-                {
-                    // Tek font yüklenemezse devam et
-                }
+                await LoadEmbeddedFontsAsync(loadedFonts, errors);
             }
 
             // İlk fontu seç
@@ -734,10 +709,129 @@ public class ControlPanelViewModel : ViewModelBase
             {
                 SelectedFont = Fonts[0];
             }
+
+            // Hata varsa loglama için bilgi ver (debug modda)
+            if (errors.Count > 0 && Fonts.Count == 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"Font yükleme uyarısı: {errors.Count} font yüklenemedi.");
+                foreach (var error in errors)
+                {
+                    System.Diagnostics.Debug.WriteLine($"  - {error}");
+                }
+            }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Font yükleme hatası sessizce yoksayılır
+            // Kritik hata - loglama
+            System.Diagnostics.Debug.WriteLine($"Font yükleme hatası: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Belirtilen dizinden fontları yükler
+    /// </summary>
+    private async Task LoadFontsFromDirectoryAsync(string fontsDir, List<string> loadedFonts, List<string> errors)
+    {
+        // .fnt dosyalarını yükle
+        var fntFiles = System.IO.Directory.GetFiles(fontsDir, "*.fnt");
+        foreach (var fntFile in fntFiles)
+        {
+            try
+            {
+                var font = await _fontLoader.LoadBMFontAsync(fntFile);
+                if (_fontLoader.ValidateFont(font))
+                {
+                    Fonts.Add(font);
+                    loadedFonts.Add(fntFile);
+                }
+            }
+            catch (Exception ex)
+            {
+                errors.Add($"{System.IO.Path.GetFileName(fntFile)}: {ex.Message}");
+            }
+        }
+
+        // .json dosyalarını yükle
+        var jsonFiles = System.IO.Directory.GetFiles(fontsDir, "*.json");
+        foreach (var jsonFile in jsonFiles)
+        {
+            try
+            {
+                var font = await _fontLoader.LoadJsonFontAsync(jsonFile);
+                if (_fontLoader.ValidateFont(font))
+                {
+                    Fonts.Add(font);
+                    loadedFonts.Add(jsonFile);
+                }
+            }
+            catch (Exception ex)
+            {
+                errors.Add($"{System.IO.Path.GetFileName(jsonFile)}: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Embedded resource olarak fontları yüklemeyi dener
+    /// </summary>
+    private async Task LoadEmbeddedFontsAsync(List<string> loadedFonts, List<string> errors)
+    {
+        try
+        {
+            // Avalonia asset URI'leri ile embedded resource'ları dene
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            var resourceNames = assembly.GetManifestResourceNames();
+
+            foreach (var resourceName in resourceNames)
+            {
+                if (resourceName.EndsWith(".fnt", StringComparison.OrdinalIgnoreCase) ||
+                    resourceName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        using var stream = assembly.GetManifestResourceStream(resourceName);
+                        if (stream != null)
+                        {
+                            // Geçici dosyaya yaz ve yükle
+                            var tempPath = System.IO.Path.Combine(
+                                System.IO.Path.GetTempPath(),
+                                System.IO.Path.GetFileName(resourceName));
+
+                            using (var fileStream = System.IO.File.Create(tempPath))
+                            {
+                                await stream.CopyToAsync(fileStream);
+                            }
+
+                            BitmapFont font;
+                            if (resourceName.EndsWith(".fnt", StringComparison.OrdinalIgnoreCase))
+                            {
+                                font = await _fontLoader.LoadBMFontAsync(tempPath);
+                            }
+                            else
+                            {
+                                font = await _fontLoader.LoadJsonFontAsync(tempPath);
+                            }
+
+                            if (_fontLoader.ValidateFont(font))
+                            {
+                                Fonts.Add(font);
+                                loadedFonts.Add(resourceName);
+                            }
+
+                            // Geçici dosyayı temizle
+                            try { System.IO.File.Delete(tempPath); } catch { }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        errors.Add($"Embedded {resourceName}: {ex.Message}");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errors.Add($"Embedded resource tarama hatası: {ex.Message}");
         }
     }
 

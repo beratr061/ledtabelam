@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Threading;
 
 namespace LEDTabelam.Services;
@@ -6,15 +8,17 @@ namespace LEDTabelam.Services;
 /// <summary>
 /// Animasyon servisi implementasyonu - Kayan yazı ve geçiş animasyonları
 /// Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
+/// Background thread üzerinde çalışır, UI donmalarını önler
 /// </summary>
 public class AnimationService : IAnimationService, IDisposable
 {
-    private readonly DispatcherTimer _timer;
+    private readonly object _lock = new();
+    private CancellationTokenSource? _cts;
+    private Task? _animationTask;
+    
     private AnimationState _state = AnimationState.Stopped;
     private int _currentOffset;
     private int _speed = 20; // Varsayılan: 20 px/s (Requirement 8.5)
-    private DateTime _lastUpdate;
-    private double _accumulatedPixels;
     private bool _disposed;
 
     /// <summary>
@@ -33,31 +37,38 @@ public class AnimationService : IAnimationService, IDisposable
     public const int DefaultSpeed = 20;
 
     /// <summary>
-    /// Timer interval (ms) - 60 FPS için ~16.67ms
+    /// Target frame rate (60 FPS)
     /// </summary>
-    private const double TimerIntervalMs = 16.67;
+    private const int TargetFps = 60;
+    private const double FrameIntervalMs = 1000.0 / TargetFps;
 
     public AnimationService()
     {
-        // DispatcherTimer varsayılan olarak UI Thread üzerinde çalışır
-        _timer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(TimerIntervalMs)
-        };
-        _timer.Tick += OnTimerTick;
     }
 
     /// <inheritdoc/>
-    public int CurrentOffset => _currentOffset;
+    public int CurrentOffset
+    {
+        get { lock (_lock) return _currentOffset; }
+    }
 
     /// <inheritdoc/>
-    public bool IsPlaying => _state == AnimationState.Playing;
+    public bool IsPlaying
+    {
+        get { lock (_lock) return _state == AnimationState.Playing; }
+    }
 
     /// <inheritdoc/>
-    public bool IsPaused => _state == AnimationState.Paused;
+    public bool IsPaused
+    {
+        get { lock (_lock) return _state == AnimationState.Paused; }
+    }
 
     /// <inheritdoc/>
-    public int Speed => _speed;
+    public int Speed
+    {
+        get { lock (_lock) return _speed; }
+    }
 
     /// <inheritdoc/>
     public event Action<AnimationState>? StateChanged;
@@ -70,19 +81,22 @@ public class AnimationService : IAnimationService, IDisposable
     {
         if (_disposed) return;
 
-        // State machine: Stopped -> Playing (valid)
-        // Playing -> Playing (restart, valid)
-        // Paused -> Playing (resume, but this method restarts)
-        SetSpeed(speed);
-        _currentOffset = 0;
-        _accumulatedPixels = 0;
-        _lastUpdate = DateTime.UtcNow;
-        
-        _state = AnimationState.Playing;
-        _timer.Start();
-        
-        StateChanged?.Invoke(_state);
-        OnFrameUpdate?.Invoke(_currentOffset);
+        lock (_lock)
+        {
+            // Mevcut animasyonu durdur
+            StopAnimationInternal();
+
+            SetSpeed(speed);
+            _currentOffset = 0;
+            _state = AnimationState.Playing;
+        }
+
+        // Yeni animasyon task'ı başlat
+        _cts = new CancellationTokenSource();
+        _animationTask = Task.Run(() => AnimationLoop(_cts.Token));
+
+        NotifyStateChanged(AnimationState.Playing);
+        NotifyFrameUpdate(0);
     }
 
     /// <inheritdoc/>
@@ -90,14 +104,15 @@ public class AnimationService : IAnimationService, IDisposable
     {
         if (_disposed) return;
 
-        // State machine: Any state -> Stopped (valid)
-        _timer.Stop();
-        _currentOffset = 0;
-        _accumulatedPixels = 0;
-        _state = AnimationState.Stopped;
-        
-        StateChanged?.Invoke(_state);
-        OnFrameUpdate?.Invoke(_currentOffset);
+        lock (_lock)
+        {
+            StopAnimationInternal();
+            _currentOffset = 0;
+            _state = AnimationState.Stopped;
+        }
+
+        NotifyStateChanged(AnimationState.Stopped);
+        NotifyFrameUpdate(0);
     }
 
     /// <inheritdoc/>
@@ -105,15 +120,13 @@ public class AnimationService : IAnimationService, IDisposable
     {
         if (_disposed) return;
 
-        // State machine: Playing -> Paused (valid)
-        // Stopped -> Paused (invalid, ignore)
-        // Paused -> Paused (no-op)
-        if (_state != AnimationState.Playing) return;
+        lock (_lock)
+        {
+            if (_state != AnimationState.Playing) return;
+            _state = AnimationState.Paused;
+        }
 
-        _timer.Stop();
-        _state = AnimationState.Paused;
-        
-        StateChanged?.Invoke(_state);
+        NotifyStateChanged(AnimationState.Paused);
     }
 
     /// <inheritdoc/>
@@ -121,53 +134,133 @@ public class AnimationService : IAnimationService, IDisposable
     {
         if (_disposed) return;
 
-        // State machine: Paused -> Playing (valid)
-        // Stopped -> Playing (invalid, ignore)
-        // Playing -> Playing (no-op)
-        if (_state != AnimationState.Paused) return;
+        bool shouldStart = false;
+        lock (_lock)
+        {
+            if (_state != AnimationState.Paused) return;
+            _state = AnimationState.Playing;
+            shouldStart = _animationTask == null || _animationTask.IsCompleted;
+        }
 
-        _lastUpdate = DateTime.UtcNow;
-        _accumulatedPixels = 0;
-        _state = AnimationState.Playing;
-        _timer.Start();
-        
-        StateChanged?.Invoke(_state);
+        if (shouldStart)
+        {
+            _cts = new CancellationTokenSource();
+            _animationTask = Task.Run(() => AnimationLoop(_cts.Token));
+        }
+
+        NotifyStateChanged(AnimationState.Playing);
     }
 
     /// <inheritdoc/>
     public void SetSpeed(int speed)
     {
-        _speed = Math.Clamp(speed, MinSpeed, MaxSpeed);
+        lock (_lock)
+        {
+            _speed = Math.Clamp(speed, MinSpeed, MaxSpeed);
+        }
     }
 
     /// <inheritdoc/>
     public void SetOffset(int offset)
     {
-        _currentOffset = Math.Max(0, offset);
-        _accumulatedPixels = 0;
-        OnFrameUpdate?.Invoke(_currentOffset);
+        lock (_lock)
+        {
+            _currentOffset = Math.Max(0, offset);
+        }
+        NotifyFrameUpdate(_currentOffset);
     }
 
-    private void OnTimerTick(object? sender, EventArgs e)
+    /// <summary>
+    /// Background thread üzerinde çalışan animasyon döngüsü
+    /// </summary>
+    private async Task AnimationLoop(CancellationToken ct)
     {
-        if (_state != AnimationState.Playing) return;
+        var lastUpdate = DateTime.UtcNow;
+        double accumulatedPixels = 0;
 
-        var now = DateTime.UtcNow;
-        var elapsed = (now - _lastUpdate).TotalSeconds;
-        _lastUpdate = now;
-
-        // Piksel hesaplama: hız (px/s) * geçen süre (s)
-        _accumulatedPixels += _speed * elapsed;
-
-        // Tam piksel sayısına ulaşıldığında offset'i güncelle
-        if (_accumulatedPixels >= 1.0)
+        while (!ct.IsCancellationRequested)
         {
-            var pixelsToMove = (int)_accumulatedPixels;
-            _accumulatedPixels -= pixelsToMove;
-            _currentOffset += pixelsToMove;
-            
-            OnFrameUpdate?.Invoke(_currentOffset);
+            AnimationState currentState;
+            int currentSpeed;
+
+            lock (_lock)
+            {
+                currentState = _state;
+                currentSpeed = _speed;
+            }
+
+            if (currentState != AnimationState.Playing)
+            {
+                // Paused veya Stopped durumunda bekle
+                await Task.Delay(50, ct).ConfigureAwait(false);
+                lastUpdate = DateTime.UtcNow;
+                accumulatedPixels = 0;
+                continue;
+            }
+
+            var now = DateTime.UtcNow;
+            var elapsed = (now - lastUpdate).TotalSeconds;
+            lastUpdate = now;
+
+            // Piksel hesaplama: hız (px/s) * geçen süre (s)
+            accumulatedPixels += currentSpeed * elapsed;
+
+            // Tam piksel sayısına ulaşıldığında offset'i güncelle
+            if (accumulatedPixels >= 1.0)
+            {
+                int pixelsToMove = (int)accumulatedPixels;
+                accumulatedPixels -= pixelsToMove;
+
+                int newOffset;
+                lock (_lock)
+                {
+                    _currentOffset += pixelsToMove;
+                    newOffset = _currentOffset;
+                }
+
+                // UI thread'e bildir
+                NotifyFrameUpdate(newOffset);
+            }
+
+            // Frame rate kontrolü
+            try
+            {
+                await Task.Delay((int)FrameIntervalMs, ct).ConfigureAwait(false);
+            }
+            catch (TaskCanceledException)
+            {
+                break;
+            }
         }
+    }
+
+    private void StopAnimationInternal()
+    {
+        _cts?.Cancel();
+        try
+        {
+            _animationTask?.Wait(100);
+        }
+        catch { /* Ignore */ }
+        _cts?.Dispose();
+        _cts = null;
+        _animationTask = null;
+    }
+
+    private void NotifyStateChanged(AnimationState state)
+    {
+        if (StateChanged == null) return;
+        
+        // UI thread'e marshal et
+        Dispatcher.UIThread.Post(() => StateChanged?.Invoke(state));
+    }
+
+    private void NotifyFrameUpdate(int offset)
+    {
+        if (OnFrameUpdate == null) return;
+        
+        // UI thread'e marshal et
+        Dispatcher.UIThread.Post(() => OnFrameUpdate?.Invoke(offset));
     }
 
     public void Dispose()
@@ -175,8 +268,11 @@ public class AnimationService : IAnimationService, IDisposable
         if (_disposed) return;
         
         _disposed = true;
-        _timer.Stop();
-        _timer.Tick -= OnTimerTick;
+        
+        lock (_lock)
+        {
+            StopAnimationInternal();
+        }
         
         GC.SuppressFinalize(this);
     }
