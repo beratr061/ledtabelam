@@ -472,6 +472,27 @@ public partial class UnifiedEditor : UserControl
 
     #endregion
 
+    #region Border Color Buttons
+
+    private void OnBorderColorRed(object? sender, RoutedEventArgs e) => SetSelectedBorderColor(Color.FromRgb(255, 0, 0));
+    private void OnBorderColorGreen(object? sender, RoutedEventArgs e) => SetSelectedBorderColor(Color.FromRgb(0, 255, 0));
+    private void OnBorderColorAmber(object? sender, RoutedEventArgs e) => SetSelectedBorderColor(Color.FromRgb(255, 176, 0));
+    private void OnBorderColorWhite(object? sender, RoutedEventArgs e) => SetSelectedBorderColor(Color.FromRgb(255, 255, 255));
+    private void OnBorderColorCyan(object? sender, RoutedEventArgs e) => SetSelectedBorderColor(Color.FromRgb(0, 255, 255));
+    private void OnBorderColorYellow(object? sender, RoutedEventArgs e) => SetSelectedBorderColor(Color.FromRgb(255, 255, 0));
+
+    private void SetSelectedBorderColor(Color color)
+    {
+        if (ViewModel?.SelectedItem?.Border != null)
+        {
+            ViewModel.SelectedItem.Border.Color = color;
+            ViewModel.OnItemsChanged();
+            RedrawZones();
+        }
+    }
+
+    #endregion
+
     #region Alignment Buttons
 
     private void OnHAlignChanged(object? sender, SelectionChangedEventArgs e)

@@ -273,6 +273,58 @@
                             </Border>
                         </StackPanel>
                         
+                        <Border Height="1" Background="#3D3D3D"/>
+                        
+                        <!-- Çerçeve Ayarları -->
+                        <StackPanel Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <CheckBox Content="Çerçeve" IsChecked="{Binding SelectedItem.Border.IsEnabled}" FontSize="11"/>
+                                <Border Width="18" Height="18" CornerRadius="3"
+                                        Background="{Binding SelectedItem.Border.Color, Converter={x:Static vm:ColorToBrushConverter.Instance}}"
+                                        BorderBrush="#505050" BorderThickness="1"
+                                        ToolTip.Tip="Çerçeve Rengi"/>
+                            </StackPanel>
+                            
+                            <StackPanel Spacing="4" IsVisible="{Binding SelectedItem.Border.IsEnabled}">
+                                <!-- Çerçeve Renkleri -->
+                                <WrapPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <Button Width="20" Height="20" Background="#FF0000" Margin="1" Click="OnBorderColorRed" Padding="0" ToolTip.Tip="Kırmızı"/>
+                                    <Button Width="20" Height="20" Background="#00FF00" Margin="1" Click="OnBorderColorGreen" Padding="0" ToolTip.Tip="Yeşil"/>
+                                    <Button Width="20" Height="20" Background="#FFB000" Margin="1" Click="OnBorderColorAmber" Padding="0" ToolTip.Tip="Amber"/>
+                                    <Button Width="20" Height="20" Background="#FFFFFF" Margin="1" Click="OnBorderColorWhite" Padding="0" ToolTip.Tip="Beyaz"/>
+                                    <Button Width="20" Height="20" Background="#00FFFF" Margin="1" Click="OnBorderColorCyan" Padding="0" ToolTip.Tip="Cyan"/>
+                                    <Button Width="20" Height="20" Background="#FFFF00" Margin="1" Click="OnBorderColorYellow" Padding="0" ToolTip.Tip="Sarı"/>
+                                </WrapPanel>
+                                
+                                <!-- Yatay Çizgi -->
+                                <Grid ColumnDefinitions="Auto,Auto,Auto">
+                                    <TextBlock Grid.Column="0" Text="Yatay:" Foreground="#808080" FontSize="9" VerticalAlignment="Center" Width="40"/>
+                                    <NumericUpDown Grid.Column="1" Minimum="1" Maximum="5" Value="{Binding SelectedItem.Border.HorizontalLines}" 
+                                                   Increment="1" Width="60" ShowButtonSpinner="True"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding SelectedItem.Border.HorizontalLines, StringFormat={}{0}px}" 
+                                               Foreground="#B0B0B0" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                                </Grid>
+                                
+                                <!-- Dikey Çizgi -->
+                                <Grid ColumnDefinitions="Auto,Auto,Auto">
+                                    <TextBlock Grid.Column="0" Text="Dikey:" Foreground="#808080" FontSize="9" VerticalAlignment="Center" Width="40"/>
+                                    <NumericUpDown Grid.Column="1" Minimum="1" Maximum="5" Value="{Binding SelectedItem.Border.VerticalLines}" 
+                                                   Increment="1" Width="60" ShowButtonSpinner="True"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding SelectedItem.Border.VerticalLines, StringFormat={}{0}px}" 
+                                               Foreground="#B0B0B0" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                                </Grid>
+                                
+                                <!-- Boşluk -->
+                                <Grid ColumnDefinitions="Auto,Auto,Auto">
+                                    <TextBlock Grid.Column="0" Text="Boşluk:" Foreground="#808080" FontSize="9" VerticalAlignment="Center" Width="40"/>
+                                    <NumericUpDown Grid.Column="1" Minimum="0" Maximum="10" Value="{Binding SelectedItem.Border.Padding}" 
+                                                   Increment="1" Width="60" ShowButtonSpinner="True"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding SelectedItem.Border.Padding, StringFormat={}{0}px}" 
+                                               Foreground="#B0B0B0" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </StackPanel>
+                        
                     </StackPanel>
                 </ScrollViewer>
             </Border>

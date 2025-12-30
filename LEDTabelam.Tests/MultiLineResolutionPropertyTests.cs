@@ -378,14 +378,14 @@ public class MultiLineResolutionPropertyTests : IDisposable
     }
 
     /// <summary>
-    /// Property 11: Default line spacing
+    /// Property 11: Default letter spacing
     /// Validates: Requirements 14.6
     /// </summary>
     [Fact]
-    public void DefaultLineSpacing_IsTwo()
+    public void DefaultLetterSpacing_IsOne()
     {
         var settings = new DisplaySettings();
-        Assert.Equal(2, settings.LineSpacing);
+        Assert.Equal(1, settings.LetterSpacing);
     }
 
     #endregion

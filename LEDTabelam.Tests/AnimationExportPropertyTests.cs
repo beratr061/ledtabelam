@@ -232,8 +232,9 @@ public class AnimationExportPropertyTests : IDisposable
         
         service.SetSpeed(speed);
         
-        return (service.Speed >= AnimationService.MinSpeed && 
-                service.Speed <= AnimationService.MaxSpeed).ToProperty();
+        // Speed is clamped to 1-100 range
+        return (service.Speed >= 1 && 
+                service.Speed <= 100).ToProperty();
     }
 
     /// <summary>

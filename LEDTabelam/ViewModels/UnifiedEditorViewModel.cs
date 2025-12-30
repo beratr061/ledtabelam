@@ -1,15 +1,244 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Reactive;
 using Avalonia;
+using Avalonia.Data.Converters;
 using Avalonia.Media;
 using ReactiveUI;
 using LEDTabelam.Models;
 using LEDTabelam.Services;
 
 namespace LEDTabelam.ViewModels;
+
+#region Converters
+
+/// <summary>
+/// Bool değerini seçim arka plan rengine dönüştürür
+/// </summary>
+public class BoolToSelectionBrushConverter : IValueConverter
+{
+    public static readonly BoolToSelectionBrushConverter Instance = new();
+    
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool isSelected && isSelected)
+            return new SolidColorBrush(Color.FromRgb(0, 90, 158));
+        return new SolidColorBrush(Color.FromRgb(45, 45, 45));
+    }
+    
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>
+/// TabelaItemType'ı ikon karakterine dönüştürür
+/// </summary>
+public class ItemTypeToIconConverter : IValueConverter
+{
+    public static readonly ItemTypeToIconConverter Instance = new();
+    
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is TabelaItemType itemType)
+        {
+            return itemType switch
+            {
+                TabelaItemType.Text => "T",
+                TabelaItemType.Symbol => "◆",
+                TabelaItemType.Image => "🖼",
+                TabelaItemType.Clock => "⏰",
+                TabelaItemType.Date => "📅",
+                _ => "?"
+            };
+        }
+        return "?";
+    }
+    
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>
+/// Color'ı SolidColorBrush'a dönüştürür
+/// </summary>
+public class ColorToBrushConverter : IValueConverter
+{
+    public static readonly ColorToBrushConverter Instance = new();
+    
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is Color color)
+            return new SolidColorBrush(color);
+        return Brushes.Transparent;
+    }
+    
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>
+/// Öğe içeriğini görüntüleme metnine dönüştürür
+/// </summary>
+public class ItemContentDisplayConverter : IMultiValueConverter
+{
+    public static readonly ItemContentDisplayConverter Instance = new();
+    
+    public object? Convert(System.Collections.Generic.IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (values.Count < 3) return "";
+        
+        var itemType = values[0] as TabelaItemType? ?? TabelaItemType.Text;
+        var content = values[1] as string ?? "";
+        var symbolName = values[2] as string ?? "";
+        
+        return itemType switch
+        {
+            TabelaItemType.Symbol => string.IsNullOrEmpty(symbolName) ? "(Sembol seçin)" : symbolName,
+            TabelaItemType.Clock => "Saat",
+            TabelaItemType.Date => "Tarih",
+            _ => string.IsNullOrEmpty(content) ? "(Boş)" : content
+        };
+    }
+}
+
+/// <summary>
+/// Bool değerini play/pause renk durumuna dönüştürür
+/// </summary>
+public class BoolToPlayColorConverter : IValueConverter
+{
+    public static readonly BoolToPlayColorConverter Instance = new();
+    
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool isPlaying && isPlaying)
+            return new SolidColorBrush(Color.FromRgb(0, 255, 0));
+        return new SolidColorBrush(Color.FromRgb(224, 224, 224));
+    }
+    
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>
+/// HorizontalAlignment'ı ComboBox index'ine dönüştürür
+/// </summary>
+public class HAlignToIndexConverter : IValueConverter
+{
+    public static readonly HAlignToIndexConverter Instance = new();
+    
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is HorizontalAlignment align)
+        {
+            return align switch
+            {
+                HorizontalAlignment.Left => 0,
+                HorizontalAlignment.Center => 1,
+                HorizontalAlignment.Right => 2,
+                _ => 0
+            };
+        }
+        return 0;
+    }
+    
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is int index)
+        {
+            return index switch
+            {
+                0 => HorizontalAlignment.Left,
+                1 => HorizontalAlignment.Center,
+                2 => HorizontalAlignment.Right,
+                _ => HorizontalAlignment.Left
+            };
+        }
+        return HorizontalAlignment.Left;
+    }
+}
+
+/// <summary>
+/// VerticalAlignment'ı ComboBox index'ine dönüştürür
+/// </summary>
+public class VAlignToIndexConverter : IValueConverter
+{
+    public static readonly VAlignToIndexConverter Instance = new();
+    
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is VerticalAlignment align)
+        {
+            return align switch
+            {
+                VerticalAlignment.Top => 0,
+                VerticalAlignment.Center => 1,
+                VerticalAlignment.Bottom => 2,
+                _ => 0
+            };
+        }
+        return 0;
+    }
+    
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is int index)
+        {
+            return index switch
+            {
+                0 => VerticalAlignment.Top,
+                1 => VerticalAlignment.Center,
+                2 => VerticalAlignment.Bottom,
+                _ => VerticalAlignment.Top
+            };
+        }
+        return VerticalAlignment.Top;
+    }
+}
+
+/// <summary>
+/// ScrollDirection'ı ComboBox index'ine dönüştürür
+/// </summary>
+public class ScrollDirToIndexConverter : IValueConverter
+{
+    public static readonly ScrollDirToIndexConverter Instance = new();
+    
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is ScrollDirection dir)
+        {
+            return dir switch
+            {
+                ScrollDirection.Left => 0,
+                ScrollDirection.Right => 1,
+                ScrollDirection.Up => 2,
+                ScrollDirection.Down => 3,
+                _ => 0
+            };
+        }
+        return 0;
+    }
+    
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is int index)
+        {
+            return index switch
+            {
+                0 => ScrollDirection.Left,
+                1 => ScrollDirection.Right,
+                2 => ScrollDirection.Up,
+                3 => ScrollDirection.Down,
+                _ => ScrollDirection.Left
+            };
+        }
+        return ScrollDirection.Left;
+    }
+}
+
+#endregion
 
 /// <summary>
 /// Birleşik düzenleyici ViewModel - Program ve görsel düzenleyici tek arayüzde
@@ -196,6 +425,8 @@ public class UnifiedEditorViewModel : ViewModelBase
                 foreach (TabelaItem item in e.NewItems)
                 {
                     item.PropertyChanged += OnItemPropertyChanged;
+                    // Border property değişikliklerini de dinle
+                    item.Border.PropertyChanged += OnBorderPropertyChanged;
                 }
             }
             if (e.OldItems != null)
@@ -203,6 +434,7 @@ public class UnifiedEditorViewModel : ViewModelBase
                 foreach (TabelaItem item in e.OldItems)
                 {
                     item.PropertyChanged -= OnItemPropertyChanged;
+                    item.Border.PropertyChanged -= OnBorderPropertyChanged;
                 }
             }
         };
@@ -216,6 +448,12 @@ public class UnifiedEditorViewModel : ViewModelBase
         {
             OnItemsChanged();
         }
+    }
+
+    private void OnBorderPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        // Border ayarları değiştiğinde render'ı tetikle
+        OnItemsChanged();
     }
 
     private void AddDefaultItems()

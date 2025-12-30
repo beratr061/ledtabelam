@@ -1,14 +1,47 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Timers;
+using Avalonia.Data.Converters;
 using ReactiveUI;
 using LEDTabelam.Models;
 using LEDTabelam.Services;
 
 namespace LEDTabelam.ViewModels;
+
+/// <summary>
+/// TransitionType'ı görüntüleme metnine dönüştürür
+/// </summary>
+public class TransitionTypeToDisplayConverter : IValueConverter
+{
+    public static readonly TransitionTypeToDisplayConverter Instance = new();
+    
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is TransitionType transition)
+        {
+            return transition switch
+            {
+                TransitionType.None => "Yok",
+                TransitionType.Fade => "Solma",
+                TransitionType.SlideLeft => "Sola Kayma",
+                TransitionType.SlideRight => "Sağa Kayma",
+                TransitionType.SlideUp => "Yukarı Kayma",
+                TransitionType.SlideDown => "Aşağı Kayma",
+                TransitionType.Wipe => "Silme",
+                TransitionType.Dissolve => "Çözülme",
+                _ => transition.ToString()
+            };
+        }
+        return value?.ToString() ?? "";
+    }
+    
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
 
 /// <summary>
 /// Playlist ViewModel'i - Sıralı mesaj yönetimi

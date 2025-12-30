@@ -38,6 +38,9 @@ public class TabelaItem : ReactiveObject
     private int _scrollSpeed = 20;
     private double _scrollOffset = 0; // Kayan yazı için piksel offset
     
+    // Çerçeve
+    private BorderSettings _border = new();
+    
     // Durum
     private bool _isSelected = false;
     private bool _isVisible = true;
@@ -275,6 +278,15 @@ public class TabelaItem : ReactiveObject
     {
         get => _isVisible;
         set => this.RaiseAndSetIfChanged(ref _isVisible, value);
+    }
+
+    /// <summary>
+    /// Çerçeve ayarları
+    /// </summary>
+    public BorderSettings Border
+    {
+        get => _border;
+        set => this.RaiseAndSetIfChanged(ref _border, value ?? new BorderSettings());
     }
 
     /// <summary>

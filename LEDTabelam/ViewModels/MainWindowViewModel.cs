@@ -59,29 +59,9 @@ public class MainWindowViewModel : ViewModelBase
     public PreviewViewModel Preview { get; }
 
     /// <summary>
-    /// Slot düzenleyici ViewModel'i
-    /// </summary>
-    public SlotEditorViewModel SlotEditor { get; }
-
-    /// <summary>
     /// Playlist ViewModel'i
     /// </summary>
     public PlaylistViewModel Playlist { get; }
-
-    /// <summary>
-    /// Basit tabela düzenleyici ViewModel'i
-    /// </summary>
-    public SimpleTabelaViewModel SimpleTabelaEditor { get; }
-
-    /// <summary>
-    /// HD2020 tarzı program düzenleyici ViewModel'i
-    /// </summary>
-    public ProgramEditorViewModel ProgramEditor { get; }
-
-    /// <summary>
-    /// Görsel bölge düzenleyici ViewModel'i
-    /// </summary>
-    public VisualZoneEditorViewModel VisualZoneEditor { get; }
 
     /// <summary>
     /// Birleşik düzenleyici ViewModel'i (Program + Görsel)
@@ -149,11 +129,7 @@ public class MainWindowViewModel : ViewModelBase
         // Alt ViewModel'leri oluştur
         ControlPanel = new ControlPanelViewModel(_profileManager, _slotManager, FontLoader, _zoneManager);
         Preview = new PreviewViewModel(LedRenderer, AnimationService);
-        SlotEditor = new SlotEditorViewModel(_slotManager);
         Playlist = new PlaylistViewModel(AnimationService);
-        SimpleTabelaEditor = new SimpleTabelaViewModel();
-        ProgramEditor = new ProgramEditorViewModel();
-        VisualZoneEditor = new VisualZoneEditorViewModel();
         UnifiedEditor = new UnifiedEditorViewModel();
 
         // Komutları oluştur
@@ -166,34 +142,21 @@ public class MainWindowViewModel : ViewModelBase
         SaveWebPCommand = ReactiveCommand.CreateFromTask(SaveWebPAsync);
         StopAnimationCommand = ReactiveCommand.Create(StopAnimation);
 
-        // ControlPanel font listesi değişikliklerini ProgramEditor'a bağla
+        // ControlPanel font listesi değişikliklerini UnifiedEditor'a bağla
         ControlPanel.Fonts.CollectionChanged += (s, e) =>
         {
-            ProgramEditor.UpdateAvailableFonts(ControlPanel.Fonts);
-            VisualZoneEditor.UpdateAvailableFonts(ControlPanel.Fonts);
             UnifiedEditor.UpdateAvailableFonts(ControlPanel.Fonts);
         };
-
-        // SimpleTabelaEditor değişikliklerini izle
-        SimpleTabelaEditor.TabelaChanged += OnSimpleTabelaChanged;
-
-        // ProgramEditor değişikliklerini izle
-        ProgramEditor.ItemsChanged += OnProgramItemsChanged;
-
-        // VisualZoneEditor değişikliklerini izle
-        VisualZoneEditor.ItemsChanged += OnVisualZoneItemsChanged;
 
         // UnifiedEditor değişikliklerini izle
         UnifiedEditor.ItemsChanged += OnUnifiedEditorItemsChanged;
 
-        // ControlPanel ayarları değiştiğinde VisualZoneEditor'ı güncelle
+        // ControlPanel ayarları değiştiğinde UnifiedEditor'ı güncelle
         ControlPanel.WhenAnyValue(x => x.CurrentSettings)
             .Subscribe(settings =>
             {
                 if (settings != null)
                 {
-                    VisualZoneEditor.UpdateDisplaySize(settings.Width, settings.Height);
-                    ProgramEditor.UpdateDisplaySize(settings.Width, settings.Height);
                     UnifiedEditor.UpdateDisplaySize(settings.Width, settings.Height);
                 }
             })
@@ -215,14 +178,6 @@ public class MainWindowViewModel : ViewModelBase
             .Throttle(TimeSpan.FromMilliseconds(50))
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe(_ => RenderTextToPreview())
-            .DisposeWith(Disposables);
-
-        // Zone değişikliklerini izle
-        SlotEditor.Zones.CollectionChanged += (s, e) => RenderTextToPreview();
-
-        // Slot değişikliklerini izle
-        ControlPanel.WhenAnyValue(x => x.CurrentSlotNumber)
-            .Subscribe(slotNumber => LoadSlot(slotNumber))
             .DisposeWith(Disposables);
 
         // Animasyon durumu değişikliklerini izle
@@ -367,82 +322,13 @@ public class MainWindowViewModel : ViewModelBase
                 return;
             }
 
-            // SimpleTabelaEditor'dan zone'ları al
-            var simpleTabelaZones = SimpleTabelaEditor.GetZones();
-            
-            if (simpleTabelaZones.Count > 0)
-            {
-                // Zone'ların LetterSpacing'ini ControlPanel'den al
-                foreach (var zone in simpleTabelaZones)
-                {
-                    zone.LetterSpacing = settings.LetterSpacing;
-                }
-                
-                // Zone'ları render et (hem RGB hem tek renk modunda)
-                var colorMatrix = PreviewRenderer.RenderZonesToColorMatrix(font, simpleTabelaZones, settings);
-                Preview.UpdateColorMatrix(colorMatrix);
-            }
-            else if (ProgramEditor.Items.Count > 0)
-            {
-                // ProgramEditor'dan öğeleri render et
-                RenderProgramToPreview();
-            }
-            else
-            {
-                // Zone'ları kontrol et (eski sistem)
-                var zones = SlotEditor.Zones;
-                
-                if (zones.Count > 0)
-                {
-                    // PreviewRenderer ile zone'ları render et
-                    var zoneList = new System.Collections.Generic.List<Zone>(zones);
-                    // Zone'ların LetterSpacing'ini ControlPanel'den al
-                    foreach (var zone in zoneList)
-                    {
-                        zone.LetterSpacing = settings.LetterSpacing;
-                    }
-                    var colorMatrix = PreviewRenderer.RenderZonesToColorMatrix(font, zoneList, settings);
-                    Preview.UpdateColorMatrix(colorMatrix);
-                }
-                else
-                {
-                    // Tek renkli basit render - SimpleTabelaEditor'dan metin al
-                    var text = SimpleTabelaEditor.GetDisplayText();
-                    if (!string.IsNullOrEmpty(text))
-                    {
-                        var ledColor = settings.GetLedColor();
-                        var skColor = new SkiaSharp.SKColor(ledColor.R, ledColor.G, ledColor.B, ledColor.A);
-                        var textBitmap = FontLoader.RenderText(font, text, skColor, settings.LetterSpacing);
-
-                        if (textBitmap != null)
-                        {
-                            Preview.UpdateFromTextBitmap(textBitmap);
-                            textBitmap.Dispose();
-                        }
-                    }
-                    // İçerik yoksa - ayarlar zaten güncellendi, mevcut görüntü korundu
-                }
-            }
+            // UnifiedEditor'dan öğeleri render et
+            RenderUnifiedEditorToPreview();
         }
         catch (Exception ex)
         {
             StatusMessage = $"Render hatası: {ex.Message}";
         }
-    }
-
-    private void OnSimpleTabelaChanged()
-    {
-        RenderTextToPreview();
-    }
-
-    private void OnProgramItemsChanged()
-    {
-        RenderProgramToPreview();
-    }
-
-    private void OnVisualZoneItemsChanged()
-    {
-        RenderVisualZonesToPreview();
     }
 
     private void OnUnifiedEditorItemsChanged()
@@ -488,94 +374,6 @@ public class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private void RenderVisualZonesToPreview()
-    {
-        try
-        {
-            var settings = ControlPanel.CurrentSettings;
-            var defaultFont = ControlPanel.SelectedFont;
-
-            // Önce ayarları güncelle
-            Preview.UpdateSettings(settings);
-
-            // VisualZoneEditor'ın display boyutlarını güncelle
-            VisualZoneEditor.UpdateDisplaySize(settings.Width, settings.Height);
-
-            // Font yoksa sadece ayarları güncelle
-            if (defaultFont == null && VisualZoneEditor.AvailableFonts.Count == 0)
-            {
-                return;
-            }
-
-            // VisualZoneEditor'dan öğeleri al ve render et
-            var items = new System.Collections.Generic.List<TabelaItem>(VisualZoneEditor.Items);
-            if (items.Count > 0)
-            {
-                var colorMatrix = PreviewRenderer.RenderProgramToColorMatrix(
-                    items,
-                    defaultFont,
-                    fontName => VisualZoneEditor.GetFontByName(fontName) ?? defaultFont,
-                    settings);
-
-                Preview.UpdateColorMatrix(colorMatrix);
-            }
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Görsel zone render hatası: {ex.Message}";
-        }
-    }
-
-    private void RenderProgramToPreview()
-    {
-        try
-        {
-            var settings = ControlPanel.CurrentSettings;
-            var defaultFont = ControlPanel.SelectedFont;
-
-            // Önce ayarları güncelle
-            Preview.UpdateSettings(settings);
-
-            // Font yoksa sadece ayarları güncelle
-            if (defaultFont == null && ProgramEditor.AvailableFonts.Count == 0)
-            {
-                return;
-            }
-
-            // Display boyutlarını ProgramEditor'a bildir
-            ProgramEditor.UpdateDisplaySize(settings.Width, settings.Height);
-
-            // PreviewRenderer ile program öğelerini render et
-            var items = new System.Collections.Generic.List<TabelaItem>(ProgramEditor.Items);
-            var colorMatrix = PreviewRenderer.RenderProgramToColorMatrix(
-                items,
-                defaultFont,
-                fontName => ProgramEditor.GetFontByName(fontName),
-                settings);
-
-            Preview.UpdateColorMatrix(colorMatrix);
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Program render hatası: {ex.Message}";
-        }
-    }
-
-    private void LoadSlot(int slotNumber)
-    {
-        var slot = _slotManager.GetSlot(slotNumber);
-        if (slot != null)
-        {
-            SlotEditor.LoadSlot(slot);
-            StatusMessage = $"Slot {slotNumber:D3} yüklendi";
-        }
-        else
-        {
-            SlotEditor.CreateNewSlot(slotNumber);
-            StatusMessage = $"Slot {slotNumber:D3} - Tanımsız";
-        }
-    }
-
     private void OnAnimationStateChanged(AnimationState state)
     {
         StatusMessage = state switch
@@ -607,13 +405,9 @@ public class MainWindowViewModel : ViewModelBase
         {
             AnimationService.StateChanged -= OnAnimationStateChanged;
             AnimationService.OnTick -= OnAnimationTick;
-            SimpleTabelaEditor.TabelaChanged -= OnSimpleTabelaChanged;
-            ProgramEditor.ItemsChanged -= OnProgramItemsChanged;
-            VisualZoneEditor.ItemsChanged -= OnVisualZoneItemsChanged;
             UnifiedEditor.ItemsChanged -= OnUnifiedEditorItemsChanged;
             ControlPanel.Dispose();
             Preview.Dispose();
-            SlotEditor.Dispose();
             Playlist.Dispose();
         }
         base.Dispose(disposing);

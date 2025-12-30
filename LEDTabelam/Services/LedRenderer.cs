@@ -567,6 +567,131 @@ public class LedRenderer : ILedRenderer, IDisposable
         return pitch.GetLedDiameterRatio();
     }
 
+    /// <inheritdoc/>
+    public void DrawBorder(bool[,] pixelMatrix, BorderSettings border, int x, int y, int width, int height)
+    {
+        if (!border.IsEnabled || width <= 0 || height <= 0) return;
+
+        int matrixWidth = pixelMatrix.GetLength(0);
+        int matrixHeight = pixelMatrix.GetLength(1);
+
+        // Üst kenar çizgileri
+        for (int line = 0; line < border.HorizontalLines; line++)
+        {
+            int lineY = y + line;
+            if (lineY >= 0 && lineY < matrixHeight)
+            {
+                for (int px = x; px < x + width && px < matrixWidth; px++)
+                {
+                    if (px >= 0) pixelMatrix[px, lineY] = true;
+                }
+            }
+        }
+
+        // Alt kenar çizgileri
+        for (int line = 0; line < border.HorizontalLines; line++)
+        {
+            int lineY = y + height - 1 - line;
+            if (lineY >= 0 && lineY < matrixHeight)
+            {
+                for (int px = x; px < x + width && px < matrixWidth; px++)
+                {
+                    if (px >= 0) pixelMatrix[px, lineY] = true;
+                }
+            }
+        }
+
+        // Sol kenar çizgileri
+        for (int line = 0; line < border.VerticalLines; line++)
+        {
+            int lineX = x + line;
+            if (lineX >= 0 && lineX < matrixWidth)
+            {
+                for (int py = y; py < y + height && py < matrixHeight; py++)
+                {
+                    if (py >= 0) pixelMatrix[lineX, py] = true;
+                }
+            }
+        }
+
+        // Sağ kenar çizgileri
+        for (int line = 0; line < border.VerticalLines; line++)
+        {
+            int lineX = x + width - 1 - line;
+            if (lineX >= 0 && lineX < matrixWidth)
+            {
+                for (int py = y; py < y + height && py < matrixHeight; py++)
+                {
+                    if (py >= 0) pixelMatrix[lineX, py] = true;
+                }
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public void DrawBorder(SKColor[,] colorMatrix, BorderSettings border, int x, int y, int width, int height)
+    {
+        if (!border.IsEnabled || width <= 0 || height <= 0) return;
+
+        int matrixWidth = colorMatrix.GetLength(0);
+        int matrixHeight = colorMatrix.GetLength(1);
+        
+        // Avalonia Color'ı SKColor'a dönüştür
+        var borderColor = new SKColor(border.Color.R, border.Color.G, border.Color.B, border.Color.A);
+
+        // Üst kenar çizgileri
+        for (int line = 0; line < border.HorizontalLines; line++)
+        {
+            int lineY = y + line;
+            if (lineY >= 0 && lineY < matrixHeight)
+            {
+                for (int px = x; px < x + width && px < matrixWidth; px++)
+                {
+                    if (px >= 0) colorMatrix[px, lineY] = borderColor;
+                }
+            }
+        }
+
+        // Alt kenar çizgileri
+        for (int line = 0; line < border.HorizontalLines; line++)
+        {
+            int lineY = y + height - 1 - line;
+            if (lineY >= 0 && lineY < matrixHeight)
+            {
+                for (int px = x; px < x + width && px < matrixWidth; px++)
+                {
+                    if (px >= 0) colorMatrix[px, lineY] = borderColor;
+                }
+            }
+        }
+
+        // Sol kenar çizgileri
+        for (int line = 0; line < border.VerticalLines; line++)
+        {
+            int lineX = x + line;
+            if (lineX >= 0 && lineX < matrixWidth)
+            {
+                for (int py = y; py < y + height && py < matrixHeight; py++)
+                {
+                    if (py >= 0) colorMatrix[lineX, py] = borderColor;
+                }
+            }
+        }
+
+        // Sağ kenar çizgileri
+        for (int line = 0; line < border.VerticalLines; line++)
+        {
+            int lineX = x + width - 1 - line;
+            if (lineX >= 0 && lineX < matrixWidth)
+            {
+                for (int py = y; py < y + height && py < matrixHeight; py++)
+                {
+                    if (py >= 0) colorMatrix[lineX, py] = borderColor;
+                }
+            }
+        }
+    }
+
     /// <summary>
     /// Kaynakları temizle
     /// </summary>

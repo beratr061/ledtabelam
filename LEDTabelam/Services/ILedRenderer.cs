@@ -77,4 +77,26 @@ public interface ILedRenderer
     /// <param name="customRatio">Özel oran (Custom pitch için)</param>
     /// <returns>LED çapı / merkez mesafesi oranı</returns>
     double GetPitchRatio(PixelPitch pitch, double customRatio = 0.7);
+
+    /// <summary>
+    /// Piksel matrisine çerçeve çizer
+    /// </summary>
+    /// <param name="pixelMatrix">Piksel matrisi (değiştirilecek)</param>
+    /// <param name="border">Çerçeve ayarları</param>
+    /// <param name="x">Çerçeve başlangıç X koordinatı</param>
+    /// <param name="y">Çerçeve başlangıç Y koordinatı</param>
+    /// <param name="width">Çerçeve genişliği</param>
+    /// <param name="height">Çerçeve yüksekliği</param>
+    void DrawBorder(bool[,] pixelMatrix, BorderSettings border, int x, int y, int width, int height);
+
+    /// <summary>
+    /// Renk matrisine çerçeve çizer
+    /// </summary>
+    /// <param name="colorMatrix">Renk matrisi (değiştirilecek)</param>
+    /// <param name="border">Çerçeve ayarları</param>
+    /// <param name="x">Çerçeve başlangıç X koordinatı</param>
+    /// <param name="y">Çerçeve başlangıç Y koordinatı</param>
+    /// <param name="width">Çerçeve genişliği</param>
+    /// <param name="height">Çerçeve yüksekliği</param>
+    void DrawBorder(SKColor[,] colorMatrix, BorderSettings border, int x, int y, int width, int height);
 }

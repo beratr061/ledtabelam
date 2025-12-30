@@ -173,10 +173,15 @@ public class PlaylistPropertyTests : IDisposable
     [Property(MaxTest = 100)]
     public Property AddingItemIncreasesCountByOne(NonEmptyString text)
     {
+        // Skip whitespace-only strings as PlaylistManager rejects them
+        var textValue = text.Get;
+        if (string.IsNullOrWhiteSpace(textValue))
+            return true.ToProperty();
+            
         using var manager = new PlaylistManager();
         
         var initialCount = manager.Count;
-        manager.AddItem(text.Get);
+        manager.AddItem(textValue);
         
         return (manager.Count == initialCount + 1).ToProperty();
     }

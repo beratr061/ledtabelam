@@ -59,9 +59,6 @@ public partial class App : Application
                 zoneManager,
                 engineServices);
             
-            // ProgramEditor ViewModel'e AssetLibrary'yi bağla
-            mainWindowViewModel.ProgramEditor.SetAssetLibrary(assetLibrary);
-            
             // UnifiedEditor ViewModel'e AssetLibrary'yi bağla
             mainWindowViewModel.UnifiedEditor.SetAssetLibrary(assetLibrary);
 

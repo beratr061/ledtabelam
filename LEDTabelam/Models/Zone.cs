@@ -30,6 +30,9 @@ public class Zone : ReactiveObject
     // Zone-specific animasyon state'i
     private double _currentOffset;
     private double _accumulatedOffset;
+    
+    // Çerçeve ayarları
+    private BorderSettings _border = new();
 
     /// <summary>
     /// Zone sıra numarası
@@ -129,6 +132,15 @@ public class Zone : ReactiveObject
     {
         get => _lineSpacing;
         set => this.RaiseAndSetIfChanged(ref _lineSpacing, value);
+    }
+
+    /// <summary>
+    /// Zone çerçeve ayarları
+    /// </summary>
+    public BorderSettings Border
+    {
+        get => _border;
+        set => this.RaiseAndSetIfChanged(ref _border, value ?? new BorderSettings());
     }
     
     /// <summary>
