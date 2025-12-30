@@ -134,7 +134,13 @@
                     <TextBlock Text="Geçiş Efekti:" Foreground="#B0B0B0" FontSize="11" Margin="0,8,0,0"/>
                     <ComboBox ItemsSource="{Binding TransitionOptions}"
                               SelectedItem="{Binding SelectedItem.Transition}"
-                              HorizontalAlignment="Stretch"/>
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={x:Static vm:TransitionTypeToDisplayConverter.Instance}}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </StackPanel>
                 
                 <Separator Background="#3D3D3D"/>

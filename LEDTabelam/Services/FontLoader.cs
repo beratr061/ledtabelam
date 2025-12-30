@@ -263,6 +263,11 @@ public class FontLoader : IFontLoader
         if (root.TryGetProperty("name", out var nameElement))
             font.Name = nameElement.GetString() ?? font.Name;
 
+        // LineHeight'ı JSON'dan oku (varsa)
+        int jsonLineHeight = 0;
+        if (root.TryGetProperty("lineHeight", out var lineHeightElement))
+            jsonLineHeight = lineHeightElement.GetInt32();
+
         // Get letterspace for character spacing (varsayılan 1px)
         // Not: Bazı font formatlarında letterspace farklı birimde olabilir
         // 64 gibi büyük değerler genellikle farklı bir ölçek kullanır
@@ -307,8 +312,8 @@ public class FontLoader : IFontLoader
             }
         }
 
-        // Set line height
-        font.LineHeight = maxHeight > 0 ? maxHeight : 16;
+        // Set line height - JSON'dan gelen değeri kullan, yoksa hesaplanan değeri kullan
+        font.LineHeight = jsonLineHeight > 0 ? jsonLineHeight : (maxHeight > 0 ? maxHeight : 16);
         font.Base = font.LineHeight - 2;
 
         // Generate font image from pixel data

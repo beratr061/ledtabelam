@@ -61,6 +61,9 @@ public partial class App : Application
             
             // ProgramEditor ViewModel'e AssetLibrary'yi bağla
             mainWindowViewModel.ProgramEditor.SetAssetLibrary(assetLibrary);
+            
+            // UnifiedEditor ViewModel'e AssetLibrary'yi bağla
+            mainWindowViewModel.UnifiedEditor.SetAssetLibrary(assetLibrary);
 
             var mainWindow = new MainWindow
             {

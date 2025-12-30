@@ -153,10 +153,17 @@ public enum ZoneContentType
 /// </summary>
 public enum TransitionType
 {
-    None,       // Geçiş efekti yok
+    None,       // Geçiş efekti yok (Static - yazı sabit durur)
     Fade,       // Solma efekti
-    SlideLeft,  // Sola kayma
-    SlideRight  // Sağa kayma
+    SlideLeft,  // Sola kayma (Scroll Left)
+    SlideRight, // Sağa kayma (Scroll Right)
+    SlideUp,    // Yukarı kayma (Scroll Up)
+    SlideDown,  // Aşağı kayma (Scroll Down)
+    Blink,      // Yanıp sönme efekti
+    Laser,      // Lazer yazım efekti (soldan sağa karakter karakter)
+    Curtain,    // Perde efekti (ortadan açılma)
+    Dissolve,   // Piksel piksel dağılma
+    Wipe        // Silme efekti (bir yönden diğerine)
 }
 
 /// <summary>

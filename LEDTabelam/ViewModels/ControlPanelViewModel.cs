@@ -34,7 +34,7 @@ public class ControlPanelViewModel : ViewModelBase
     /// </summary>
     public ObservableCollection<string> Resolutions { get; } = new()
     {
-        "32x16", "64x16", "96x16", "128x16", "144x19", "150x24", "160x16", "192x16", "Özel"
+        "32x16", "64x16", "96x16", "128x16", "144x19", "150x24", "160x16", "160x24", "192x16", "192x24", "Özel"
     };
 
     /// <summary>

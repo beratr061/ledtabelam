@@ -1,0 +1,181 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LEDTabelam.ViewModels"
+             xmlns:models="using:LEDTabelam.Models"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="300"
+             x:Class="LEDTabelam.Views.VisualZoneEditor"
+             x:DataType="vm:VisualZoneEditorViewModel">
+
+    <UserControl.Styles>
+        <!-- Zone kutusu stili -->
+        <Style Selector="Border.zone-box">
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="2"/>
+            <Setter Property="Cursor" Value="SizeAll"/>
+        </Style>
+        <Style Selector="Border.zone-box:pointerover">
+            <Setter Property="BorderThickness" Value="3"/>
+        </Style>
+        
+        <!-- Resize handle stili -->
+        <Style Selector="Border.resize-handle">
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Height" Value="10"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#0078D4"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="2"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        
+        <!-- Üst Toolbar -->
+        <Border Grid.Row="0" Background="#2D2D2D" Padding="8" Margin="0,0,0,4">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Görsel Bölge Düzenleyici" FontWeight="SemiBold" 
+                               Foreground="#E0E0E0" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding DisplaySize}" Foreground="#808080" 
+                               FontSize="11" VerticalAlignment="Center"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                    <Button Content="+ Metin" Command="{Binding AddTextZoneCommand}" 
+                            Padding="8,4" FontSize="11" ToolTip.Tip="Yeni metin bölgesi ekle"/>
+                    <Button Content="+ Sembol" Command="{Binding AddSymbolZoneCommand}" 
+                            Padding="8,4" FontSize="11" ToolTip.Tip="Yeni sembol bölgesi ekle"/>
+                    <Button Content="+ Saat" Command="{Binding AddClockZoneCommand}" 
+                            Padding="8,4" FontSize="11" ToolTip.Tip="Saat bölgesi ekle"/>
+                    <Border Width="1" Background="#505050" Margin="4,0"/>
+                    <Button Content="Sil" Command="{Binding DeleteSelectedCommand}" 
+                            Padding="8,4" FontSize="11" IsEnabled="{Binding HasSelection}"/>
+                    <Button Content="Tümünü Temizle" Command="{Binding ClearAllCommand}" 
+                            Padding="8,4" FontSize="11"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- Canvas Alanı -->
+        <Border Grid.Row="1" Background="#1A1A1A" CornerRadius="4" ClipToBounds="True">
+            <Grid>
+                <!-- Ana Canvas - LED tabela boyutunda -->
+                <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="#000000" 
+                        BorderBrush="#404040" BorderThickness="2"
+                        Width="{Binding CanvasWidth}" Height="{Binding CanvasHeight}">
+                    <Canvas x:Name="ZoneCanvas" 
+                            Background="Transparent"
+                            PointerPressed="OnCanvasPointerPressed"
+                            PointerMoved="OnCanvasPointerMoved"
+                            PointerReleased="OnCanvasPointerReleased"/>
+                </Border>
+                
+                <!-- Koordinat göstergesi -->
+                <Border Background="#80000000" CornerRadius="4" Padding="6,3"
+                        HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8">
+                    <TextBlock Text="{Binding MousePosition}" Foreground="#FFFFFF" FontSize="10"/>
+                </Border>
+                
+                <!-- Zoom kontrolleri -->
+                <StackPanel Orientation="Horizontal" Spacing="4"
+                            HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8">
+                    <Button Content="-" Width="24" Height="24" Command="{Binding ZoomOutCommand}"/>
+                    <TextBlock Text="{Binding ZoomLevel, StringFormat='{}{0}%'}" 
+                               Foreground="#FFFFFF" FontSize="10" VerticalAlignment="Center" Width="40" TextAlignment="Center"/>
+                    <Button Content="+" Width="24" Height="24" Command="{Binding ZoomInCommand}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- Alt Panel: Seçili öğe özellikleri -->
+        <Border Grid.Row="2" Background="#2D2D2D" Padding="8" Margin="0,4,0,0"
+                IsVisible="{Binding HasSelection}">
+            <Grid RowDefinitions="Auto,Auto">
+                <!-- Üst satır: Pozisyon, boyut, font, içerik -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="X:" Foreground="#808080" VerticalAlignment="Center"/>
+                        <NumericUpDown Value="{Binding SelectedItem.X}" Minimum="0" Maximum="512" 
+                                       Width="55" FontSize="11"/>
+                    </StackPanel>
+                    
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="Y:" Foreground="#808080" VerticalAlignment="Center"/>
+                        <NumericUpDown Value="{Binding SelectedItem.Y}" Minimum="0" Maximum="512" 
+                                       Width="55" FontSize="11"/>
+                    </StackPanel>
+                    
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="W:" Foreground="#808080" VerticalAlignment="Center"/>
+                        <NumericUpDown Value="{Binding SelectedItem.Width}" Minimum="1" Maximum="512" 
+                                       Width="55" FontSize="11"/>
+                    </StackPanel>
+                    
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="H:" Foreground="#808080" VerticalAlignment="Center"/>
+                        <NumericUpDown Value="{Binding SelectedItem.Height}" Minimum="1" Maximum="512" 
+                                       Width="55" FontSize="11"/>
+                    </StackPanel>
+                    
+                    <Border Width="1" Background="#505050" Margin="4,0"/>
+                    
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="Font:" Foreground="#808080" VerticalAlignment="Center"/>
+                        <ComboBox ItemsSource="{Binding FontNames}"
+                                  SelectedItem="{Binding SelectedItem.FontName}"
+                                  Width="130" FontSize="11"/>
+                    </StackPanel>
+                    
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="İçerik:" Foreground="#808080" VerticalAlignment="Center"/>
+                        <TextBox Text="{Binding SelectedItem.Content}" Width="120" FontSize="11"/>
+                    </StackPanel>
+                </StackPanel>
+                
+                <!-- Alt satır: Hizalama ve renk -->
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+                    <!-- Yatay Hizalama -->
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="Yatay:" Foreground="#808080" VerticalAlignment="Center"/>
+                        <Button Content="◀" Width="28" Height="24" Click="OnAlignLeft" ToolTip.Tip="Sola Hizala"/>
+                        <Button Content="◆" Width="28" Height="24" Click="OnAlignCenterH" ToolTip.Tip="Ortala"/>
+                        <Button Content="▶" Width="28" Height="24" Click="OnAlignRight" ToolTip.Tip="Sağa Hizala"/>
+                    </StackPanel>
+                    
+                    <Border Width="1" Background="#505050" Margin="4,0"/>
+                    
+                    <!-- Dikey Hizalama -->
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="Dikey:" Foreground="#808080" VerticalAlignment="Center"/>
+                        <Button Content="▲" Width="28" Height="24" Click="OnAlignTop" ToolTip.Tip="Üste Hizala"/>
+                        <Button Content="◆" Width="28" Height="24" Click="OnAlignCenterV" ToolTip.Tip="Ortala"/>
+                        <Button Content="▼" Width="28" Height="24" Click="OnAlignBottom" ToolTip.Tip="Alta Hizala"/>
+                    </StackPanel>
+                    
+                    <Border Width="1" Background="#505050" Margin="4,0"/>
+                    
+                    <!-- Kayan Yazı -->
+                    <CheckBox Content="Kayan" IsChecked="{Binding SelectedItem.IsScrolling}" 
+                              VerticalAlignment="Center" FontSize="11"/>
+                    
+                    <Border Width="1" Background="#505050" Margin="4,0"/>
+                    
+                    <!-- Renk -->
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="Renk:" Foreground="#808080" VerticalAlignment="Center"/>
+                        <Button Width="24" Height="24" Background="#FF0000" Click="OnColorRed" ToolTip.Tip="Kırmızı"/>
+                        <Button Width="24" Height="24" Background="#00FF00" Click="OnColorGreen" ToolTip.Tip="Yeşil"/>
+                        <Button Width="24" Height="24" Background="#FFB000" Click="OnColorAmber" ToolTip.Tip="Amber"/>
+                        <Button Width="24" Height="24" Background="#FFFFFF" Click="OnColorWhite" ToolTip.Tip="Beyaz"/>
+                        <Button Width="24" Height="24" Background="#00FFFF" Click="OnColorCyan" ToolTip.Tip="Cyan"/>
+                        <Button Width="24" Height="24" Background="#FFFF00" Click="OnColorYellow" ToolTip.Tip="Sarı"/>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+
+</UserControl>

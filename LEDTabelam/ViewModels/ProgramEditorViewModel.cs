@@ -17,7 +17,7 @@ public class ProgramEditorViewModel : ViewModelBase
 {
     private int _programNumber = 1;
     private TabelaItem? _selectedItem;
-    private int _displayWidth = 192;
+    private int _displayWidth = 160;
     private int _displayHeight = 24;
     private int _nextItemId = 1;
     private AssetInfo? _selectedSymbol;

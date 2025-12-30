@@ -322,3 +322,62 @@ public class ItemContentDisplayConverter : IMultiValueConverter
         return "";
     }
 }
+
+
+/// <summary>
+/// TransitionType'ı Türkçe görüntüleme metnine dönüştüren converter
+/// </summary>
+public class TransitionTypeToDisplayConverter : IValueConverter
+{
+    public static readonly TransitionTypeToDisplayConverter Instance = new();
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is TransitionType transition)
+        {
+            return transition switch
+            {
+                TransitionType.None => "Sabit (Geçiş Yok)",
+                TransitionType.Fade => "Solma",
+                TransitionType.SlideLeft => "← Sola Kay",
+                TransitionType.SlideRight => "→ Sağa Kay",
+                TransitionType.SlideUp => "↑ Yukarı Kay",
+                TransitionType.SlideDown => "↓ Aşağı Kay",
+                TransitionType.Blink => "⚡ Yanıp Sön",
+                TransitionType.Laser => "🔫 Lazer Yazım",
+                TransitionType.Curtain => "🎭 Perde Efekti",
+                TransitionType.Dissolve => "✨ Dağılma",
+                TransitionType.Wipe => "🧹 Silme",
+                _ => transition.ToString()
+            };
+        }
+        return value?.ToString() ?? "";
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Animasyon durumuna göre play butonu rengini döndüren converter
+/// </summary>
+public class BoolToPlayColorConverter : IValueConverter
+{
+    public static readonly BoolToPlayColorConverter Instance = new();
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool isPlaying && isPlaying)
+        {
+            return new SolidColorBrush(Color.FromRgb(0, 255, 0)); // Yeşil - oynatılıyor
+        }
+        return new SolidColorBrush(Color.FromRgb(224, 224, 224)); // Gri - durdu
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}

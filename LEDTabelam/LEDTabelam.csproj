@@ -21,6 +21,12 @@
     <None Include="Assets\Fonts\*.png" CopyToOutputDirectory="PreserveNewest" LinkBase="Assets\Fonts" />
   </ItemGroup>
 
+  <!-- Piskel ikon dosyalarını output dizinine kopyala -->
+  <ItemGroup>
+    <None Include="Assets\Icons\piskel\*.json" CopyToOutputDirectory="PreserveNewest" LinkBase="Assets\Icons\piskel" />
+    <None Include="Assets\Icons\*.c" CopyToOutputDirectory="PreserveNewest" LinkBase="Assets\Icons" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.10" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.10" />

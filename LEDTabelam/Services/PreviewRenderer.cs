@@ -208,7 +208,8 @@ public class PreviewRenderer : IPreviewRenderer
                 var pixel = symbolBitmap.GetPixel(x, y);
                 if (pixel.Alpha > 128)
                 {
-                    colorMatrix[destX, destY] = itemColor;
+                    // Orijinal piksel rengini kullan (çok renkli ikonlar için)
+                    colorMatrix[destX, destY] = pixel;
                 }
             }
         }
@@ -238,34 +239,82 @@ public class PreviewRenderer : IPreviewRenderer
             int textWidth = textBitmap.Width;
             int textHeight = textBitmap.Height;
 
-            // Öğe sınırları içinde hizalama
-            int offsetX = item.HAlign switch
+            // Kayan yazı için offset hesapla
+            int scrollOffsetX = 0;
+            int scrollOffsetY = 0;
+            
+            if (item.IsScrolling)
             {
-                HorizontalAlignment.Left => 0,
-                HorizontalAlignment.Center => Math.Max(0, (item.Width - textWidth) / 2),
-                HorizontalAlignment.Right => Math.Max(0, item.Width - textWidth),
-                _ => 0
-            };
+                switch (item.ScrollDirection)
+                {
+                    case ScrollDirection.Left:
+                    case ScrollDirection.Right:
+                        scrollOffsetX = (int)item.ScrollOffset;
+                        break;
+                    case ScrollDirection.Up:
+                    case ScrollDirection.Down:
+                        scrollOffsetY = (int)item.ScrollOffset;
+                        break;
+                }
+            }
 
-            int offsetY = item.VAlign switch
+            // Öğe sınırları içinde hizalama (kayan yazı değilse)
+            int offsetX = item.IsScrolling && (item.ScrollDirection == ScrollDirection.Left || item.ScrollDirection == ScrollDirection.Right)
+                ? scrollOffsetX
+                : item.HAlign switch
+                {
+                    HorizontalAlignment.Left => 0,
+                    HorizontalAlignment.Center => Math.Max(0, (item.Width - textWidth) / 2),
+                    HorizontalAlignment.Right => Math.Max(0, item.Width - textWidth),
+                    _ => 0
+                };
+
+            int offsetY = item.IsScrolling && (item.ScrollDirection == ScrollDirection.Up || item.ScrollDirection == ScrollDirection.Down)
+                ? scrollOffsetY
+                : item.VAlign switch
+                {
+                    VerticalAlignment.Top => 0,
+                    VerticalAlignment.Center => Math.Max(0, (item.Height - textHeight) / 2),
+                    VerticalAlignment.Bottom => Math.Max(0, item.Height - textHeight),
+                    _ => 0
+                };
+
+            // Dikey hizalama (yatay kayan yazıda)
+            if (item.IsScrolling && (item.ScrollDirection == ScrollDirection.Left || item.ScrollDirection == ScrollDirection.Right))
             {
-                VerticalAlignment.Top => 0,
-                VerticalAlignment.Center => Math.Max(0, (item.Height - textHeight) / 2),
-                VerticalAlignment.Bottom => Math.Max(0, item.Height - textHeight),
-                _ => 0
-            };
+                offsetY = item.VAlign switch
+                {
+                    VerticalAlignment.Top => 0,
+                    VerticalAlignment.Center => Math.Max(0, (item.Height - textHeight) / 2),
+                    VerticalAlignment.Bottom => Math.Max(0, item.Height - textHeight),
+                    _ => 0
+                };
+            }
+            
+            // Yatay hizalama (dikey kayan yazıda)
+            if (item.IsScrolling && (item.ScrollDirection == ScrollDirection.Up || item.ScrollDirection == ScrollDirection.Down))
+            {
+                offsetX = item.HAlign switch
+                {
+                    HorizontalAlignment.Left => 0,
+                    HorizontalAlignment.Center => Math.Max(0, (item.Width - textWidth) / 2),
+                    HorizontalAlignment.Right => Math.Max(0, item.Width - textWidth),
+                    _ => 0
+                };
+            }
 
-            // Pikselleri kopyala (öğe sınırları içinde)
+            // Pikselleri kopyala (öğe sınırları içinde - clipping)
             for (int y = 0; y < textHeight; y++)
             {
                 int destY = item.Y + offsetY + y;
                 if (destY < 0 || destY >= totalHeight) continue;
+                if (destY < item.Y || destY >= item.Y + item.Height) continue; // Öğe sınırı
 
                 for (int x = 0; x < textWidth; x++)
                 {
                     int destX = item.X + offsetX + x;
                     if (destX < 0 || destX >= totalWidth) continue;
-                    if (destX >= item.X + item.Width) break;
+                    if (destX < item.X || destX >= item.X + item.Width) continue; // Öğe sınırı
 
                     var pixel = textBitmap.GetPixel(x, y);
                     if (pixel.Alpha > 128)

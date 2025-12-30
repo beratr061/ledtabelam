@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <!-- Turkish Flag - Pixel art version for LED display -->
-  <rect width="32" height="32" fill="#E30A17"/>
-  <!-- Crescent -->
-  <circle cx="12" cy="16" r="8" fill="white"/>
-  <circle cx="14" cy="16" r="6" fill="#E30A17"/>
-  <!-- Star -->
-  <polygon points="24,16 21,18 22,21 19,19 16,21 17,18 14,16 18,16 19,13 20,16" fill="white"/>
-</svg>

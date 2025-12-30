@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using SkiaSharp;
 
 namespace LEDTabelam.Services;
@@ -28,6 +29,7 @@ public class AssetLibrary : IAssetLibrary
 
         InitializeBuiltInCategories();
         InitializeBuiltInAssets();
+        LoadPiskelAssets();
         LoadUserAssets();
     }
 
@@ -35,49 +37,215 @@ public class AssetLibrary : IAssetLibrary
     {
         _categories.AddRange(new[]
         {
+            new AssetCategory { Name = "transport", DisplayName = "Ulaşım", IsBuiltIn = true },
+            new AssetCategory { Name = "arrows", DisplayName = "Yön Okları", IsBuiltIn = true },
             new AssetCategory { Name = "flags", DisplayName = "Bayraklar", IsBuiltIn = true },
             new AssetCategory { Name = "accessibility", DisplayName = "Erişilebilirlik", IsBuiltIn = true },
-            new AssetCategory { Name = "arrows", DisplayName = "Yön Okları", IsBuiltIn = true },
-            new AssetCategory { Name = "transport", DisplayName = "Ulaşım Sembolleri", IsBuiltIn = true },
+            new AssetCategory { Name = "other", DisplayName = "Diğer", IsBuiltIn = true },
             new AssetCategory { Name = "user", DisplayName = "Kullanıcı İkonları", IsBuiltIn = false }
         });
     }
 
     private void InitializeBuiltInAssets()
     {
-        // Türk Bayrağı (16px pixel-perfect)
-        AddBuiltInAsset("turkish_flag", "Türk Bayrağı", "flags", GetTurkishFlagSvg());
-
-        // Erişilebilirlik İkonları
-        AddBuiltInAsset("wheelchair", "Engelli İkonu", "accessibility", GetWheelchairSvg());
-        AddBuiltInAsset("hearing", "İşitme Engelli", "accessibility", GetHearingSvg());
-        AddBuiltInAsset("visual", "Görme Engelli", "accessibility", GetVisualSvg());
-
-        // Yön Okları
-        AddBuiltInAsset("arrow_left", "Sol Ok", "arrows", GetArrowLeftSvg());
-        AddBuiltInAsset("arrow_right", "Sağ Ok", "arrows", GetArrowRightSvg());
-        AddBuiltInAsset("arrow_up", "Yukarı Ok", "arrows", GetArrowUpSvg());
-        AddBuiltInAsset("arrow_down", "Aşağı Ok", "arrows", GetArrowDownSvg());
-
-        // Ulaşım Sembolleri
-        AddBuiltInAsset("bus", "Otobüs", "transport", GetBusSvg());
-        AddBuiltInAsset("metro", "Metro", "transport", GetMetroSvg());
-        AddBuiltInAsset("tram", "Tramvay", "transport", GetTramSvg());
-        AddBuiltInAsset("ferry", "Vapur", "transport", GetFerrySvg());
+        // Dahili SVG ikonlar kaldırıldı - sadece .c dosyaları kullanılıyor
     }
 
     private void AddBuiltInAsset(string name, string displayName, string category, string svgContent)
     {
-        _assets[name] = new AssetInfo
+        // SVG desteği kaldırıldı - sadece .c dosyaları kullanılıyor
+    }
+
+    /// <summary>
+    /// Piskel JSON ikonlarını yükler
+    /// </summary>
+    private void LoadPiskelAssets()
+    {
+        // JSON formatındaki ikonları yükle
+        var piskelJsonPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Icons", "piskel");
+        if (Directory.Exists(piskelJsonPath))
         {
-            Name = name,
-            DisplayName = displayName,
-            Category = category,
-            SvgContent = svgContent,
-            IsBuiltIn = true,
-            Has16px = true,
-            Has32px = true
-        };
+            foreach (var file in Directory.GetFiles(piskelJsonPath, "*.json"))
+            {
+                LoadPiskelJsonFile(file);
+            }
+        }
+
+        // .c formatındaki Piskel ikonlarını yükle
+        var iconsPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Icons");
+        if (Directory.Exists(iconsPath))
+        {
+            foreach (var file in Directory.GetFiles(iconsPath, "*.c"))
+            {
+                LoadPiskelCFile(file);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Piskel JSON dosyasını yükler
+    /// </summary>
+    private void LoadPiskelJsonFile(string file)
+    {
+        try
+        {
+            var json = File.ReadAllText(file);
+            var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            var name = root.GetProperty("name").GetString() ?? Path.GetFileNameWithoutExtension(file);
+            var displayName = root.TryGetProperty("displayName", out var dn) ? dn.GetString() ?? name : name;
+            var category = root.TryGetProperty("category", out var cat) ? cat.GetString() ?? "transport" : "transport";
+            var width = root.GetProperty("width").GetInt32();
+            var height = root.GetProperty("height").GetInt32();
+            
+            // Piksel verisini oku
+            var pixelsElement = root.GetProperty("pixels");
+            var pixels = new int[height][];
+            int rowIndex = 0;
+            foreach (var row in pixelsElement.EnumerateArray())
+            {
+                var rowData = new List<int>();
+                foreach (var pixel in row.EnumerateArray())
+                {
+                    rowData.Add(pixel.GetInt32());
+                }
+                pixels[rowIndex++] = rowData.ToArray();
+            }
+
+            _assets[name] = new AssetInfo
+            {
+                Name = name,
+                DisplayName = displayName,
+                Category = category,
+                IsBuiltIn = true,
+                Has16px = true,
+                Has32px = true,
+                IsBitmap = true,
+                BitmapWidth = width,
+                BitmapHeight = height,
+                BitmapPixels = pixels,
+                FilePath = file
+            };
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Piskel JSON yükleme hatası ({file}): {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Piskel .c dosyasını parse eder ve yükler
+    /// </summary>
+    private void LoadPiskelCFile(string file)
+    {
+        try
+        {
+            var content = File.ReadAllText(file);
+            var name = Path.GetFileNameWithoutExtension(file);
+            
+            // Boyutları parse et - daha esnek regex (Türkçe karakterler için)
+            int width = 0, height = 0;
+            
+            // WIDTH ve HEIGHT içeren satırları bul
+            var widthMatch = System.Text.RegularExpressions.Regex.Match(content, @"#define\s+[^\s]+WIDTH\s+(\d+)");
+            if (widthMatch.Success)
+                width = int.Parse(widthMatch.Groups[1].Value);
+            
+            var heightMatch = System.Text.RegularExpressions.Regex.Match(content, @"#define\s+[^\s]+HEIGHT\s+(\d+)");
+            if (heightMatch.Success)
+                height = int.Parse(heightMatch.Groups[1].Value);
+
+            if (width == 0 || height == 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"Piskel .c boyut bulunamadı: {file}");
+                return;
+            }
+
+            // Piksel verisini parse et - uint32_t array'i bul
+            var dataMatch = System.Text.RegularExpressions.Regex.Match(content, 
+                @"uint32_t\s+\w+\[\d+\]\[\d+\]\s*=\s*\{\s*\{([^}]+)\}",
+                System.Text.RegularExpressions.RegexOptions.Singleline);
+            
+            if (!dataMatch.Success)
+            {
+                System.Diagnostics.Debug.WriteLine($"Piskel .c veri bulunamadı: {file}");
+                return;
+            }
+
+            var dataStr = dataMatch.Groups[1].Value;
+            
+            // Hex değerlerini parse et
+            var hexMatches = System.Text.RegularExpressions.Regex.Matches(dataStr, @"0x([0-9a-fA-F]+)");
+            var pixelValues = new List<uint>();
+            foreach (System.Text.RegularExpressions.Match m in hexMatches)
+            {
+                pixelValues.Add(Convert.ToUInt32(m.Groups[1].Value, 16));
+            }
+
+            if (pixelValues.Count != width * height)
+            {
+                System.Diagnostics.Debug.WriteLine($"Piskel .c piksel sayısı uyuşmuyor: {file} (beklenen: {width * height}, bulunan: {pixelValues.Count})");
+                return;
+            }
+
+            // 2D array'lere dönüştür - her zaman orijinal renkleri sakla
+            var pixels = new int[height][];
+            var colors = new uint[height][];
+            
+            for (int y = 0; y < height; y++)
+            {
+                pixels[y] = new int[width];
+                colors[y] = new uint[width];
+                    
+                for (int x = 0; x < width; x++)
+                {
+                    var pixel = pixelValues[y * width + x];
+                    // Alpha değeri 0 değilse piksel dolu
+                    pixels[y][x] = (pixel & 0xFF000000) != 0 ? 1 : 0;
+                    colors[y][x] = pixel;
+                }
+            }
+
+            // Dosya adından kategori tahmin et
+            var category = "other"; // varsayılan
+            var lowerName = name.ToLowerInvariant();
+            if (lowerName.Contains("arrow") || lowerName.Contains("ok"))
+                category = "arrows";
+            else if (lowerName.Contains("flag") || lowerName.Contains("bayrak"))
+                category = "flags";
+            else if (lowerName.Contains("wheel") || lowerName.Contains("engel"))
+                category = "accessibility";
+            else if (lowerName.Contains("bus") || lowerName.Contains("metro") || lowerName.Contains("tram") || 
+                     lowerName.Contains("ucak") || lowerName.Contains("vapur") || lowerName.Contains("tren"))
+                category = "transport";
+
+            // DisplayName oluştur (ilk harf büyük)
+            var displayName = char.ToUpper(name[0]) + name.Substring(1);
+
+            _assets[name] = new AssetInfo
+            {
+                Name = name,
+                DisplayName = displayName,
+                Category = category,
+                IsBuiltIn = true,
+                Has16px = true,
+                Has32px = true,
+                IsBitmap = true,
+                BitmapWidth = width,
+                BitmapHeight = height,
+                BitmapPixels = pixels,
+                BitmapColors = colors,
+                IsMultiColor = true, // Her zaman orijinal renkleri kullan
+                FilePath = file
+            };
+
+            System.Diagnostics.Debug.WriteLine($"Piskel .c yüklendi: {name} ({width}x{height})");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Piskel .c yükleme hatası ({file}): {ex.Message}");
+        }
     }
 
 
@@ -139,6 +307,13 @@ public class AssetLibrary : IAssetLibrary
         if (asset == null)
             return null;
 
+        // Bitmap ikon ise
+        if (asset.IsBitmap && asset.BitmapPixels != null)
+        {
+            return RenderBitmapAsset(asset, size, tintColor);
+        }
+
+        // SVG ikon ise
         // Boyutu 16 veya 32'ye yuvarla
         int targetSize = size <= 24 ? 16 : 32;
 
@@ -150,6 +325,56 @@ public class AssetLibrary : IAssetLibrary
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Bitmap ikonu render eder (orijinal boyut ve renklerle)
+    /// </summary>
+    private SKBitmap? RenderBitmapAsset(AssetInfo asset, int targetSize, SKColor tintColor)
+    {
+        if (asset.BitmapPixels == null || asset.BitmapColors == null)
+            return null;
+
+        int srcWidth = asset.BitmapWidth;
+        int srcHeight = asset.BitmapHeight;
+        
+        // Orijinal boyutunda render et
+        var bitmap = new SKBitmap(srcWidth, srcHeight, SKColorType.Rgba8888, SKAlphaType.Premul);
+        
+        using (var canvas = new SKCanvas(bitmap))
+        {
+            canvas.Clear(SKColors.Transparent);
+            
+            // Her pikseli orijinal rengiyle çiz
+            for (int y = 0; y < srcHeight && y < asset.BitmapPixels.Length; y++)
+            {
+                var row = asset.BitmapPixels[y];
+                var colorRow = asset.BitmapColors[y];
+                
+                for (int x = 0; x < srcWidth && x < row.Length; x++)
+                {
+                    if (row[x] != 0)
+                    {
+                        var argb = colorRow[x];
+                        // ABGR formatından SKColor'a dönüştür
+                        byte a = (byte)((argb >> 24) & 0xFF);
+                        byte b = (byte)((argb >> 16) & 0xFF);
+                        byte g = (byte)((argb >> 8) & 0xFF);
+                        byte r = (byte)(argb & 0xFF);
+                        
+                        using var paint = new SKPaint
+                        {
+                            Color = new SKColor(r, g, b, a),
+                            IsAntialias = false,
+                            Style = SKPaintStyle.Fill
+                        };
+                        canvas.DrawPoint(x, y, paint);
+                    }
+                }
+            }
+        }
+
+        return bitmap;
     }
 
     /// <inheritdoc/>
@@ -212,99 +437,4 @@ public class AssetLibrary : IAssetLibrary
             return false;
         }
     }
-
-
-    #region Built-in SVG Content
-
-    // Pixel-perfect 16x16 SVG ikonları
-    // Tüm ikonlar siyah/beyaz olarak tasarlanmış, LED rengine boyanabilir
-
-    private static string GetTurkishFlagSvg() => @"
-<svg xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 16 16"">
-  <rect width=""16"" height=""16"" fill=""white""/>
-  <circle cx=""6"" cy=""8"" r=""4"" fill=""white""/>
-  <circle cx=""7"" cy=""8"" r=""3"" fill=""black""/>
-  <polygon points=""10,8 12,6 11,8 12,10"" fill=""white""/>
-</svg>";
-
-    private static string GetWheelchairSvg() => @"
-<svg xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 16 16"">
-  <circle cx=""8"" cy=""3"" r=""2"" fill=""white""/>
-  <path d=""M7 5 L7 9 L5 9 L5 11 L9 11 L9 13 L13 13 L13 11 L11 11 L11 9 L9 9 L9 5 Z"" fill=""white""/>
-  <circle cx=""6"" cy=""13"" r=""2"" fill=""none"" stroke=""white"" stroke-width=""1""/>
-</svg>";
-
-    private static string GetHearingSvg() => @"
-<svg xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 16 16"">
-  <path d=""M4 6 Q4 2 8 2 Q12 2 12 6 L12 8 Q12 10 10 10 L10 12 Q10 14 8 14"" fill=""none"" stroke=""white"" stroke-width=""2""/>
-  <circle cx=""8"" cy=""14"" r=""1"" fill=""white""/>
-</svg>";
-
-    private static string GetVisualSvg() => @"
-<svg xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 16 16"">
-  <ellipse cx=""8"" cy=""8"" rx=""7"" ry=""4"" fill=""none"" stroke=""white"" stroke-width=""1""/>
-  <circle cx=""8"" cy=""8"" r=""2"" fill=""white""/>
-  <line x1=""2"" y1=""14"" x2=""14"" y2=""2"" stroke=""white"" stroke-width=""2""/>
-</svg>";
-
-    private static string GetArrowLeftSvg() => @"
-<svg xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 16 16"">
-  <polygon points=""2,8 8,2 8,5 14,5 14,11 8,11 8,14"" fill=""white""/>
-</svg>";
-
-    private static string GetArrowRightSvg() => @"
-<svg xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 16 16"">
-  <polygon points=""14,8 8,2 8,5 2,5 2,11 8,11 8,14"" fill=""white""/>
-</svg>";
-
-    private static string GetArrowUpSvg() => @"
-<svg xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 16 16"">
-  <polygon points=""8,2 2,8 5,8 5,14 11,14 11,8 14,8"" fill=""white""/>
-</svg>";
-
-    private static string GetArrowDownSvg() => @"
-<svg xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 16 16"">
-  <polygon points=""8,14 2,8 5,8 5,2 11,2 11,8 14,8"" fill=""white""/>
-</svg>";
-
-    private static string GetBusSvg() => @"
-<svg xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 16 16"">
-  <rect x=""2"" y=""2"" width=""12"" height=""10"" rx=""1"" fill=""white""/>
-  <rect x=""3"" y=""3"" width=""4"" height=""3"" fill=""black""/>
-  <rect x=""9"" y=""3"" width=""4"" height=""3"" fill=""black""/>
-  <circle cx=""5"" cy=""13"" r=""1"" fill=""white""/>
-  <circle cx=""11"" cy=""13"" r=""1"" fill=""white""/>
-  <rect x=""2"" y=""11"" width=""12"" height=""2"" fill=""white""/>
-</svg>";
-
-    private static string GetMetroSvg() => @"
-<svg xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 16 16"">
-  <rect x=""3"" y=""2"" width=""10"" height=""10"" rx=""2"" fill=""white""/>
-  <rect x=""4"" y=""3"" width=""8"" height=""4"" fill=""black""/>
-  <circle cx=""5"" cy=""10"" r=""1"" fill=""black""/>
-  <circle cx=""11"" cy=""10"" r=""1"" fill=""black""/>
-  <line x1=""4"" y1=""13"" x2=""2"" y2=""15"" stroke=""white"" stroke-width=""1""/>
-  <line x1=""12"" y1=""13"" x2=""14"" y2=""15"" stroke=""white"" stroke-width=""1""/>
-</svg>";
-
-    private static string GetTramSvg() => @"
-<svg xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 16 16"">
-  <rect x=""4"" y=""4"" width=""8"" height=""9"" rx=""1"" fill=""white""/>
-  <rect x=""5"" y=""5"" width=""6"" height=""3"" fill=""black""/>
-  <circle cx=""6"" cy=""11"" r=""1"" fill=""black""/>
-  <circle cx=""10"" cy=""11"" r=""1"" fill=""black""/>
-  <line x1=""6"" y1=""4"" x2=""4"" y2=""1"" stroke=""white"" stroke-width=""1""/>
-  <line x1=""10"" y1=""4"" x2=""12"" y2=""1"" stroke=""white"" stroke-width=""1""/>
-  <line x1=""2"" y1=""1"" x2=""14"" y2=""1"" stroke=""white"" stroke-width=""1""/>
-</svg>";
-
-    private static string GetFerrySvg() => @"
-<svg xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 16 16"">
-  <path d=""M2 10 L4 6 L12 6 L14 10 Z"" fill=""white""/>
-  <rect x=""6"" y=""3"" width=""4"" height=""3"" fill=""white""/>
-  <path d=""M1 11 Q4 13 8 11 Q12 13 15 11 L15 12 Q12 14 8 12 Q4 14 1 12 Z"" fill=""white""/>
-  <path d=""M1 13 Q4 15 8 13 Q12 15 15 13 L15 14 Q12 16 8 14 Q4 16 1 14 Z"" fill=""white""/>
-</svg>";
-
-    #endregion
 }

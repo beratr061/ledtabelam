@@ -36,6 +36,7 @@ public class TabelaItem : ReactiveObject
     private bool _isScrolling = false;
     private ScrollDirection _scrollDirection = ScrollDirection.Left;
     private int _scrollSpeed = 20;
+    private double _scrollOffset = 0; // Kayan yazı için piksel offset
     
     // Durum
     private bool _isSelected = false;
@@ -201,6 +202,61 @@ public class TabelaItem : ReactiveObject
     {
         get => _scrollSpeed;
         set => this.RaiseAndSetIfChanged(ref _scrollSpeed, value);
+    }
+
+    /// <summary>
+    /// Kayan yazı offset'i (piksel) - animasyon sırasında güncellenir
+    /// </summary>
+    public double ScrollOffset
+    {
+        get => _scrollOffset;
+        set => this.RaiseAndSetIfChanged(ref _scrollOffset, value);
+    }
+
+    /// <summary>
+    /// Scroll offset'i sıfırlar
+    /// </summary>
+    public void ResetScrollOffset()
+    {
+        ScrollOffset = 0;
+    }
+
+    /// <summary>
+    /// Scroll offset'i deltaTime'a göre günceller
+    /// </summary>
+    public void UpdateScrollOffset(double deltaTime, int contentWidth, int contentHeight)
+    {
+        if (!IsScrolling) return;
+        
+        double speed = ScrollSpeed * deltaTime;
+        
+        switch (ScrollDirection)
+        {
+            case ScrollDirection.Left:
+                ScrollOffset -= speed;
+                // Metin tamamen dışarı çıktıysa başa sar
+                if (ScrollOffset < -contentWidth)
+                    ScrollOffset = Width;
+                break;
+                
+            case ScrollDirection.Right:
+                ScrollOffset += speed;
+                if (ScrollOffset > Width)
+                    ScrollOffset = -contentWidth;
+                break;
+                
+            case ScrollDirection.Up:
+                ScrollOffset -= speed;
+                if (ScrollOffset < -contentHeight)
+                    ScrollOffset = Height;
+                break;
+                
+            case ScrollDirection.Down:
+                ScrollOffset += speed;
+                if (ScrollOffset > Height)
+                    ScrollOffset = -contentHeight;
+                break;
+        }
     }
 
     /// <summary>

@@ -79,4 +79,34 @@ public class AssetInfo
     public bool IsBuiltIn { get; set; } = true;
     public bool Has16px { get; set; } = true;
     public bool Has32px { get; set; } = true;
+    
+    /// <summary>
+    /// Piskel bitmap ikonu mu (SVG değil)
+    /// </summary>
+    public bool IsBitmap { get; set; } = false;
+    
+    /// <summary>
+    /// Bitmap genişliği (IsBitmap=true ise)
+    /// </summary>
+    public int BitmapWidth { get; set; }
+    
+    /// <summary>
+    /// Bitmap yüksekliği (IsBitmap=true ise)
+    /// </summary>
+    public int BitmapHeight { get; set; }
+    
+    /// <summary>
+    /// Bitmap piksel verisi (1=dolu, 0=boş) - tek renkli ikonlar için
+    /// </summary>
+    public int[][]? BitmapPixels { get; set; }
+    
+    /// <summary>
+    /// Bitmap piksel renkleri (ARGB) - çok renkli ikonlar için
+    /// </summary>
+    public uint[][]? BitmapColors { get; set; }
+    
+    /// <summary>
+    /// Çok renkli ikon mu
+    /// </summary>
+    public bool IsMultiColor { get; set; } = false;
 }

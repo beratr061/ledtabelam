@@ -11,8 +11,8 @@ namespace LEDTabelam.Models;
 public class DisplaySettings : ReactiveObject
 {
     // Panel boyutu (piksel sayısı) - kullanıcının belirlediği çözünürlük
-    private int _panelWidth = 128;
-    private int _panelHeight = 16;
+    private int _panelWidth = 160;
+    private int _panelHeight = 24;
     
     private LedColorType _colorType = LedColorType.Amber;
     private Color _customColor = Color.FromArgb(255, 255, 176, 0);

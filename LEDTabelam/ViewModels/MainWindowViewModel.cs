@@ -78,6 +78,16 @@ public class MainWindowViewModel : ViewModelBase
     /// </summary>
     public ProgramEditorViewModel ProgramEditor { get; }
 
+    /// <summary>
+    /// Görsel bölge düzenleyici ViewModel'i
+    /// </summary>
+    public VisualZoneEditorViewModel VisualZoneEditor { get; }
+
+    /// <summary>
+    /// Birleşik düzenleyici ViewModel'i (Program + Görsel)
+    /// </summary>
+    public UnifiedEditorViewModel UnifiedEditor { get; }
+
     #region Commands
 
     /// <summary>
@@ -143,6 +153,8 @@ public class MainWindowViewModel : ViewModelBase
         Playlist = new PlaylistViewModel(AnimationService);
         SimpleTabelaEditor = new SimpleTabelaViewModel();
         ProgramEditor = new ProgramEditorViewModel();
+        VisualZoneEditor = new VisualZoneEditorViewModel();
+        UnifiedEditor = new UnifiedEditorViewModel();
 
         // Komutları oluştur
         SavePngCommand = ReactiveCommand.CreateFromTask(SavePngAsync);
@@ -158,6 +170,8 @@ public class MainWindowViewModel : ViewModelBase
         ControlPanel.Fonts.CollectionChanged += (s, e) =>
         {
             ProgramEditor.UpdateAvailableFonts(ControlPanel.Fonts);
+            VisualZoneEditor.UpdateAvailableFonts(ControlPanel.Fonts);
+            UnifiedEditor.UpdateAvailableFonts(ControlPanel.Fonts);
         };
 
         // SimpleTabelaEditor değişikliklerini izle
@@ -165,6 +179,25 @@ public class MainWindowViewModel : ViewModelBase
 
         // ProgramEditor değişikliklerini izle
         ProgramEditor.ItemsChanged += OnProgramItemsChanged;
+
+        // VisualZoneEditor değişikliklerini izle
+        VisualZoneEditor.ItemsChanged += OnVisualZoneItemsChanged;
+
+        // UnifiedEditor değişikliklerini izle
+        UnifiedEditor.ItemsChanged += OnUnifiedEditorItemsChanged;
+
+        // ControlPanel ayarları değiştiğinde VisualZoneEditor'ı güncelle
+        ControlPanel.WhenAnyValue(x => x.CurrentSettings)
+            .Subscribe(settings =>
+            {
+                if (settings != null)
+                {
+                    VisualZoneEditor.UpdateDisplaySize(settings.Width, settings.Height);
+                    ProgramEditor.UpdateDisplaySize(settings.Width, settings.Height);
+                    UnifiedEditor.UpdateDisplaySize(settings.Width, settings.Height);
+                }
+            })
+            .DisposeWith(Disposables);
 
         // Font veya ayarlar değiştiğinde önizlemeyi güncelle
         // Throttle ile çok sık güncellemeyi önle
@@ -194,6 +227,24 @@ public class MainWindowViewModel : ViewModelBase
 
         // Animasyon durumu değişikliklerini izle
         AnimationService.StateChanged += OnAnimationStateChanged;
+        
+        // Animasyon tick'lerini UnifiedEditor'a bağla
+        AnimationService.OnTick += OnAnimationTick;
+        
+        // UnifiedEditor animasyon durumu değiştiğinde AnimationService'i kontrol et
+        UnifiedEditor.WhenAnyValue(x => x.IsAnimationPlaying)
+            .Subscribe(isPlaying =>
+            {
+                if (isPlaying && !AnimationService.IsPlaying)
+                {
+                    AnimationService.Start();
+                }
+                else if (!isPlaying && AnimationService.IsPlaying)
+                {
+                    AnimationService.Stop();
+                }
+            })
+            .DisposeWith(Disposables);
     }
 
     #region Command Implementations
@@ -389,6 +440,92 @@ public class MainWindowViewModel : ViewModelBase
         RenderProgramToPreview();
     }
 
+    private void OnVisualZoneItemsChanged()
+    {
+        RenderVisualZonesToPreview();
+    }
+
+    private void OnUnifiedEditorItemsChanged()
+    {
+        RenderUnifiedEditorToPreview();
+    }
+
+    private void RenderUnifiedEditorToPreview()
+    {
+        try
+        {
+            var settings = ControlPanel.CurrentSettings;
+            var defaultFont = ControlPanel.SelectedFont;
+
+            // Önce ayarları güncelle
+            Preview.UpdateSettings(settings);
+
+            // UnifiedEditor'ın display boyutlarını güncelle
+            UnifiedEditor.UpdateDisplaySize(settings.Width, settings.Height);
+
+            // Font yoksa sadece ayarları güncelle
+            if (defaultFont == null && UnifiedEditor.AvailableFonts.Count == 0)
+            {
+                return;
+            }
+
+            // UnifiedEditor'dan öğeleri al ve render et
+            var items = new System.Collections.Generic.List<TabelaItem>(UnifiedEditor.Items);
+            if (items.Count > 0)
+            {
+                var colorMatrix = PreviewRenderer.RenderProgramToColorMatrix(
+                    items,
+                    defaultFont,
+                    fontName => UnifiedEditor.GetFontByName(fontName) ?? defaultFont,
+                    settings);
+
+                Preview.UpdateColorMatrix(colorMatrix);
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Birleşik düzenleyici render hatası: {ex.Message}";
+        }
+    }
+
+    private void RenderVisualZonesToPreview()
+    {
+        try
+        {
+            var settings = ControlPanel.CurrentSettings;
+            var defaultFont = ControlPanel.SelectedFont;
+
+            // Önce ayarları güncelle
+            Preview.UpdateSettings(settings);
+
+            // VisualZoneEditor'ın display boyutlarını güncelle
+            VisualZoneEditor.UpdateDisplaySize(settings.Width, settings.Height);
+
+            // Font yoksa sadece ayarları güncelle
+            if (defaultFont == null && VisualZoneEditor.AvailableFonts.Count == 0)
+            {
+                return;
+            }
+
+            // VisualZoneEditor'dan öğeleri al ve render et
+            var items = new System.Collections.Generic.List<TabelaItem>(VisualZoneEditor.Items);
+            if (items.Count > 0)
+            {
+                var colorMatrix = PreviewRenderer.RenderProgramToColorMatrix(
+                    items,
+                    defaultFont,
+                    fontName => VisualZoneEditor.GetFontByName(fontName) ?? defaultFont,
+                    settings);
+
+                Preview.UpdateColorMatrix(colorMatrix);
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Görsel zone render hatası: {ex.Message}";
+        }
+    }
+
     private void RenderProgramToPreview()
     {
         try
@@ -450,6 +587,18 @@ public class MainWindowViewModel : ViewModelBase
         };
     }
 
+    private void OnAnimationTick(AnimationTick tick)
+    {
+        // UnifiedEditor'daki kayan yazıları güncelle (UI thread'de çalıştır)
+        if (UnifiedEditor.IsAnimationPlaying)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                UnifiedEditor.OnAnimationTick(tick.DeltaTime);
+            });
+        }
+    }
+
     #endregion
 
     protected override void Dispose(bool disposing)
@@ -457,8 +606,11 @@ public class MainWindowViewModel : ViewModelBase
         if (disposing)
         {
             AnimationService.StateChanged -= OnAnimationStateChanged;
+            AnimationService.OnTick -= OnAnimationTick;
             SimpleTabelaEditor.TabelaChanged -= OnSimpleTabelaChanged;
             ProgramEditor.ItemsChanged -= OnProgramItemsChanged;
+            VisualZoneEditor.ItemsChanged -= OnVisualZoneItemsChanged;
+            UnifiedEditor.ItemsChanged -= OnUnifiedEditorItemsChanged;
             ControlPanel.Dispose();
             Preview.Dispose();
             SlotEditor.Dispose();

@@ -234,8 +234,8 @@ public class ProfileManager : IProfileManager
             Name = DefaultProfileName,
             Settings = new DisplaySettings
             {
-                Width = 128,
-                Height = 16,
+                PanelWidth = 160,
+                PanelHeight = 24,
                 ColorType = LedColorType.Amber,
                 Pitch = PixelPitch.P10,
                 Shape = PixelShape.Round,

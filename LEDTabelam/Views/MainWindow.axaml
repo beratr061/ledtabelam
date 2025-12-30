@@ -158,8 +158,8 @@
                     <!-- Önizleme alanı minimum 200px, esnek büyüme -->
                     <RowDefinition Height="*" MinHeight="200"/>
                     <RowDefinition Height="Auto"/>
-                    <!-- Alt panel: küçük ekranlarda daraltılabilir, varsayılan 180px -->
-                    <RowDefinition Height="180" MinHeight="120" MaxHeight="300"/>
+                    <!-- Alt panel: varsayılan 320px, daha geniş çalışma alanı -->
+                    <RowDefinition Height="320" MinHeight="200" MaxHeight="500"/>
                 </Grid.RowDefinitions>
                 
                 <!-- Önizleme Paneli -->
@@ -171,10 +171,8 @@
                 
                 <!-- Alt Panel: HD2020 tarzı basit menü - ScrollViewer ile taşma koruması -->
                 <TabControl Grid.Row="2" Background="#252525">
-                    <TabItem Header="Program Düzenleyici">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <views:ProgramEditor DataContext="{Binding ProgramEditor}"/>
-                        </ScrollViewer>
+                    <TabItem Header="Düzenleyici">
+                        <views:UnifiedEditor DataContext="{Binding UnifiedEditor}"/>
                     </TabItem>
                     <TabItem Header="Animasyon">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
