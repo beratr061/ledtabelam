@@ -45,4 +45,14 @@ public interface IFontLoader
     /// <param name="letterSpacing">Harf arası boşluk (piksel, varsayılan 1)</param>
     /// <returns>Render edilmiş bitmap</returns>
     SKBitmap RenderText(BitmapFont font, string text, SKColor color, int letterSpacing = 1);
+
+    /// <summary>
+    /// Çok renkli metin segmentlerini bitmap font kullanarak SKBitmap'e render eder
+    /// Her segment farklı renkte olabilir
+    /// </summary>
+    /// <param name="font">Kullanılacak font</param>
+    /// <param name="segments">Renkli metin segmentleri</param>
+    /// <param name="letterSpacing">Harf arası boşluk (piksel, varsayılan 1)</param>
+    /// <returns>Render edilmiş bitmap</returns>
+    SKBitmap RenderColoredText(BitmapFont font, System.Collections.Generic.IEnumerable<(string Text, SKColor Color)> segments, int letterSpacing = 1);
 }

@@ -16,6 +16,24 @@ namespace LEDTabelam.ViewModels;
 #region Converters
 
 /// <summary>
+/// Bool değerini "Açık"/"Kapalı" metnine dönüştürür
+/// </summary>
+public class BoolToOnOffConverter : IValueConverter
+{
+    public static readonly BoolToOnOffConverter Instance = new();
+    
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool isOn)
+            return isOn ? "Açık" : "Kapalı";
+        return "Kapalı";
+    }
+    
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>
 /// Bool değerini seçim arka plan rengine dönüştürür
 /// </summary>
 public class BoolToSelectionBrushConverter : IValueConverter
@@ -311,6 +329,41 @@ public class UnifiedEditorViewModel : ViewModelBase
     public bool IsTextItemSelected => SelectedItem?.ItemType == TabelaItemType.Text;
     public bool IsSymbolItemSelected => SelectedItem?.ItemType == TabelaItemType.Symbol;
     public bool IsScrollingItemSelected => SelectedItem?.ItemType == TabelaItemType.Text && SelectedItem?.IsScrolling == true;
+    
+    /// <summary>
+    /// Seçili öğe çok renkli mod kullanıyor mu
+    /// </summary>
+    public bool IsColoredSegmentsMode => SelectedItem?.UseColoredSegments == true;
+
+    /// <summary>
+    /// Seçili segment index'i (çok renkli modda)
+    /// </summary>
+    private int _selectedSegmentIndex = -1;
+    public int SelectedSegmentIndex
+    {
+        get => _selectedSegmentIndex;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedSegmentIndex, value);
+            this.RaisePropertyChanged(nameof(SelectedSegment));
+            this.RaisePropertyChanged(nameof(HasSegmentSelection));
+        }
+    }
+
+    /// <summary>
+    /// Seçili segment
+    /// </summary>
+    public ColoredTextSegment? SelectedSegment => 
+        SelectedItem?.UseColoredSegments == true && 
+        _selectedSegmentIndex >= 0 && 
+        _selectedSegmentIndex < (SelectedItem?.ColoredSegments.Count ?? 0)
+            ? SelectedItem?.ColoredSegments[_selectedSegmentIndex]
+            : null;
+
+    /// <summary>
+    /// Segment seçili mi
+    /// </summary>
+    public bool HasSegmentSelection => SelectedSegment != null;
 
     public int DisplayWidth
     {
@@ -400,6 +453,11 @@ public class UnifiedEditorViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> MoveDownCommand { get; }
     public ReactiveCommand<Unit, Unit> ZoomInCommand { get; }
     public ReactiveCommand<Unit, Unit> ZoomOutCommand { get; }
+    
+    // Çok renkli metin komutları
+    public ReactiveCommand<Unit, Unit> EnableColoredSegmentsCommand { get; }
+    public ReactiveCommand<Unit, Unit> DisableColoredSegmentsCommand { get; }
+    public ReactiveCommand<Unit, Unit> ApplyRainbowColorsCommand { get; }
 
     #endregion
 
@@ -417,6 +475,12 @@ public class UnifiedEditorViewModel : ViewModelBase
         MoveDownCommand = ReactiveCommand.Create(MoveItemDown, hasSelection);
         ZoomInCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Min(800, ZoomLevel + 50); });
         ZoomOutCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Max(100, ZoomLevel - 50); });
+        
+        // Çok renkli metin komutları
+        var isTextSelected = this.WhenAnyValue(x => x.IsTextItemSelected);
+        EnableColoredSegmentsCommand = ReactiveCommand.Create(EnableColoredSegments, isTextSelected);
+        DisableColoredSegmentsCommand = ReactiveCommand.Create(DisableColoredSegments, isTextSelected);
+        ApplyRainbowColorsCommand = ReactiveCommand.Create(ApplyRainbowColors, isTextSelected);
 
         Items.CollectionChanged += (s, e) =>
         {
@@ -836,4 +900,145 @@ public class UnifiedEditorViewModel : ViewModelBase
     /// Kayan yazı olan öğe var mı
     /// </summary>
     public bool HasScrollingItems => Items.Any(i => i.IsScrolling && i.ItemType == TabelaItemType.Text);
+
+    #region Çok Renkli Metin Metodları
+
+    /// <summary>
+    /// Seçili metin öğesini çok renkli moda geçirir
+    /// Her harf ayrı bir segment olur
+    /// </summary>
+    private void EnableColoredSegments()
+    {
+        if (SelectedItem == null || SelectedItem.ItemType != TabelaItemType.Text) return;
+        
+        SelectedItem.ConvertToColoredSegments();
+        SelectedSegmentIndex = SelectedItem.ColoredSegments.Count > 0 ? 0 : -1;
+        
+        this.RaisePropertyChanged(nameof(IsColoredSegmentsMode));
+        OnItemsChanged();
+    }
+
+    /// <summary>
+    /// Çok renkli modu kapatır, tek renkli moda döner
+    /// </summary>
+    private void DisableColoredSegments()
+    {
+        if (SelectedItem == null || SelectedItem.ItemType != TabelaItemType.Text) return;
+        
+        SelectedItem.ConvertToSingleColor();
+        SelectedSegmentIndex = -1;
+        
+        this.RaisePropertyChanged(nameof(IsColoredSegmentsMode));
+        OnItemsChanged();
+    }
+
+    /// <summary>
+    /// Gökkuşağı renkleri uygular (her harfe farklı renk)
+    /// </summary>
+    private void ApplyRainbowColors()
+    {
+        if (SelectedItem == null || SelectedItem.ItemType != TabelaItemType.Text) return;
+        
+        // Önce çok renkli moda geç
+        if (!SelectedItem.UseColoredSegments)
+        {
+            SelectedItem.ConvertToColoredSegments();
+        }
+        
+        // Gökkuşağı renkleri
+        var rainbowColors = new[]
+        {
+            Color.FromRgb(255, 0, 0),     // Kırmızı
+            Color.FromRgb(255, 127, 0),   // Turuncu
+            Color.FromRgb(255, 255, 0),   // Sarı
+            Color.FromRgb(0, 255, 0),     // Yeşil
+            Color.FromRgb(0, 0, 255),     // Mavi
+            Color.FromRgb(75, 0, 130),    // Indigo
+            Color.FromRgb(148, 0, 211)    // Mor
+        };
+        
+        for (int i = 0; i < SelectedItem.ColoredSegments.Count; i++)
+        {
+            SelectedItem.ColoredSegments[i].Color = rainbowColors[i % rainbowColors.Length];
+        }
+        
+        this.RaisePropertyChanged(nameof(IsColoredSegmentsMode));
+        OnItemsChanged();
+    }
+
+    /// <summary>
+    /// Belirli bir segmentin rengini değiştirir
+    /// </summary>
+    public void SetSegmentColor(int segmentIndex, Color color)
+    {
+        if (SelectedItem?.UseColoredSegments != true) return;
+        if (segmentIndex < 0 || segmentIndex >= SelectedItem.ColoredSegments.Count) return;
+        
+        SelectedItem.ColoredSegments[segmentIndex].Color = color;
+        OnItemsChanged();
+    }
+
+    /// <summary>
+    /// Seçili segmentin rengini değiştirir
+    /// </summary>
+    public void SetSelectedSegmentColor(Color color)
+    {
+        if (SelectedSegment != null)
+        {
+            SelectedSegment.Color = color;
+            OnItemsChanged();
+        }
+    }
+
+    /// <summary>
+    /// Segment seçer
+    /// </summary>
+    public void SelectSegment(int index)
+    {
+        if (SelectedItem?.UseColoredSegments != true) return;
+        if (index < 0 || index >= SelectedItem.ColoredSegments.Count)
+        {
+            SelectedSegmentIndex = -1;
+            return;
+        }
+        SelectedSegmentIndex = index;
+    }
+
+    /// <summary>
+    /// Tüm segmentlere aynı rengi uygular
+    /// </summary>
+    public void ApplyColorToAllSegments(Color color)
+    {
+        if (SelectedItem?.UseColoredSegments != true) return;
+        
+        foreach (var segment in SelectedItem.ColoredSegments)
+        {
+            segment.Color = color;
+        }
+        OnItemsChanged();
+    }
+
+    /// <summary>
+    /// Gradient (geçişli) renk uygular
+    /// </summary>
+    public void ApplyGradientColors(Color startColor, Color endColor)
+    {
+        if (SelectedItem?.UseColoredSegments != true) return;
+        if (SelectedItem.ColoredSegments.Count == 0) return;
+        
+        int count = SelectedItem.ColoredSegments.Count;
+        for (int i = 0; i < count; i++)
+        {
+            float t = count > 1 ? (float)i / (count - 1) : 0;
+            var color = Color.FromRgb(
+                (byte)(startColor.R + (endColor.R - startColor.R) * t),
+                (byte)(startColor.G + (endColor.G - startColor.G) * t),
+                (byte)(startColor.B + (endColor.B - startColor.B) * t)
+            );
+            SelectedItem.ColoredSegments[i].Color = color;
+        }
+        OnItemsChanged();
+    }
+
+    #endregion
 }

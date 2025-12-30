@@ -692,4 +692,165 @@ public partial class UnifiedEditor : UserControl
     }
 
     #endregion
+
+    #region Çok Renkli Metin Events
+
+    /// <summary>
+    /// Çok renkli mod toggle
+    /// </summary>
+    private void OnColoredModeToggle(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel?.SelectedItem == null) 
+        {
+            System.Diagnostics.Debug.WriteLine("SelectedItem null!");
+            return;
+        }
+        
+        System.Diagnostics.Debug.WriteLine($"Mevcut durum: {ViewModel.SelectedItem.UseColoredSegments}");
+        System.Diagnostics.Debug.WriteLine($"Content: '{ViewModel.SelectedItem.Content}'");
+        
+        if (ViewModel.SelectedItem.UseColoredSegments)
+        {
+            // Zaten açıksa kapat
+            ViewModel.SelectedItem.ConvertToSingleColor();
+            System.Diagnostics.Debug.WriteLine("Kapatıldı");
+        }
+        else
+        {
+            // Kapalıysa aç - önce içerik kontrolü
+            if (string.IsNullOrEmpty(ViewModel.SelectedItem.Content))
+            {
+                System.Diagnostics.Debug.WriteLine("İçerik boş, segment oluşturulamaz!");
+                return;
+            }
+            ViewModel.SelectedItem.ConvertToColoredSegments();
+            System.Diagnostics.Debug.WriteLine($"Açıldı, segment sayısı: {ViewModel.SelectedItem.ColoredSegments.Count}");
+        }
+        
+        ViewModel.OnItemsChanged();
+        RedrawZones();
+    }
+
+    /// <summary>
+    /// Gökkuşağı renkleri uygula
+    /// </summary>
+    private void OnApplyRainbow(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel?.SelectedItem == null) return;
+        
+        // Önce çok renkli moda geç
+        if (!ViewModel.SelectedItem.UseColoredSegments)
+        {
+            ViewModel.SelectedItem.ConvertToColoredSegments();
+        }
+        
+        // Gökkuşağı renkleri
+        var rainbowColors = new[]
+        {
+            Color.FromRgb(255, 0, 0),     // Kırmızı
+            Color.FromRgb(255, 127, 0),   // Turuncu
+            Color.FromRgb(255, 255, 0),   // Sarı
+            Color.FromRgb(0, 255, 0),     // Yeşil
+            Color.FromRgb(0, 0, 255),     // Mavi
+            Color.FromRgb(75, 0, 130),    // Indigo
+            Color.FromRgb(148, 0, 211)    // Mor
+        };
+        
+        for (int i = 0; i < ViewModel.SelectedItem.ColoredSegments.Count; i++)
+        {
+            ViewModel.SelectedItem.ColoredSegments[i].Color = rainbowColors[i % rainbowColors.Length];
+        }
+        
+        ViewModel.OnItemsChanged();
+        RedrawZones();
+    }
+
+    /// <summary>
+    /// Kırmızı-Yeşil gradient uygula
+    /// </summary>
+    private void OnApplyGradientRG(object? sender, RoutedEventArgs e)
+    {
+        ApplyGradient(Color.FromRgb(255, 0, 0), Color.FromRgb(0, 255, 0));
+    }
+
+    /// <summary>
+    /// Mavi-Sarı gradient uygula
+    /// </summary>
+    private void OnApplyGradientBY(object? sender, RoutedEventArgs e)
+    {
+        ApplyGradient(Color.FromRgb(0, 100, 255), Color.FromRgb(255, 255, 0));
+    }
+
+    private void ApplyGradient(Color startColor, Color endColor)
+    {
+        if (ViewModel?.SelectedItem == null) return;
+        
+        // Önce çok renkli moda geç
+        if (!ViewModel.SelectedItem.UseColoredSegments)
+        {
+            ViewModel.SelectedItem.ConvertToColoredSegments();
+        }
+        
+        int count = ViewModel.SelectedItem.ColoredSegments.Count;
+        if (count == 0) return;
+        
+        for (int i = 0; i < count; i++)
+        {
+            float t = count > 1 ? (float)i / (count - 1) : 0;
+            var color = Color.FromRgb(
+                (byte)(startColor.R + (endColor.R - startColor.R) * t),
+                (byte)(startColor.G + (endColor.G - startColor.G) * t),
+                (byte)(startColor.B + (endColor.B - startColor.B) * t)
+            );
+            ViewModel.SelectedItem.ColoredSegments[i].Color = color;
+        }
+        
+        ViewModel.OnItemsChanged();
+        RedrawZones();
+    }
+
+    /// <summary>
+    /// Segment'e tıklandığında
+    /// </summary>
+    private void OnSegmentClick(object? sender, PointerPressedEventArgs e)
+    {
+        // Segment seçimi için (ileride kullanılabilir)
+    }
+
+    /// <summary>
+    /// Segment rengini kırmızı yap
+    /// </summary>
+    private void OnSegmentColorRed(object? sender, RoutedEventArgs e) => SetSegmentColor(sender, Color.FromRgb(255, 0, 0));
+    
+    /// <summary>
+    /// Segment rengini yeşil yap
+    /// </summary>
+    private void OnSegmentColorGreen(object? sender, RoutedEventArgs e) => SetSegmentColor(sender, Color.FromRgb(0, 255, 0));
+    
+    /// <summary>
+    /// Segment rengini amber yap
+    /// </summary>
+    private void OnSegmentColorAmber(object? sender, RoutedEventArgs e) => SetSegmentColor(sender, Color.FromRgb(255, 176, 0));
+    
+    /// <summary>
+    /// Segment rengini cyan yap
+    /// </summary>
+    private void OnSegmentColorCyan(object? sender, RoutedEventArgs e) => SetSegmentColor(sender, Color.FromRgb(0, 255, 255));
+    
+    /// <summary>
+    /// Segment rengini sarı yap
+    /// </summary>
+    private void OnSegmentColorYellow(object? sender, RoutedEventArgs e) => SetSegmentColor(sender, Color.FromRgb(255, 255, 0));
+
+    private void SetSegmentColor(object? sender, Color color)
+    {
+        if (sender is Button btn && btn.Tag is ColoredTextSegment segment)
+        {
+            segment.Color = color;
+            ViewModel?.OnItemsChanged();
+            RedrawZones();
+        }
+    }
+
+    #endregion
 }

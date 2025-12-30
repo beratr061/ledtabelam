@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -678,5 +679,103 @@ public class FontLoader : IFontLoader
                 return false;
         }
         return true;
+    }
+
+    /// <summary>
+    /// Çok renkli metin segmentlerini bitmap font kullanarak SKBitmap'e render eder
+    /// Her segment farklı renkte olabilir - LED tabelalarda gökkuşağı efekti için
+    /// </summary>
+    public SKBitmap RenderColoredText(BitmapFont font, IEnumerable<(string Text, SKColor Color)> segments, int letterSpacing = 1)
+    {
+        if (font == null)
+            throw new ArgumentNullException(nameof(font));
+
+        if (font.FontImage == null)
+            throw new InvalidOperationException("Font görüntüsü yüklenmemiş");
+
+        var segmentList = segments?.ToList() ?? new List<(string Text, SKColor Color)>();
+        
+        if (segmentList.Count == 0)
+        {
+            var emptyBitmap = new SKBitmap(1, font.LineHeight);
+            emptyBitmap.Erase(SKColors.Transparent);
+            return emptyBitmap;
+        }
+
+        // Toplam genişliği hesapla
+        string fullText = string.Concat(segmentList.Select(s => s.Text));
+        int totalWidth = CalculateTextWidth(font, fullText, letterSpacing);
+        int height = font.LineHeight;
+
+        if (totalWidth <= 0)
+            totalWidth = 1;
+
+        var bitmap = new SKBitmap(totalWidth, height);
+        using var canvas = new SKCanvas(bitmap);
+        canvas.Clear(SKColors.Transparent);
+
+        int currentX = 0;
+        char? previousChar = null;
+
+        foreach (var segment in segmentList)
+        {
+            if (string.IsNullOrEmpty(segment.Text))
+                continue;
+
+            // Bu segment için paint oluştur
+            using var paint = new SKPaint
+            {
+                IsAntialias = false,
+                BlendMode = SKBlendMode.SrcOver
+            };
+
+            // Renk matrisi ile tint uygula
+            if (segment.Color != SKColors.White)
+            {
+                var colorMatrix = new float[]
+                {
+                    segment.Color.Red / 255f, 0, 0, 0, 0,
+                    0, segment.Color.Green / 255f, 0, 0, 0,
+                    0, 0, segment.Color.Blue / 255f, 0, 0,
+                    0, 0, 0, segment.Color.Alpha / 255f, 0
+                };
+                paint.ColorFilter = SKColorFilter.CreateColorMatrix(colorMatrix);
+            }
+
+            foreach (char c in segment.Text)
+            {
+                // Kerning uygula
+                if (previousChar.HasValue)
+                {
+                    currentX += font.GetKerning(previousChar.Value, c);
+                }
+
+                FontChar? fontChar = GetFontCharOrPlaceholder(font, c);
+
+                if (fontChar != null && font.FontImage != null)
+                {
+                    var srcRect = new SKRect(
+                        fontChar.X,
+                        fontChar.Y,
+                        fontChar.X + fontChar.Width,
+                        fontChar.Y + fontChar.Height
+                    );
+
+                    var destRect = new SKRect(
+                        currentX + fontChar.XOffset,
+                        fontChar.YOffset,
+                        currentX + fontChar.XOffset + fontChar.Width,
+                        fontChar.YOffset + fontChar.Height
+                    );
+
+                    canvas.DrawBitmap(font.FontImage, srcRect, destRect, paint);
+                    currentX += fontChar.XAdvance + letterSpacing;
+                }
+
+                previousChar = c;
+            }
+        }
+
+        return bitmap;
     }
 }

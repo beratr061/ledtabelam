@@ -1,4 +1,5 @@
 using System;
+using System.Collections.ObjectModel;
 using Avalonia.Media;
 using ReactiveUI;
 
@@ -24,6 +25,10 @@ public class TabelaItem : ReactiveObject
     // Görünüm
     private Color _color = Color.FromRgb(255, 176, 0); // Amber
     private Models.HorizontalAlignment _hAlign = Models.HorizontalAlignment.Left;
+    
+    // Çok renkli metin desteği
+    private bool _useColoredSegments = false;
+    private ObservableCollection<ColoredTextSegment> _coloredSegments = new();
     private Models.VerticalAlignment _vAlign = Models.VerticalAlignment.Center;
     private string _fontName = "PolarisRGB6x10M"; // Varsayılan font
     private int _letterSpacing = 1; // Harf aralığı (piksel)
@@ -118,12 +123,70 @@ public class TabelaItem : ReactiveObject
     }
 
     /// <summary>
-    /// Metin/öğe rengi
+    /// Metin/öğe rengi (tek renk modu için)
     /// </summary>
     public Color Color
     {
         get => _color;
         set => this.RaiseAndSetIfChanged(ref _color, value);
+    }
+
+    /// <summary>
+    /// Çok renkli segment modu aktif mi
+    /// true ise ColoredSegments kullanılır, false ise Content + Color kullanılır
+    /// </summary>
+    public bool UseColoredSegments
+    {
+        get => _useColoredSegments;
+        set => this.RaiseAndSetIfChanged(ref _useColoredSegments, value);
+    }
+
+    /// <summary>
+    /// Renkli metin segmentleri - her segment farklı renkte olabilir
+    /// Örnek: "AÇIK" -> [("A", Yeşil), ("Ç", Kırmızı), ("I", Sarı), ("K", Mavi)]
+    /// </summary>
+    public ObservableCollection<ColoredTextSegment> ColoredSegments
+    {
+        get => _coloredSegments;
+        set => this.RaiseAndSetIfChanged(ref _coloredSegments, value ?? new ObservableCollection<ColoredTextSegment>());
+    }
+
+    /// <summary>
+    /// Tüm segmentlerin birleştirilmiş metni
+    /// </summary>
+    public string GetFullText()
+    {
+        if (!UseColoredSegments || ColoredSegments.Count == 0)
+            return Content;
+        
+        var sb = new System.Text.StringBuilder();
+        foreach (var segment in ColoredSegments)
+        {
+            sb.Append(segment.Text);
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Tek renkli metni çok renkli segmentlere dönüştürür (her harf ayrı segment)
+    /// </summary>
+    public void ConvertToColoredSegments()
+    {
+        ColoredSegments.Clear();
+        foreach (char c in Content)
+        {
+            ColoredSegments.Add(new ColoredTextSegment(c.ToString(), Color));
+        }
+        UseColoredSegments = true;
+    }
+
+    /// <summary>
+    /// Çok renkli segmentleri tek renkli metne dönüştürür
+    /// </summary>
+    public void ConvertToSingleColor()
+    {
+        Content = GetFullText();
+        UseColoredSegments = false;
     }
 
     /// <summary>

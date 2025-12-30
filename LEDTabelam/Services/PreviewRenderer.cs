@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using LEDTabelam.Models;
 using SkiaSharp;
 
@@ -450,10 +451,22 @@ public class PreviewRenderer : IPreviewRenderer
 
         try
         {
-            int lineCount = _multiLineTextRenderer.GetLineCount(item.Content);
-            textBitmap = lineCount > 1
-                ? _multiLineTextRenderer.RenderMultiLineText(font, item.Content, itemColor, lineSpacing, letterSpacing)
-                : _fontLoader.RenderText(font, item.Content, itemColor, letterSpacing);
+            // Çok renkli metin modu kontrolü
+            if (item.UseColoredSegments && item.ColoredSegments.Count > 0)
+            {
+                // Çok renkli metin render
+                var segments = item.ColoredSegments.Select(s => 
+                    (s.Text, new SKColor(s.Color.R, s.Color.G, s.Color.B)));
+                textBitmap = _fontLoader.RenderColoredText(font, segments, letterSpacing);
+            }
+            else
+            {
+                // Normal tek renkli metin render
+                int lineCount = _multiLineTextRenderer.GetLineCount(item.Content);
+                textBitmap = lineCount > 1
+                    ? _multiLineTextRenderer.RenderMultiLineText(font, item.Content, itemColor, lineSpacing, letterSpacing)
+                    : _fontLoader.RenderText(font, item.Content, itemColor, letterSpacing);
+            }
 
             if (textBitmap == null) return;
 
@@ -525,6 +538,9 @@ public class PreviewRenderer : IPreviewRenderer
             }
 
             // Pikselleri kopyala (içerik alanı sınırları içinde - clipping)
+            // Çok renkli modda orijinal piksel rengini kullan
+            bool useOriginalColors = item.UseColoredSegments && item.ColoredSegments.Count > 0;
+            
             for (int y = 0; y < textHeight; y++)
             {
                 int destY = contentY + offsetY + y;
@@ -540,7 +556,8 @@ public class PreviewRenderer : IPreviewRenderer
                     var pixel = textBitmap.GetPixel(x, y);
                     if (pixel.Alpha > 128)
                     {
-                        colorMatrix[destX, destY] = itemColor;
+                        // Çok renkli modda bitmap'teki rengi kullan, tek renkli modda item rengini kullan
+                        colorMatrix[destX, destY] = useOriginalColors ? pixel : itemColor;
                     }
                 }
             }
