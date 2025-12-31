@@ -5,7 +5,7 @@ namespace LEDTabelam.Models;
 
 /// <summary>
 /// Tabela slot tanımı (001-999 arası numaralı)
-/// Her slot, tabeladaki tüm öğeleri (metin, sembol, pozisyon, renk, font vb.) saklar
+/// Her slot, tabeladaki tüm öğeleri (metin, sembol, pozisyon, renk, font vb.) ve panel boyutunu saklar
 /// Requirements: 20.1, 20.2
 /// </summary>
 public class TabelaSlot : ReactiveObject
@@ -13,6 +13,8 @@ public class TabelaSlot : ReactiveObject
     private int _slotNumber;
     private string _name = string.Empty;
     private List<TabelaItem> _items = new();
+    private int _panelWidth = 160;
+    private int _panelHeight = 24;
 
     /// <summary>
     /// Slot numarası (1-999)
@@ -30,6 +32,24 @@ public class TabelaSlot : ReactiveObject
     {
         get => _name;
         set => this.RaiseAndSetIfChanged(ref _name, value);
+    }
+
+    /// <summary>
+    /// Panel genişliği (piksel)
+    /// </summary>
+    public int PanelWidth
+    {
+        get => _panelWidth;
+        set => this.RaiseAndSetIfChanged(ref _panelWidth, value);
+    }
+
+    /// <summary>
+    /// Panel yüksekliği (piksel)
+    /// </summary>
+    public int PanelHeight
+    {
+        get => _panelHeight;
+        set => this.RaiseAndSetIfChanged(ref _panelHeight, value);
     }
 
     /// <summary>

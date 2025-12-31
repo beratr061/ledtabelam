@@ -679,6 +679,7 @@ public class ControlPanelViewModel : ViewModelBase
 
     /// <summary>
     /// Mevcut slot numarasındaki slot'u yükler
+    /// Slot'un panel boyutu varsa onu da uygular
     /// </summary>
     private void LoadCurrentSlot()
     {
@@ -689,12 +690,44 @@ public class ControlPanelViewModel : ViewModelBase
         }
 
         CurrentSlot = SelectedProfile.GetSlot(CurrentSlotNumber);
+        
+        // Slot'un panel boyutunu uygula (eğer tanımlıysa)
+        if (CurrentSlot != null && CurrentSlot.IsDefined)
+        {
+            // Panel boyutunu güncelle
+            var width = CurrentSlot.PanelWidth;
+            var height = CurrentSlot.PanelHeight;
+            
+            // Geçerli boyutlar mı kontrol et
+            if (width > 0 && height > 0)
+            {
+                // Standart çözünürlük mü kontrol et
+                var resolutionString = $"{width}x{height}";
+                if (Resolutions.Contains(resolutionString))
+                {
+                    SelectedResolution = resolutionString;
+                }
+                else
+                {
+                    SelectedResolution = "Özel";
+                    _panelWidth = width;
+                    _panelHeight = height;
+                    this.RaisePropertyChanged(nameof(PanelWidth));
+                    this.RaisePropertyChanged(nameof(PanelHeight));
+                    this.RaisePropertyChanged(nameof(ActualWidth));
+                    this.RaisePropertyChanged(nameof(ActualHeight));
+                    this.RaisePropertyChanged(nameof(ActualResolutionText));
+                }
+                UpdateCurrentSettings();
+            }
+        }
+        
         SlotChanged?.Invoke(CurrentSlot);
     }
 
     /// <summary>
     /// Mevcut slot'u TabelaItem listesinden kaydeder
-    /// Tüm öğelerin pozisyonu, boyutu, rengi, fontu, çerçevesi vb. kaydedilir
+    /// Tüm öğelerin pozisyonu, boyutu, rengi, fontu, çerçevesi vb. ve panel boyutu kaydedilir
     /// </summary>
     public void SaveSlotFromItems(List<TabelaItem> items)
     {
@@ -711,7 +744,9 @@ public class ControlPanelViewModel : ViewModelBase
         var slot = new TabelaSlot 
         { 
             SlotNumber = CurrentSlotNumber,
-            Name = CurrentSlot?.Name ?? string.Empty
+            Name = CurrentSlot?.Name ?? string.Empty,
+            PanelWidth = PanelWidth,
+            PanelHeight = PanelHeight
         };
         
         // Tüm öğeleri derin kopyala
