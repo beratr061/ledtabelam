@@ -29,6 +29,7 @@ public class MainWindowViewModel : ViewModelBase
 
     private string _title = "LEDTabelam - Otobüs Hat Tabelası Önizleme";
     private string _statusMessage = "Hazır";
+    private Profile? _currentProfile;
 
     /// <summary>
     /// Pencere başlığı
@@ -47,6 +48,27 @@ public class MainWindowViewModel : ViewModelBase
         get => _statusMessage;
         set => this.RaiseAndSetIfChanged(ref _statusMessage, value);
     }
+
+    /// <summary>
+    /// Aktif profil
+    /// </summary>
+    public Profile? CurrentProfile
+    {
+        get => _currentProfile;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _currentProfile, value);
+            if (value != null)
+            {
+                Title = $"LEDTabelam - {value.Name}";
+            }
+        }
+    }
+
+    /// <summary>
+    /// ProfileManager erişimi (dialog'lar için)
+    /// </summary>
+    public IProfileManager ProfileManager => _profileManager;
 
     /// <summary>
     /// Kontrol paneli ViewModel'i
@@ -110,7 +132,21 @@ public class MainWindowViewModel : ViewModelBase
     /// </summary>
     public ReactiveCommand<Unit, Unit> StopAnimationCommand { get; }
 
+    /// <summary>
+    /// Profil yönetimi komutu
+    /// </summary>
+    public ReactiveCommand<Unit, Unit> ManageProfilesCommand { get; }
+
     #endregion
+
+    /// <summary>
+    /// Profili yükler
+    /// </summary>
+    public void LoadProfile(Profile profile)
+    {
+        CurrentProfile = profile;
+        ControlPanel.SelectedProfile = profile;
+    }
 
     /// <summary>
     /// MainWindowViewModel constructor
@@ -141,6 +177,7 @@ public class MainWindowViewModel : ViewModelBase
         SaveGifCommand = ReactiveCommand.CreateFromTask(SaveGifAsync);
         SaveWebPCommand = ReactiveCommand.CreateFromTask(SaveWebPAsync);
         StopAnimationCommand = ReactiveCommand.Create(StopAnimation);
+        ManageProfilesCommand = ReactiveCommand.Create(() => { }); // View'da handle edilecek
 
         // ControlPanel font listesi değişikliklerini UnifiedEditor'a bağla
         ControlPanel.Fonts.CollectionChanged += (s, e) =>
@@ -148,6 +185,9 @@ public class MainWindowViewModel : ViewModelBase
             UnifiedEditor.UpdateAvailableFonts(ControlPanel.Fonts);
         };
 
+        // Slot değişikliklerini izle
+        ControlPanel.SlotChanged += OnSlotChanged;
+        
         // UnifiedEditor değişikliklerini izle
         UnifiedEditor.ItemsChanged += OnUnifiedEditorItemsChanged;
 
@@ -334,6 +374,46 @@ public class MainWindowViewModel : ViewModelBase
     private void OnUnifiedEditorItemsChanged()
     {
         RenderUnifiedEditorToPreview();
+        
+        // Slot'u otomatik kaydet ve profili diske yaz
+        if (ControlPanel.SelectedProfile != null)
+        {
+            ControlPanel.SaveSlotFromItems(new System.Collections.Generic.List<TabelaItem>(UnifiedEditor.Items));
+            // Profili diske kaydet (async fire-and-forget)
+            _ = SaveCurrentProfileAsync();
+        }
+    }
+
+    private async System.Threading.Tasks.Task SaveCurrentProfileAsync()
+    {
+        try
+        {
+            if (ControlPanel.SelectedProfile != null)
+            {
+                await _profileManager.SaveProfileAsync(ControlPanel.SelectedProfile);
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Profil kaydetme hatası: {ex.Message}";
+        }
+    }
+
+    private void OnSlotChanged(TabelaSlot? slot)
+    {
+        // Slot değiştiğinde UnifiedEditor'ı güncelle
+        UnifiedEditor.Items.Clear();
+        
+        if (slot != null && slot.IsDefined)
+        {
+            var items = ControlPanel.GetSlotAsItems();
+            foreach (var item in items)
+            {
+                UnifiedEditor.Items.Add(item);
+            }
+        }
+        
+        RenderUnifiedEditorToPreview();
     }
 
     private void RenderUnifiedEditorToPreview()
@@ -406,6 +486,7 @@ public class MainWindowViewModel : ViewModelBase
             AnimationService.StateChanged -= OnAnimationStateChanged;
             AnimationService.OnTick -= OnAnimationTick;
             UnifiedEditor.ItemsChanged -= OnUnifiedEditorItemsChanged;
+            ControlPanel.SlotChanged -= OnSlotChanged;
             ControlPanel.Dispose();
             Preview.Dispose();
             Playlist.Dispose();

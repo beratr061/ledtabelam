@@ -24,9 +24,9 @@ public class ControlPanelViewModel : ViewModelBase
 
     #region Resolution Properties
 
-    private string _selectedResolution = "128x16";
-    private int _panelWidth = 128;  // P10 referansında panel genişliği
-    private int _panelHeight = 16;  // P10 referansında panel yüksekliği
+    private string _selectedResolution = "160x24";
+    private int _panelWidth = 160;  // P10 referansında panel genişliği
+    private int _panelHeight = 24;  // P10 referansında panel yüksekliği
     private bool _isCustomResolution = false;
 
     /// <summary>
@@ -34,7 +34,7 @@ public class ControlPanelViewModel : ViewModelBase
     /// </summary>
     public ObservableCollection<string> Resolutions { get; } = new()
     {
-        "32x16", "64x16", "96x16", "128x16", "144x19", "150x24", "160x16", "160x24", "192x16", "192x24", "Özel"
+        "160x24", "144x19", "Özel"
     };
 
     /// <summary>
@@ -327,6 +327,7 @@ public class ControlPanelViewModel : ViewModelBase
             if (value != null)
             {
                 LoadProfileSettings(value);
+                LoadCurrentSlot(); // Profil değiştiğinde slot'u da yükle
             }
         }
     }
@@ -337,6 +338,7 @@ public class ControlPanelViewModel : ViewModelBase
 
     private int _currentSlotNumber = 1;
     private string _slotSearchQuery = string.Empty;
+    private TabelaSlot? _currentSlot;
 
     /// <summary>
     /// Mevcut slot numarası (1-999)
@@ -347,8 +349,22 @@ public class ControlPanelViewModel : ViewModelBase
         set
         {
             var validValue = Math.Clamp(value, 1, 999);
-            this.RaiseAndSetIfChanged(ref _currentSlotNumber, validValue);
+            if (_currentSlotNumber != validValue)
+            {
+                _currentSlotNumber = validValue;
+                this.RaisePropertyChanged(nameof(CurrentSlotNumber));
+                LoadCurrentSlot();
+            }
         }
+    }
+
+    /// <summary>
+    /// Mevcut slot
+    /// </summary>
+    public TabelaSlot? CurrentSlot
+    {
+        get => _currentSlot;
+        private set => this.RaiseAndSetIfChanged(ref _currentSlot, value);
     }
 
     /// <summary>
@@ -364,6 +380,11 @@ public class ControlPanelViewModel : ViewModelBase
     /// Arama sonuçları
     /// </summary>
     public ObservableCollection<TabelaSlot> SearchResults { get; } = new();
+
+    /// <summary>
+    /// Slot değiştiğinde tetiklenir
+    /// </summary>
+    public event Action<TabelaSlot?>? SlotChanged;
 
     #endregion
 
@@ -599,6 +620,7 @@ public class ControlPanelViewModel : ViewModelBase
             SelectedProfile.FontName = SelectedFont?.Name ?? string.Empty;
             SelectedProfile.DefaultZones = _zoneManager.GetZones();
             SelectedProfile.ModifiedAt = DateTime.UtcNow;
+            // Slot'lar zaten profil içinde, ayrıca kaydetmeye gerek yok
 
             await _profileManager.SaveProfileAsync(SelectedProfile);
         }
@@ -637,14 +659,127 @@ public class ControlPanelViewModel : ViewModelBase
     private void SearchSlots()
     {
         SearchResults.Clear();
-        if (!string.IsNullOrWhiteSpace(SlotSearchQuery))
+        if (!string.IsNullOrWhiteSpace(SlotSearchQuery) && SelectedProfile != null)
         {
-            var results = _slotManager.SearchSlots(SlotSearchQuery);
+            var query = SlotSearchQuery.ToLowerInvariant();
+            var results = SelectedProfile.Slots.Values
+                .Where(s => s.IsDefined && 
+                    (s.Name.ToLowerInvariant().Contains(query) ||
+                     s.Summary.ToLowerInvariant().Contains(query) ||
+                     s.SlotNumber.ToString().Contains(query)))
+                .OrderBy(s => s.SlotNumber)
+                .Take(20);
+            
             foreach (var slot in results)
             {
                 SearchResults.Add(slot);
             }
         }
+    }
+
+    /// <summary>
+    /// Mevcut slot numarasındaki slot'u yükler
+    /// </summary>
+    private void LoadCurrentSlot()
+    {
+        if (SelectedProfile == null)
+        {
+            CurrentSlot = null;
+            return;
+        }
+
+        CurrentSlot = SelectedProfile.GetSlot(CurrentSlotNumber);
+        SlotChanged?.Invoke(CurrentSlot);
+    }
+
+    /// <summary>
+    /// Mevcut slot'u TabelaItem listesinden kaydeder
+    /// Tüm öğelerin pozisyonu, boyutu, rengi, fontu, çerçevesi vb. kaydedilir
+    /// </summary>
+    public void SaveSlotFromItems(List<TabelaItem> items)
+    {
+        if (SelectedProfile == null) return;
+
+        // Boş liste ise slot'u sil
+        if (items.Count == 0)
+        {
+            SelectedProfile.Slots.Remove(CurrentSlotNumber);
+            CurrentSlot = null;
+            return;
+        }
+
+        var slot = new TabelaSlot 
+        { 
+            SlotNumber = CurrentSlotNumber,
+            Name = CurrentSlot?.Name ?? string.Empty
+        };
+        
+        // Tüm öğeleri derin kopyala
+        slot.Items = items.Select(CloneTabelaItem).ToList();
+
+        SelectedProfile.SetSlot(CurrentSlotNumber, slot);
+        CurrentSlot = slot;
+    }
+
+    /// <summary>
+    /// TabelaItem'ı derin kopyalar
+    /// </summary>
+    private static TabelaItem CloneTabelaItem(TabelaItem source)
+    {
+        var clone = new TabelaItem
+        {
+            Id = source.Id,
+            Name = source.Name,
+            Content = source.Content,
+            ItemType = source.ItemType,
+            X = source.X,
+            Y = source.Y,
+            Width = source.Width,
+            Height = source.Height,
+            Color = source.Color,
+            UseColoredSegments = source.UseColoredSegments,
+            HAlign = source.HAlign,
+            VAlign = source.VAlign,
+            FontName = source.FontName,
+            LetterSpacing = source.LetterSpacing,
+            SymbolName = source.SymbolName,
+            SymbolSize = source.SymbolSize,
+            IsScrolling = source.IsScrolling,
+            ScrollDirection = source.ScrollDirection,
+            ScrollSpeed = source.ScrollSpeed,
+            IsVisible = source.IsVisible
+        };
+
+        // Renkli segmentleri kopyala
+        if (source.UseColoredSegments && source.ColoredSegments != null)
+        {
+            foreach (var segment in source.ColoredSegments)
+            {
+                clone.ColoredSegments.Add(new ColoredTextSegment(segment.Text, segment.Color));
+            }
+        }
+
+        // Çerçeve ayarlarını kopyala
+        if (source.Border != null)
+        {
+            clone.Border = source.Border.Clone();
+        }
+
+        return clone;
+    }
+
+    /// <summary>
+    /// Slot'u TabelaItem listesine dönüştürür
+    /// </summary>
+    public List<TabelaItem> GetSlotAsItems()
+    {
+        if (CurrentSlot == null || CurrentSlot.Items == null || CurrentSlot.Items.Count == 0)
+        {
+            return new List<TabelaItem>();
+        }
+
+        // Tüm öğeleri derin kopyala
+        return CurrentSlot.Items.Select(CloneTabelaItem).ToList();
     }
 
     #endregion

@@ -5,18 +5,14 @@ namespace LEDTabelam.Models;
 
 /// <summary>
 /// Tabela slot tanımı (001-999 arası numaralı)
+/// Her slot, tabeladaki tüm öğeleri (metin, sembol, pozisyon, renk, font vb.) saklar
 /// Requirements: 20.1, 20.2
 /// </summary>
 public class TabelaSlot : ReactiveObject
 {
     private int _slotNumber;
-    private string _routeNumber = string.Empty;
-    private string _routeText = string.Empty;
-    private string? _iconPath;
-    private List<Zone> _zones = new();
-    private TextStyle _textStyle = new();
-    private Models.HorizontalAlignment _hAlign = Models.HorizontalAlignment.Center;
-    private Models.VerticalAlignment _vAlign = Models.VerticalAlignment.Center;
+    private string _name = string.Empty;
+    private List<TabelaItem> _items = new();
 
     /// <summary>
     /// Slot numarası (1-999)
@@ -28,70 +24,53 @@ public class TabelaSlot : ReactiveObject
     }
 
     /// <summary>
-    /// Hat numarası (örn: "34", "19K", "M1")
+    /// Slot adı (kullanıcı tanımlı, örn: "M1 Korucuk - Gar")
     /// </summary>
-    public string RouteNumber
+    public string Name
     {
-        get => _routeNumber;
-        set => this.RaiseAndSetIfChanged(ref _routeNumber, value);
+        get => _name;
+        set => this.RaiseAndSetIfChanged(ref _name, value);
     }
 
     /// <summary>
-    /// Güzergah metni (örn: "Zincirlikuyu - Söğütlüçeşme")
+    /// Tabeladaki tüm öğeler (metin, sembol vb.)
+    /// Her öğenin pozisyonu, boyutu, rengi, fontu, çerçevesi vb. saklanır
     /// </summary>
-    public string RouteText
+    public List<TabelaItem> Items
     {
-        get => _routeText;
-        set => this.RaiseAndSetIfChanged(ref _routeText, value);
-    }
-
-    /// <summary>
-    /// İkon/logo dosya yolu (opsiyonel)
-    /// </summary>
-    public string? IconPath
-    {
-        get => _iconPath;
-        set => this.RaiseAndSetIfChanged(ref _iconPath, value);
-    }
-
-    /// <summary>
-    /// Slot'a özgü zone tanımları
-    /// </summary>
-    public List<Zone> Zones
-    {
-        get => _zones;
-        set => this.RaiseAndSetIfChanged(ref _zones, value);
-    }
-
-    /// <summary>
-    /// Metin stil ayarları
-    /// </summary>
-    public TextStyle TextStyle
-    {
-        get => _textStyle;
-        set => this.RaiseAndSetIfChanged(ref _textStyle, value);
-    }
-
-    /// <summary>
-    /// Yatay hizalama
-    /// </summary>
-    public Models.HorizontalAlignment HAlign
-    {
-        get => _hAlign;
-        set => this.RaiseAndSetIfChanged(ref _hAlign, value);
-    }
-
-    /// <summary>
-    /// Dikey hizalama
-    /// </summary>
-    public Models.VerticalAlignment VAlign
-    {
-        get => _vAlign;
-        set => this.RaiseAndSetIfChanged(ref _vAlign, value);
+        get => _items;
+        set => this.RaiseAndSetIfChanged(ref _items, value ?? new List<TabelaItem>());
     }
 
     /// <summary>
     /// Slot'un tanımlı olup olmadığını kontrol eder
     /// </summary>
-    public bool IsDefined => !string.IsNullOrEmpty(RouteNumber) || !string.IsNullOrEmpty(RouteText);
+    public bool IsDefined => Items.Count > 0 || !string.IsNullOrEmpty(Name);
+
+    /// <summary>
+    /// Slot'un özet açıklaması (liste görünümü için)
+    /// </summary>
+    public string Summary
+    {
+        get
+        {
+            if (!string.IsNullOrEmpty(Name))
+                return Name;
+            
+            if (Items.Count == 0)
+                return "(Boş)";
+            
+            // İlk metin öğesinin içeriğini göster
+            foreach (var item in Items)
+            {
+                if (item.ItemType == TabelaItemType.Text && !string.IsNullOrEmpty(item.Content))
+                {
+                    var text = item.Content;
+                    return text.Length > 30 ? text.Substring(0, 30) + "..." : text;
+                }
+            }
+            
+            return $"{Items.Count} öğe";
+        }
+    }
 }

@@ -1,0 +1,23 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="350" d:DesignHeight="180"
+        x:Class="LEDTabelam.Views.InputDialog"
+        Width="350" Height="180"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <Border Background="#1E1E1E" Padding="24">
+        <StackPanel Spacing="16">
+            <TextBlock x:Name="MessageText" FontSize="13" Foreground="#D0D0D0"/>
+            <TextBox x:Name="InputTextBox" FontSize="14"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button x:Name="CancelButton" Content="İptal" Padding="20,8" Click="OnCancelClick"/>
+                <Button x:Name="OkButton" Content="Tamam" Padding="20,8" 
+                        Background="#0078D4" Foreground="White" Click="OnOkClick"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+
+</Window>

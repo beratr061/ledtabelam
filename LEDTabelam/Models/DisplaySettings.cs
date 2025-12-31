@@ -19,7 +19,7 @@ public class DisplaySettings : ReactiveObject
     private int _brightness = 100;
     private int _backgroundDarkness = 100;
     private int _pixelSize = 4;
-    private PixelPitch _pitch = PixelPitch.P5;
+    private PixelPitch _pitch = PixelPitch.P10;
     private double _customPitchRatio = 0.7;
     private PixelShape _shape = PixelShape.Round;
     private int _zoomLevel = 100;

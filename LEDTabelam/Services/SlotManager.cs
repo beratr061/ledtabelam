@@ -96,8 +96,9 @@ public class SlotManager : ISlotManager
         
         return _slots.Values
             .Where(s => s.IsDefined && 
-                       (s.RouteNumber.ToLowerInvariant().Contains(normalizedQuery) ||
-                        s.RouteText.ToLowerInvariant().Contains(normalizedQuery)))
+                       (s.Name.ToLowerInvariant().Contains(normalizedQuery) ||
+                        s.Summary.ToLowerInvariant().Contains(normalizedQuery) ||
+                        s.SlotNumber.ToString().Contains(normalizedQuery)))
             .OrderBy(s => s.SlotNumber)
             .ToList();
     }

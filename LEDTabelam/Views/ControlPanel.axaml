@@ -4,36 +4,54 @@
              xmlns:models="using:LEDTabelam.Models"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="320" d:DesignHeight="800"
+             mc:Ignorable="d" d:DesignWidth="280" d:DesignHeight="800"
              x:Class="LEDTabelam.Views.ControlPanel"
              x:DataType="vm:ControlPanelViewModel">
 
     <UserControl.Styles>
-        <Style Selector="Expander">
-            <Setter Property="Background" Value="#2D2D2D"/>
-            <Setter Property="Margin" Value="4"/>
-            <Setter Property="Padding" Value="8"/>
+        <!-- Section Card Stili -->
+        <Style Selector="Border.SectionCard">
+            <Setter Property="Background" Value="#1E1E1E"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
-        <Style Selector="Expander /template/ ToggleButton">
-            <Setter Property="Foreground" Value="#E0E0E0"/>
+        
+        <!-- Section Title -->
+        <Style Selector="TextBlock.SectionTitle">
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#0078D4"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        
+        <!-- Label -->
+        <Style Selector="TextBlock.Label">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#909090"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+        
+        <!-- Value Text -->
+        <Style Selector="TextBlock.Value">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#D0D0D0"/>
         </Style>
         
         <!-- Segmented Button Stili -->
-        <Style Selector="RadioButton.Segmented">
-            <Setter Property="Padding" Value="12,6"/>
-            <Setter Property="Margin" Value="2"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#E0E0E0"/>
-            <Setter Property="BorderBrush" Value="#30FFFFFF"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="4"/>
+        <Style Selector="RadioButton.Seg">
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="Background" Value="#2A2A2A"/>
+            <Setter Property="Foreground" Value="#B0B0B0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <ControlTemplate>
                     <Border Background="{TemplateBinding Background}" 
-                            BorderBrush="{TemplateBinding BorderBrush}" 
-                            BorderThickness="{TemplateBinding BorderThickness}" 
                             CornerRadius="{TemplateBinding CornerRadius}" 
                             Padding="{TemplateBinding Padding}">
                         <ContentPresenter Content="{TemplateBinding Content}" 
@@ -43,204 +61,191 @@
                 </ControlTemplate>
             </Setter>
         </Style>
-        <Style Selector="RadioButton.Segmented:checked">
+        <Style Selector="RadioButton.Seg:checked">
             <Setter Property="Background" Value="#0078D4"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#0078D4"/>
         </Style>
-        <Style Selector="RadioButton.Segmented:pointerover">
-            <Setter Property="Background" Value="#404040"/>
+        <Style Selector="RadioButton.Seg:pointerover">
+            <Setter Property="Background" Value="#363636"/>
         </Style>
-        <Style Selector="RadioButton.Segmented:checked:pointerover">
-            <Setter Property="Background" Value="#1084D8"/>
+        <Style Selector="RadioButton.Seg:checked:pointerover">
+            <Setter Property="Background" Value="#1a86dc"/>
         </Style>
         
-        <!-- Renk Paleti Stili -->
-        <Style Selector="RadioButton.ColorSwatch">
-            <Setter Property="Width" Value="32"/>
-            <Setter Property="Height" Value="32"/>
-            <Setter Property="Margin" Value="4"/>
-            <Setter Property="Cursor" Value="Hand"/>
+        <!-- Compact Slider -->
+        <Style Selector="Slider.Compact">
+            <Setter Property="Margin" Value="0,2,0,0"/>
+        </Style>
+        
+        <!-- Compact NumericUpDown -->
+        <Style Selector="NumericUpDown.Compact">
+            <Setter Property="Width" Value="55"/>
+            <Setter Property="ShowButtonSpinner" Value="False"/>
+            <Setter Property="FontSize" Value="11"/>
         </Style>
     </UserControl.Styles>
 
-    <StackPanel Spacing="4">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="8">
+        <StackPanel Spacing="0">
         
-        <!-- Slot Seçici -->
-        <Expander Header="📍 Slot" IsExpanded="True">
-            <StackPanel Spacing="8">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <NumericUpDown Grid.Column="0"
-                                   Value="{Binding CurrentSlotNumber}"
-                                   Minimum="1"
-                                   Maximum="999"
-                                   FormatString="000"
-                                   Increment="1"/>
-                    <Button Grid.Column="1" Content="Ara..." Margin="8,0,0,0"/>
-                </Grid>
-                <TextBox Watermark="Slot ara (hat no veya güzergah)..."
-                         Text="{Binding SlotSearchQuery}"/>
-            </StackPanel>
-        </Expander>
-        
-        <!-- ═══════════════════════════════════════════════════════════════ -->
-        <!-- DONANIM (Hardware) -->
-        <!-- ═══════════════════════════════════════════════════════════════ -->
-        
-        <!-- Çözünürlük Ayarları - Segmented Butonlar -->
-        <Expander Header="📐 Panel Boyutu" IsExpanded="True">
-            <StackPanel Spacing="8">
-                <TextBlock Text="Hızlı Seçim" Foreground="#808080" FontSize="11"/>
-                <WrapPanel>
-                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="32x16" 
-                                 Command="{Binding SetResolutionCommand}" CommandParameter="32x16"
-                                 IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=32x16}"/>
-                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="64x16" 
-                                 Command="{Binding SetResolutionCommand}" CommandParameter="64x16"
-                                 IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=64x16}"/>
-                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="96x16" 
-                                 Command="{Binding SetResolutionCommand}" CommandParameter="96x16"
-                                 IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=96x16}"/>
-                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="128x16" 
-                                 Command="{Binding SetResolutionCommand}" CommandParameter="128x16"
-                                 IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=128x16}"/>
-                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="144x19" 
-                                 Command="{Binding SetResolutionCommand}" CommandParameter="144x19"
-                                 IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=144x19}"/>
-                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="150x24" 
-                                 Command="{Binding SetResolutionCommand}" CommandParameter="150x24"
-                                 IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=150x24}"/>
-                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="160x16" 
-                                 Command="{Binding SetResolutionCommand}" CommandParameter="160x16"
-                                 IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=160x16}"/>
-                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="192x16" 
-                                 Command="{Binding SetResolutionCommand}" CommandParameter="192x16"
-                                 IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=192x16}"/>
-                    <RadioButton Classes="Segmented" GroupName="Resolution" Content="Özel" 
-                                 IsChecked="{Binding IsCustomResolution}"/>
-                </WrapPanel>
-                
-                <!-- Özel Boyut Girişi -->
-                <Grid IsVisible="{Binding IsCustomResolution}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <NumericUpDown Grid.Column="0"
-                                   Value="{Binding PanelWidth}"
-                                   Minimum="1"
-                                   Maximum="512"
-                                   Watermark="Genişlik"/>
-                    <TextBlock Grid.Column="1" Text="x" VerticalAlignment="Center" Margin="8,0"/>
-                    <NumericUpDown Grid.Column="2"
-                                   Value="{Binding PanelHeight}"
-                                   Minimum="1"
-                                   Maximum="512"
-                                   Watermark="Yükseklik"/>
-                </Grid>
-                
-                <!-- Gerçek çözünürlük bilgisi -->
-                <TextBlock Text="{Binding ActualResolutionText}" 
-                           Foreground="#808080" FontSize="10"/>
-            </StackPanel>
-        </Expander>
-        
-        <!-- Piksel Tipi (Pitch) - Segmented -->
-        <Expander Header="⚙️ LED Görünümü (Pitch)" IsExpanded="False">
-            <StackPanel Spacing="8">
-                <TextBlock Text="LED'ler arası boşluk oranı" Foreground="#808080" FontSize="11"/>
-                <TextBlock Text="(Çözünürlüğü etkilemez, sadece görünümü değiştirir)" Foreground="#606060" FontSize="10"/>
-                <WrapPanel>
-                    <RadioButton Classes="Segmented" GroupName="Pitch" Content="P5 (Sıkı)" 
-                                 IsChecked="{Binding SelectedPitch, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:PixelPitch.P5}}"/>
-                    <RadioButton Classes="Segmented" GroupName="Pitch" Content="P10 (Aralıklı)" 
-                                 IsChecked="{Binding SelectedPitch, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:PixelPitch.P10}}"/>
-                    <RadioButton Classes="Segmented" GroupName="Pitch" Content="Özel" 
-                                 IsChecked="{Binding IsCustomPitch}"/>
-                </WrapPanel>
-                <Grid IsVisible="{Binding IsCustomPitch}" ColumnDefinitions="Auto,*,Auto">
-                    <TextBlock Grid.Column="0" Text="LED Oranı:" Foreground="#808080" FontSize="11" VerticalAlignment="Center"/>
-                    <Slider Grid.Column="1" Minimum="0.5" Maximum="0.95" Value="{Binding CustomPitchRatio}" Margin="8,0"/>
-                    <TextBlock Grid.Column="2" Text="{Binding CustomPitchRatio, StringFormat={}{0:P0}}" 
-                               Foreground="#B0B0B0" FontSize="11" Width="40" VerticalAlignment="Center"/>
-                </Grid>
-            </StackPanel>
-        </Expander>
-        
-        <!-- ═══════════════════════════════════════════════════════════════ -->
-        <!-- GÖRÜNÜM (Appearance) -->
-        <!-- ═══════════════════════════════════════════════════════════════ -->
-        
-        <!-- Piksel Şekli - Segmented -->
-        <Expander Header="🔲 Piksel Şekli" IsExpanded="False">
-            <WrapPanel>
-                <RadioButton Classes="Segmented" GroupName="PixelShape" Content="⬜ Kare" 
-                             IsChecked="{Binding SelectedShape, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:PixelShape.Square}}"/>
-                <RadioButton Classes="Segmented" GroupName="PixelShape" Content="⚫ Yuvarlak" 
-                             IsChecked="{Binding SelectedShape, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:PixelShape.Round}}"/>
-            </WrapPanel>
-        </Expander>
-        
-        <!-- Görsel Ayarlar - Slider + NumericUpDown kombinasyonu -->
-        <Expander Header="🌟 Görsel Ayarlar" IsExpanded="True">
-            <StackPanel Spacing="8">
-                <!-- Parlaklık -->
-                <TextBlock Classes="label" Text="{Binding Brightness, StringFormat='Parlaklık: %{0}'}"/>
-                <Grid ColumnDefinitions="*, Auto">
-                    <Slider Grid.Column="0" Minimum="0" Maximum="100" Value="{Binding Brightness}"
-                            TickFrequency="1" IsSnapToTickEnabled="True"/>
-                    <NumericUpDown Grid.Column="1" Value="{Binding Brightness}" 
-                                   Minimum="0" Maximum="100"
-                                   ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
-                </Grid>
-                
-                <!-- Arka Plan -->
-                <TextBlock Classes="label" Text="{Binding BackgroundDarkness, StringFormat='Arka Plan: %{0}'}"/>
-                <Grid ColumnDefinitions="*, Auto">
-                    <Slider Grid.Column="0" Minimum="0" Maximum="100" Value="{Binding BackgroundDarkness}"
-                            TickFrequency="1" IsSnapToTickEnabled="True"/>
-                    <NumericUpDown Grid.Column="1" Value="{Binding BackgroundDarkness}" 
-                                   Minimum="0" Maximum="100"
-                                   ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
-                </Grid>
-            </StackPanel>
-        </Expander>
-        
-        <!-- Efektler -->
-        <Expander Header="✨ Efektler" IsExpanded="False">
-            <StackPanel Spacing="8">
-                <CheckBox Content="Ters Renk" IsChecked="{Binding InvertColors}"/>
-                
-                <TextBlock Classes="label" Text="{Binding AgingPercent, StringFormat='Eskime: %{0}'}"/>
-                <Grid ColumnDefinitions="*, Auto">
-                    <Slider Grid.Column="0" Minimum="0" Maximum="5" Value="{Binding AgingPercent}"
-                            TickFrequency="1" IsSnapToTickEnabled="True"/>
-                    <NumericUpDown Grid.Column="1" Value="{Binding AgingPercent}" 
-                                   Minimum="0" Maximum="5"
-                                   ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
-                </Grid>
-            </StackPanel>
-        </Expander>
-        
-        <!-- Animasyon -->
-        <Expander Header="🎬 Animasyon" IsExpanded="False">
-            <StackPanel Spacing="8">
-                <TextBlock Classes="label" Text="{Binding AnimationSpeed, StringFormat='Hız: {0} px/s'}"/>
-                <Grid ColumnDefinitions="*, Auto">
-                    <Slider Grid.Column="0" Minimum="1" Maximum="100" Value="{Binding AnimationSpeed}"
-                            TickFrequency="1" IsSnapToTickEnabled="True"/>
-                    <NumericUpDown Grid.Column="1" Value="{Binding AnimationSpeed}" 
-                                   Minimum="1" Maximum="100"
-                                   ShowButtonSpinner="False" Width="60" Margin="8,0,0,0"/>
-                </Grid>
-            </StackPanel>
-        </Expander>
-        
-    </StackPanel>
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- SLOT SEÇİCİ -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <Border Classes="SectionCard">
+                <StackPanel>
+                    <TextBlock Classes="SectionTitle" Text="📍 SLOT"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <NumericUpDown Grid.Column="0"
+                                       Value="{Binding CurrentSlotNumber}"
+                                       Minimum="1" Maximum="999"
+                                       FormatString="000" Increment="1"/>
+                        <Button Grid.Column="1" Content="🔍" 
+                                Width="36" Margin="6,0,0,0"
+                                ToolTip.Tip="Slot Ara"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+            
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- PANEL BOYUTU -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <Border Classes="SectionCard">
+                <StackPanel>
+                    <TextBlock Classes="SectionTitle" Text="📐 PANEL BOYUTU"/>
+                    
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <RadioButton Classes="Seg" GroupName="Resolution" Content="160×24" 
+                                     Command="{Binding SetResolutionCommand}" CommandParameter="160x24"
+                                     IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=160x24}"/>
+                        <RadioButton Classes="Seg" GroupName="Resolution" Content="144×19" 
+                                     Command="{Binding SetResolutionCommand}" CommandParameter="144x19"
+                                     IsChecked="{Binding SelectedResolution, Converter={x:Static vm:StringEqualityConverter.Instance}, ConverterParameter=144x19}"/>
+                        <RadioButton Classes="Seg" GroupName="Resolution" Content="Özel" 
+                                     IsChecked="{Binding IsCustomResolution}"/>
+                    </StackPanel>
+                    
+                    <!-- Özel Boyut -->
+                    <Grid IsVisible="{Binding IsCustomResolution}" ColumnDefinitions="*,Auto,*" Margin="0,0,0,6">
+                        <NumericUpDown Grid.Column="0" Value="{Binding PanelWidth}"
+                                       Minimum="1" Maximum="512" Watermark="G"/>
+                        <TextBlock Grid.Column="1" Text="×" VerticalAlignment="Center" 
+                                   Margin="8,0" Foreground="#606060"/>
+                        <NumericUpDown Grid.Column="2" Value="{Binding PanelHeight}"
+                                       Minimum="1" Maximum="512" Watermark="Y"/>
+                    </Grid>
+                    
+                    <TextBlock Classes="Value" Text="{Binding ActualResolutionText}" 
+                               Foreground="#606060" FontSize="10"/>
+                </StackPanel>
+            </Border>
+            
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- LED GÖRÜNÜMÜ -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <Border Classes="SectionCard">
+                <StackPanel>
+                    <TextBlock Classes="SectionTitle" Text="⚙️ LED GÖRÜNÜMÜ"/>
+                    
+                    <!-- Pitch -->
+                    <TextBlock Classes="Label" Text="Piksel Aralığı"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <RadioButton Classes="Seg" GroupName="Pitch" Content="P5" 
+                                     IsChecked="{Binding SelectedPitch, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:PixelPitch.P5}}"/>
+                        <RadioButton Classes="Seg" GroupName="Pitch" Content="P10" 
+                                     IsChecked="{Binding SelectedPitch, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:PixelPitch.P10}}"/>
+                    </StackPanel>
+                    
+                    <!-- Şekil -->
+                    <TextBlock Classes="Label" Text="Piksel Şekli"/>
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton Classes="Seg" GroupName="PixelShape" Content="⬜ Kare" 
+                                     IsChecked="{Binding SelectedShape, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:PixelShape.Square}}"/>
+                        <RadioButton Classes="Seg" GroupName="PixelShape" Content="⚫ Yuvarlak" 
+                                     IsChecked="{Binding SelectedShape, Converter={x:Static vm:EnumToBoolConverter.Instance}, ConverterParameter={x:Static models:PixelShape.Round}}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- PARLAKLIK & ARKA PLAN -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <Border Classes="SectionCard">
+                <StackPanel>
+                    <TextBlock Classes="SectionTitle" Text="🌟 PARLAKLIK"/>
+                    
+                    <!-- Parlaklık -->
+                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,12">
+                        <TextBlock Grid.Column="0" Classes="Label" Text="LED" 
+                                   VerticalAlignment="Center" Width="60"/>
+                        <Slider Grid.Column="1" Classes="Compact"
+                                Minimum="0" Maximum="100" Value="{Binding Brightness}"
+                                TickFrequency="1" IsSnapToTickEnabled="True"/>
+                        <NumericUpDown Grid.Column="2" Classes="Compact"
+                                       Value="{Binding Brightness}" 
+                                       Minimum="0" Maximum="100" Margin="8,0,0,0"/>
+                    </Grid>
+                    
+                    <!-- Arka Plan -->
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <TextBlock Grid.Column="0" Classes="Label" Text="Arka Plan" 
+                                   VerticalAlignment="Center" Width="60"/>
+                        <Slider Grid.Column="1" Classes="Compact"
+                                Minimum="0" Maximum="100" Value="{Binding BackgroundDarkness}"
+                                TickFrequency="1" IsSnapToTickEnabled="True"/>
+                        <NumericUpDown Grid.Column="2" Classes="Compact"
+                                       Value="{Binding BackgroundDarkness}" 
+                                       Minimum="0" Maximum="100" Margin="8,0,0,0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+            
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- EFEKTLER -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <Border Classes="SectionCard">
+                <StackPanel>
+                    <TextBlock Classes="SectionTitle" Text="✨ EFEKTLER"/>
+                    
+                    <CheckBox Content="Ters Renk" IsChecked="{Binding InvertColors}" 
+                              Margin="0,0,0,10"/>
+                    
+                    <!-- Eskime -->
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <TextBlock Grid.Column="0" Classes="Label" Text="Eskime" 
+                                   VerticalAlignment="Center" Width="60"/>
+                        <Slider Grid.Column="1" Classes="Compact"
+                                Minimum="0" Maximum="5" Value="{Binding AgingPercent}"
+                                TickFrequency="1" IsSnapToTickEnabled="True"/>
+                        <NumericUpDown Grid.Column="2" Classes="Compact"
+                                       Value="{Binding AgingPercent}" 
+                                       Minimum="0" Maximum="5" Margin="8,0,0,0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+            
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- ANİMASYON -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <Border Classes="SectionCard">
+                <StackPanel>
+                    <TextBlock Classes="SectionTitle" Text="🎬 ANİMASYON"/>
+                    
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <TextBlock Grid.Column="0" Classes="Label" Text="Hız" 
+                                   VerticalAlignment="Center" Width="60"/>
+                        <Slider Grid.Column="1" Classes="Compact"
+                                Minimum="1" Maximum="100" Value="{Binding AnimationSpeed}"
+                                TickFrequency="1" IsSnapToTickEnabled="True"/>
+                        <NumericUpDown Grid.Column="2" Classes="Compact"
+                                       Value="{Binding AnimationSpeed}" 
+                                       Minimum="1" Maximum="100" Margin="8,0,0,0"/>
+                    </Grid>
+                    <TextBlock Text="px/s" Foreground="#505050" FontSize="10" 
+                               HorizontalAlignment="Right" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Border>
+            
+        </StackPanel>
+    </ScrollViewer>
 
 </UserControl>

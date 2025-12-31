@@ -1,0 +1,94 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="450" d:DesignHeight="380"
+        x:Class="LEDTabelam.Views.ProfileSetupDialog"
+        Title="LED Tabelam - Başlangıç"
+        Width="450" Height="380"
+        WindowStartupLocation="CenterScreen"
+        CanResize="False"
+        ExtendClientAreaToDecorationsHint="False"
+        SystemDecorations="BorderOnly">
+
+    <Window.Styles>
+        <Style Selector="TextBlock.Title">
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+        </Style>
+        <Style Selector="TextBlock.Subtitle">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#808080"/>
+        </Style>
+        <Style Selector="Button.Primary">
+            <Setter Property="Background" Value="#0078D4"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.Primary:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#1a86dc"/>
+        </Style>
+        <Style Selector="Button.Secondary">
+            <Setter Property="Background" Value="#3D3D3D"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="Padding" Value="20,10"/>
+        </Style>
+        <Style Selector="Button.Secondary:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#4D4D4D"/>
+        </Style>
+    </Window.Styles>
+
+    <Border Background="#1E1E1E" Padding="32">
+        <StackPanel Spacing="20">
+            <!-- Header -->
+            <StackPanel Spacing="4">
+                <TextBlock Classes="Title" Text="🎨 LED Tabelam'a Hoş Geldiniz"/>
+                <TextBlock Classes="Subtitle" Text="Yeni bir profil oluşturun veya mevcut bir profili içe aktarın"/>
+            </StackPanel>
+            
+            <!-- Separator -->
+            <Border Height="1" Background="#3D3D3D" Margin="0,8"/>
+            
+            <!-- New Profile Section -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Yeni Profil Oluştur" FontWeight="SemiBold" Foreground="#B0B0B0"/>
+                <TextBox x:Name="ProfileNameTextBox" 
+                         Watermark="Profil adı (örn: Metrobüs, Belediye Otobüsü...)"
+                         MaxLength="50"/>
+                <TextBlock x:Name="ErrorText" 
+                           Foreground="#FF6B6B" 
+                           FontSize="11"
+                           IsVisible="False"/>
+                <Button x:Name="CreateButton"
+                        Classes="Primary"
+                        Content="Profil Oluştur ve Başla"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Click="OnCreateClick"/>
+            </StackPanel>
+            
+            <!-- Or Separator -->
+            <Grid ColumnDefinitions="*,Auto,*" Margin="0,8">
+                <Border Grid.Column="0" Height="1" Background="#3D3D3D" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Text="veya" Foreground="#606060" Margin="16,0"/>
+                <Border Grid.Column="2" Height="1" Background="#3D3D3D" VerticalAlignment="Center"/>
+            </Grid>
+            
+            <!-- Import Section -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Mevcut Profili İçe Aktar" FontWeight="SemiBold" Foreground="#B0B0B0"/>
+                <TextBlock Text="Daha önce dışa aktarılmış bir .ledprofile dosyasını yükleyin" 
+                           Foreground="#606060" FontSize="11"/>
+                <Button x:Name="ImportButton"
+                        Classes="Secondary"
+                        Content="📁 Profil Dosyası Seç..."
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Click="OnImportClick"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+
+</Window>

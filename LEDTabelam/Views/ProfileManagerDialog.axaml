@@ -1,0 +1,106 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:models="using:LEDTabelam.Models"
+        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="450"
+        x:Class="LEDTabelam.Views.ProfileManagerDialog"
+        Title="Profil Yönetimi"
+        Width="500" Height="450"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <Window.Styles>
+        <Style Selector="TextBlock.Title">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="#0078D4"/>
+        </Style>
+        <Style Selector="Button.Action">
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+        <Style Selector="Button.Danger">
+            <Setter Property="Background" Value="#D32F2F"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        <Style Selector="Button.Danger:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#E53935"/>
+        </Style>
+    </Window.Styles>
+
+    <Border Background="#1E1E1E" Padding="20">
+        <Grid RowDefinitions="Auto,*,Auto,Auto">
+            
+            <!-- Header -->
+            <TextBlock Grid.Row="0" Classes="Title" Text="📁 Profil Yönetimi" Margin="0,0,0,16"/>
+            
+            <!-- Profile List -->
+            <Border Grid.Row="1" Background="#252525" CornerRadius="8" Padding="8">
+                <ListBox x:Name="ProfileListBox"
+                         Background="Transparent"
+                         SelectionMode="Single">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:Profile">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"/>
+                                    <TextBlock Text="{Binding ModifiedAt, StringFormat='Son değişiklik: {0:dd.MM.yyyy HH:mm}'}" 
+                                               FontSize="10" Foreground="#707070"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" 
+                                           Text="{Binding DefinedSlotCount}"
+                                           FontSize="11" Foreground="#808080"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+            
+            <!-- Actions -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,16,0,0">
+                <Button x:Name="RenameButton" Classes="Action" Content="✏️ Yeniden Adlandır" Click="OnRenameClick"/>
+                <Button x:Name="DuplicateButton" Classes="Action" Content="📋 Kopyala" Click="OnDuplicateClick"/>
+                <Button x:Name="ExportButton" Classes="Action" Content="📤 Dışa Aktar" Click="OnExportClick"/>
+                <Button x:Name="DeleteButton" Classes="Action Danger" Content="🗑️ Sil" Click="OnDeleteClick"/>
+            </StackPanel>
+            
+            <!-- New Profile & Import & Close -->
+            <Grid Grid.Row="3" ColumnDefinitions="Auto,Auto,*,Auto,Auto" Margin="0,16,0,0">
+                <Button x:Name="NewProfileButton" 
+                        Content="➕ Yeni Profil" 
+                        Padding="16,10"
+                        Click="OnNewProfileClick"/>
+                <Button x:Name="ImportButton" 
+                        Grid.Column="1"
+                        Content="📥 İçe Aktar" 
+                        Padding="16,10"
+                        Margin="8,0,0,0"
+                        Click="OnImportClick"/>
+                <Button x:Name="LoadProfileButton" 
+                        Grid.Column="3"
+                        Content="✅ Profili Yükle" 
+                        Padding="16,10"
+                        Background="#0078D4"
+                        Foreground="White"
+                        Click="OnLoadProfileClick"/>
+                <Button Grid.Column="4" 
+                        Content="Kapat" 
+                        Padding="24,10"
+                        Margin="8,0,0,0"
+                        Click="OnCloseClick"/>
+            </Grid>
+            
+        </Grid>
+    </Border>
+
+</Window>

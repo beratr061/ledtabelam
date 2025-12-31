@@ -7,6 +7,7 @@ using LEDTabelam.Services;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 
@@ -27,6 +28,13 @@ public partial class MainWindow : Window
         
         // KeyDown event'ini dinle (Space tuşu için özel işlem)
         KeyDown += OnKeyDown;
+        
+        // Profil yönetimi butonunu bağla
+        var manageProfilesButton = this.FindControl<Button>("ManageProfilesButton");
+        if (manageProfilesButton != null)
+        {
+            manageProfilesButton.Click += OnManageProfilesClick;
+        }
     }
 
     /// <summary>
@@ -196,5 +204,30 @@ public partial class MainWindow : Window
             }
         };
         await messageBox.ShowDialog(this);
+    }
+
+    /// <summary>
+    /// Profil yönetimi dialog'unu aç
+    /// </summary>
+    private async void OnManageProfilesClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            var dialog = new ProfileManagerDialog(vm.ProfileManager);
+            await dialog.ShowDialog(this);
+            
+            // Seçilen profili yükle
+            if (dialog.ProfileToLoad != null)
+            {
+                // LoadProfile metodu hem CurrentProfile hem ControlPanel.SelectedProfile'ı günceller
+                vm.LoadProfile(dialog.ProfileToLoad);
+                vm.StatusMessage = $"'{dialog.ProfileToLoad.Name}' profili yüklendi";
+            }
+            // Dialog kapandıktan sonra profilleri yeniden yükle (değişiklik varsa)
+            else if (dialog.ProfilesChanged)
+            {
+                await vm.ControlPanel.LoadProfilesAsync();
+            }
+        }
     }
 }
