@@ -4,6 +4,8 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using LEDTabelam.Models;
 using LEDTabelam.Services;
 using LEDTabelam.ViewModels;
@@ -13,6 +15,15 @@ namespace LEDTabelam;
 
 public partial class App : Application
 {
+    private IServiceProvider? _serviceProvider;
+    private GlobalExceptionHandler? _exceptionHandler;
+    private ILogger<App>? _logger;
+
+    /// <summary>
+    /// DI Service Provider - uygulama genelinde erişim için
+    /// </summary>
+    public static IServiceProvider? Services { get; private set; }
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -20,68 +31,103 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        // Serilog yapılandırması
+        ServiceCollectionExtensions.ConfigureSerilog();
+
+        // DI Container kurulumu
+        var services = new ServiceCollection();
+        services.AddLedTabelamServices();
+        services.AddSingleton<GlobalExceptionHandler>();
+        _serviceProvider = services.BuildServiceProvider();
+        Services = _serviceProvider;
+
+        // Logger al
+        _logger = _serviceProvider.GetRequiredService<ILogger<App>>();
+        _logger.LogInformation("Uygulama başlatılıyor...");
+
+        // Global exception handler
+        _exceptionHandler = _serviceProvider.GetRequiredService<GlobalExceptionHandler>();
+        _exceptionHandler.Register();
+
         // Varsayılan font dosyasını oluştur (yoksa)
         EnsureDefaultFontExists();
         
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // Servisleri oluştur
-            var profileManager = new ProfileManager();
-            var slotManager = new SlotManager();
-            var fontLoader = new FontLoader();
-            var ledRenderer = new LedRenderer();
-            var animationService = new AnimationService();
-            var exportService = new ExportService();
-            var zoneManager = new ZoneManager();
-            var multiLineTextRenderer = new MultiLineTextRenderer(fontLoader);
-            var previewRenderer = new PreviewRenderer(fontLoader, multiLineTextRenderer);
-            var programSequencer = new ProgramSequencer();
-            
-            // SVG Renderer ve Asset Library oluştur
-            var svgRenderer = new SvgRenderer();
-            var assetLibrary = new AssetLibrary(svgRenderer);
-            
-            // PreviewRenderer'a AssetLibrary'yi bağla
-            previewRenderer.SetAssetLibrary(assetLibrary);
+            // Servisleri DI'dan al
+            var profileManager = _serviceProvider.GetRequiredService<IProfileManager>();
+            var slotManager = _serviceProvider.GetRequiredService<ISlotManager>();
+            var zoneManager = _serviceProvider.GetRequiredService<IZoneManager>();
+            var engineServices = _serviceProvider.GetRequiredService<IEngineServices>();
+            var programSequencer = _serviceProvider.GetRequiredService<IProgramSequencer>();
+            var assetLibrary = _serviceProvider.GetRequiredService<IAssetLibrary>();
+            var previewRenderer = _serviceProvider.GetRequiredService<IPreviewRenderer>();
+            var exportService = _serviceProvider.GetRequiredService<IExportService>();
+            var fontLoader = _serviceProvider.GetRequiredService<IFontLoader>();
 
-            // Engine servisleri Facade'ı oluştur
-            var engineServices = new EngineServices(
-                fontLoader,
-                ledRenderer,
-                animationService,
-                exportService,
-                multiLineTextRenderer,
-                previewRenderer);
+            // PreviewRenderer'a AssetLibrary'yi bağla
+            if (previewRenderer is PreviewRenderer pr)
+            {
+                pr.SetAssetLibrary(assetLibrary);
+            }
 
             // Profil kontrolü ve uygulama başlatma
             Dispatcher.UIThread.InvokeAsync(async () =>
             {
-                var profile = await GetOrCreateProfileAsync(profileManager);
-                if (profile == null)
+                try
                 {
-                    desktop.Shutdown();
-                    return;
+                    var profile = await GetOrCreateProfileAsync(profileManager);
+                    if (profile == null)
+                    {
+                        _logger?.LogWarning("Profil oluşturulamadı, uygulama kapatılıyor");
+                        desktop.Shutdown();
+                        return;
+                    }
+
+                    var mainWindowViewModel = new MainWindowViewModel(
+                        profileManager,
+                        slotManager,
+                        zoneManager,
+                        engineServices,
+                        programSequencer);
+                    
+                    mainWindowViewModel.LoadProfile(profile);
+                    mainWindowViewModel.UnifiedEditor.SetAssetLibrary(assetLibrary);
+
+                    var mainWindow = new MainWindow
+                    {
+                        DataContext = mainWindowViewModel,
+                    };
+                    
+                    if (exportService is ExportService es && fontLoader is FontLoader fl)
+                    {
+                        mainWindow.SetServices(es, fl);
+                    }
+                    
+                    desktop.MainWindow = mainWindow;
+                    mainWindow.Show();
+
+                    _logger?.LogInformation("Uygulama başarıyla başlatıldı");
                 }
-
-                var mainWindowViewModel = new MainWindowViewModel(
-                    profileManager,
-                    slotManager,
-                    zoneManager,
-                    engineServices,
-                    programSequencer);
-                
-                mainWindowViewModel.LoadProfile(profile);
-                mainWindowViewModel.UnifiedEditor.SetAssetLibrary(assetLibrary);
-
-                var mainWindow = new MainWindow
+                catch (Exception ex)
                 {
-                    DataContext = mainWindowViewModel,
-                };
-                
-                mainWindow.SetServices(exportService, fontLoader);
-                desktop.MainWindow = mainWindow;
-                mainWindow.Show();
+                    _logger?.LogCritical(ex, "Uygulama başlatılırken kritik hata");
+                    desktop.Shutdown();
+                }
             });
+
+            // Uygulama kapanırken cleanup
+            desktop.ShutdownRequested += (s, e) =>
+            {
+                _logger?.LogInformation("Uygulama kapatılıyor...");
+                _exceptionHandler?.Unregister();
+                Serilog.Log.CloseAndFlush();
+                
+                if (_serviceProvider is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+            };
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -90,73 +136,84 @@ public partial class App : Application
     /// <summary>
     /// Profil varlığını kontrol eder, yoksa oluşturma dialogu gösterir
     /// </summary>
-    private static async System.Threading.Tasks.Task<Profile?> GetOrCreateProfileAsync(IProfileManager profileManager)
+    private async System.Threading.Tasks.Task<Profile?> GetOrCreateProfileAsync(IProfileManager profileManager)
     {
-        var profiles = await profileManager.GetAllProfilesAsync();
-        
-        if (profiles.Count > 0)
+        try
         {
-            return profiles[0];
-        }
-
-        // Profil yok, oluşturma/import dialogu göster
-        var dialog = new ProfileSetupDialog();
-        dialog.SetProfileManager(profileManager);
-        
-        var tcs = new System.Threading.Tasks.TaskCompletionSource<Profile?>();
-        
-        dialog.Closed += async (s, e) => 
-        {
-            try
+            var profiles = await profileManager.GetAllProfilesAsync();
+            
+            if (profiles.Count > 0)
             {
-                if (dialog.IsImported && dialog.ImportedProfile != null)
+                _logger?.LogDebug("Mevcut profil bulundu: {ProfileName}", profiles[0].Name);
+                return profiles[0];
+            }
+
+            _logger?.LogInformation("Profil bulunamadı, yeni profil oluşturma dialogu açılıyor");
+
+            // Profil yok, oluşturma/import dialogu göster
+            var dialog = new ProfileSetupDialog();
+            dialog.SetProfileManager(profileManager);
+            
+            var tcs = new System.Threading.Tasks.TaskCompletionSource<Profile?>();
+            
+            dialog.Closed += async (s, e) => 
+            {
+                try
                 {
-                    // Import edilen profili kaydet
-                    await profileManager.SaveProfileAsync(dialog.ImportedProfile);
-                    tcs.TrySetResult(dialog.ImportedProfile);
-                }
-                else if (!string.IsNullOrWhiteSpace(dialog.ResultProfileName))
-                {
-                    // Yeni profil oluştur
-                    var profile = new Profile
+                    if (dialog.IsImported && dialog.ImportedProfile != null)
                     {
-                        Name = dialog.ResultProfileName,
-                        Settings = new DisplaySettings
+                        await profileManager.SaveProfileAsync(dialog.ImportedProfile);
+                        _logger?.LogInformation("Profil import edildi: {ProfileName}", dialog.ImportedProfile.Name);
+                        tcs.TrySetResult(dialog.ImportedProfile);
+                    }
+                    else if (!string.IsNullOrWhiteSpace(dialog.ResultProfileName))
+                    {
+                        var profile = new Profile
                         {
-                            PanelWidth = 160,
-                            PanelHeight = 24,
-                            ColorType = LedColorType.Amber,
-                            Pitch = PixelPitch.P10,
-                            Shape = PixelShape.Round,
-                            Brightness = 100,
-                            BackgroundDarkness = 100,
-                            PixelSize = 8
-                        },
-                        FontName = "PixelFont8",
-                        CreatedAt = DateTime.UtcNow,
-                        ModifiedAt = DateTime.UtcNow
-                    };
-                    
-                    await profileManager.SaveProfileAsync(profile);
-                    tcs.TrySetResult(profile);
+                            Name = dialog.ResultProfileName,
+                            Settings = new DisplaySettings
+                            {
+                                PanelWidth = 160,
+                                PanelHeight = 24,
+                                ColorType = LedColorType.Amber,
+                                Pitch = PixelPitch.P10,
+                                Shape = PixelShape.Round,
+                                Brightness = 100,
+                                BackgroundDarkness = 100,
+                                PixelSize = 8
+                            },
+                            FontName = "PixelFont8",
+                            CreatedAt = DateTime.UtcNow,
+                            ModifiedAt = DateTime.UtcNow
+                        };
+                        
+                        await profileManager.SaveProfileAsync(profile);
+                        _logger?.LogInformation("Yeni profil oluşturuldu: {ProfileName}", profile.Name);
+                        tcs.TrySetResult(profile);
+                    }
+                    else
+                    {
+                        tcs.TrySetResult(null);
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
+                    _logger?.LogError(ex, "Profil kaydetme hatası");
                     tcs.TrySetResult(null);
                 }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Profil kaydetme hatası: {ex.Message}");
-                tcs.TrySetResult(null);
-            }
-        };
-        
-        dialog.Show();
-        return await tcs.Task;
+            };
+            
+            dialog.Show();
+            return await tcs.Task;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Profil yükleme/oluşturma hatası");
+            return null;
+        }
     }
 
-    private static void EnsureDefaultFontExists()
+    private void EnsureDefaultFontExists()
     {
         try
         {
@@ -172,11 +229,12 @@ public partial class App : Application
             if (!File.Exists(fontPngPath))
             {
                 FontImageGenerator.SaveFontImage(fontPngPath);
+                _logger?.LogDebug("Varsayılan font dosyası oluşturuldu: {Path}", fontPngPath);
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Sessizce yoksay
+            _logger?.LogWarning(ex, "Varsayılan font dosyası oluşturulamadı");
         }
     }
 }
