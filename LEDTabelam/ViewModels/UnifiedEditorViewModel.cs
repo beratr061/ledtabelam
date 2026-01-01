@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reactive;
+using System.Reactive.Linq;
 using Avalonia;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
@@ -141,6 +142,25 @@ public class BoolToPlayColorConverter : IValueConverter
 }
 
 /// <summary>
+/// Bool değerini play/pause ikonuna dönüştürür
+/// Requirements: 7.1
+/// </summary>
+public class BoolToPlayPauseIconConverter : IValueConverter
+{
+    public static readonly BoolToPlayPauseIconConverter Instance = new();
+    
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool isPlaying && isPlaying)
+            return "⏸"; // Pause icon
+        return "▶"; // Play icon
+    }
+    
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>
 /// HorizontalAlignment'ı ComboBox index'ine dönüştürür
 /// </summary>
 public class HAlignToIndexConverter : IValueConverter
@@ -256,6 +276,92 @@ public class ScrollDirToIndexConverter : IValueConverter
     }
 }
 
+/// <summary>
+/// ProgramTransitionType'ı ComboBox index'ine dönüştürür
+/// Requirements: 3.1
+/// </summary>
+public class ProgramTransitionToIndexConverter : IValueConverter
+{
+    public static readonly ProgramTransitionToIndexConverter Instance = new();
+    
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is ProgramTransitionType transition)
+        {
+            return transition switch
+            {
+                ProgramTransitionType.Direct => 0,
+                ProgramTransitionType.Fade => 1,
+                ProgramTransitionType.SlideLeft => 2,
+                ProgramTransitionType.SlideRight => 3,
+                ProgramTransitionType.SlideUp => 4,
+                ProgramTransitionType.SlideDown => 5,
+                _ => 0
+            };
+        }
+        return 0;
+    }
+    
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is int index)
+        {
+            return index switch
+            {
+                0 => ProgramTransitionType.Direct,
+                1 => ProgramTransitionType.Fade,
+                2 => ProgramTransitionType.SlideLeft,
+                3 => ProgramTransitionType.SlideRight,
+                4 => ProgramTransitionType.SlideUp,
+                5 => ProgramTransitionType.SlideDown,
+                _ => ProgramTransitionType.Direct
+            };
+        }
+        return ProgramTransitionType.Direct;
+    }
+}
+
+/// <summary>
+/// StopAnimationType'ı ComboBox index'ine dönüştürür
+/// Requirements: 6.1
+/// </summary>
+public class StopAnimationToIndexConverter : IValueConverter
+{
+    public static readonly StopAnimationToIndexConverter Instance = new();
+    
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is StopAnimationType animation)
+        {
+            return animation switch
+            {
+                StopAnimationType.Direct => 0,
+                StopAnimationType.Fade => 1,
+                StopAnimationType.SlideUp => 2,
+                StopAnimationType.SlideDown => 3,
+                _ => 0
+            };
+        }
+        return 0;
+    }
+    
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is int index)
+        {
+            return index switch
+            {
+                0 => StopAnimationType.Direct,
+                1 => StopAnimationType.Fade,
+                2 => StopAnimationType.SlideUp,
+                3 => StopAnimationType.SlideDown,
+                _ => StopAnimationType.Direct
+            };
+        }
+        return StopAnimationType.Direct;
+    }
+}
+
 #endregion
 
 /// <summary>
@@ -278,6 +384,13 @@ public class UnifiedEditorViewModel : ViewModelBase
     // Animasyon throttling için
     private readonly Stopwatch _animationStopwatch = new();
     private const double AnimationRenderIntervalMs = 33.33; // ~30 FPS render (animasyon 60 FPS'de çalışır ama render 30 FPS)
+
+    // Program yönetimi için
+    // Requirements: 1.1, 1.2, 1.5, 1.6, 1.7
+    private ObservableCollection<TabelaProgram> _programs = new();
+    private TabelaProgram? _selectedProgram;
+    private int _nextProgramId = 1;
+    private IProgramSequencer? _programSequencer;
 
     public ObservableCollection<TabelaItem> Items { get; } = new();
     public ObservableCollection<BitmapFont> AvailableFonts { get; } = new();
@@ -402,6 +515,199 @@ public class UnifiedEditorViewModel : ViewModelBase
     public double CanvasHeight => DisplayHeight * ZoomLevel / 100.0;
     public string DisplaySize => $"{DisplayWidth}x{DisplayHeight}";
 
+    #region Program Yönetimi Properties
+    // Requirements: 1.1, 1.2, 1.5, 1.6, 1.7
+
+    /// <summary>
+    /// Program koleksiyonu
+    /// </summary>
+    public ObservableCollection<TabelaProgram> Programs
+    {
+        get => _programs;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _programs, value ?? new ObservableCollection<TabelaProgram>());
+            if (_programs.Count > 0 && SelectedProgram == null)
+            {
+                SelectedProgram = _programs[0];
+            }
+            UpdateNextProgramId();
+        }
+    }
+
+    /// <summary>
+    /// Seçili program
+    /// </summary>
+    public TabelaProgram? SelectedProgram
+    {
+        get => _selectedProgram;
+        set
+        {
+            // Önce mevcut programın öğelerini kaydet
+            if (_selectedProgram != null)
+            {
+                SaveCurrentItemsToProgram();
+                _selectedProgram.IsActive = false;
+            }
+            
+            this.RaiseAndSetIfChanged(ref _selectedProgram, value);
+            
+            if (_selectedProgram != null)
+            {
+                _selectedProgram.IsActive = true;
+                // Seçili programın öğelerini Items koleksiyonuna yükle
+                LoadProgramItems(_selectedProgram);
+            }
+            
+            this.RaisePropertyChanged(nameof(HasPrograms));
+            this.RaisePropertyChanged(nameof(CanRemoveProgram));
+            this.RaisePropertyChanged(nameof(CurrentProgramDisplay));
+        }
+    }
+
+    /// <summary>
+    /// Program var mı
+    /// </summary>
+    public bool HasPrograms => Programs.Count > 0;
+
+    /// <summary>
+    /// Program silinebilir mi (en az 2 program varsa)
+    /// Requirements: 1.8
+    /// </summary>
+    public bool CanRemoveProgram => Programs.Count > 1;
+
+    /// <summary>
+    /// Mevcut program gösterimi (örn: "1/3")
+    /// Requirements: 7.5
+    /// </summary>
+    public string CurrentProgramDisplay
+    {
+        get
+        {
+            if (Programs.Count == 0 || SelectedProgram == null)
+                return "0/0";
+            
+            var index = Programs.IndexOf(SelectedProgram);
+            return $"{index + 1}/{Programs.Count}";
+        }
+    }
+
+    /// <summary>
+    /// Mevcut ara durak gösterimi (örn: "Durak 1/5")
+    /// Requirements: 10.5
+    /// </summary>
+    public string CurrentStopDisplay
+    {
+        get
+        {
+            if (SelectedItem?.IntermediateStops?.IsEnabled != true)
+                return "Durak Yok";
+            
+            var stops = SelectedItem.IntermediateStops.Stops;
+            if (stops.Count == 0)
+                return "Durak Yok";
+            
+            // ProgramSequencer'dan mevcut durak index'ini al
+            int currentIndex = 0;
+            if (_programSequencer is ProgramSequencer sequencer)
+            {
+                currentIndex = sequencer.GetCurrentStopIndex(SelectedItem.Id);
+            }
+            
+            var currentStop = currentIndex < stops.Count ? stops[currentIndex] : null;
+            var stopName = currentStop?.StopName ?? "?";
+            
+            return $"{stopName} ({currentIndex + 1}/{stops.Count})";
+        }
+    }
+
+    /// <summary>
+    /// Oynatma durumu metni
+    /// Requirements: 10.5, 10.6
+    /// </summary>
+    public string PlaybackStatusText
+    {
+        get
+        {
+            if (IsAnimationPlaying)
+                return "▶ Oynatılıyor";
+            return "⏸ Duraklatıldı";
+        }
+    }
+
+    /// <summary>
+    /// Program sequencer referansı
+    /// </summary>
+    public IProgramSequencer? ProgramSequencer
+    {
+        get => _programSequencer;
+        set
+        {
+            // Eski sequencer'dan event'leri kaldır
+            if (_programSequencer != null)
+            {
+                _programSequencer.ProgramChanged -= OnSequencerProgramChanged;
+                _programSequencer.StopChanged -= OnSequencerStopChanged;
+                _programSequencer.MainContentShowing -= OnSequencerMainContentShowing;
+            }
+            
+            _programSequencer = value;
+            
+            if (_programSequencer != null)
+            {
+                _programSequencer.Programs = Programs;
+                
+                // Yeni sequencer'a event'leri bağla
+                // Requirements: 8.1, 8.2
+                _programSequencer.ProgramChanged += OnSequencerProgramChanged;
+                _programSequencer.StopChanged += OnSequencerStopChanged;
+                _programSequencer.MainContentShowing += OnSequencerMainContentShowing;
+            }
+        }
+    }
+
+    /// <summary>
+    /// ProgramSequencer program değişikliği event handler'ı
+    /// Requirements: 8.1
+    /// </summary>
+    private void OnSequencerProgramChanged(TabelaProgram program)
+    {
+        // UI thread'de property değişikliklerini bildir
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            this.RaisePropertyChanged(nameof(CurrentProgramDisplay));
+            this.RaisePropertyChanged(nameof(CurrentStopDisplay));
+        });
+    }
+
+    /// <summary>
+    /// ProgramSequencer ara durak değişikliği event handler'ı
+    /// Requirements: 8.1, 8.2
+    /// </summary>
+    private void OnSequencerStopChanged(TabelaItem item, IntermediateStop stop)
+    {
+        // UI thread'de property değişikliklerini bildir
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            this.RaisePropertyChanged(nameof(CurrentStopDisplay));
+        });
+    }
+
+    /// <summary>
+    /// ProgramSequencer ana içerik gösterimi event handler'ı
+    /// Requirements: 8.1, 8.2
+    /// </summary>
+    private void OnSequencerMainContentShowing(TabelaItem item)
+    {
+        // UI thread'de property değişikliklerini bildir
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            this.RaisePropertyChanged(nameof(CurrentStopDisplay));
+        });
+    }
+
+    #endregion
+
     public string MousePosition
     {
         get => _mousePosition;
@@ -427,6 +733,10 @@ public class UnifiedEditorViewModel : ViewModelBase
         {
             var oldValue = _isAnimationPlaying;
             this.RaiseAndSetIfChanged(ref _isAnimationPlaying, value);
+            
+            // Status bar güncellemesi
+            // Requirements: 10.5, 10.6
+            this.RaisePropertyChanged(nameof(PlaybackStatusText));
             
             // Animasyon durduğunda offset'leri ve stopwatch'ı sıfırla
             if (oldValue && !value)
@@ -459,6 +769,27 @@ public class UnifiedEditorViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> DisableColoredSegmentsCommand { get; }
     public ReactiveCommand<Unit, Unit> ApplyRainbowColorsCommand { get; }
 
+    // Program yönetimi komutları
+    // Requirements: 1.1, 1.2, 1.5, 1.6, 1.7
+    public ReactiveCommand<Unit, Unit> AddProgramCommand { get; }
+    public ReactiveCommand<Unit, Unit> RemoveProgramCommand { get; }
+    public ReactiveCommand<Unit, Unit> MoveProgramUpCommand { get; }
+    public ReactiveCommand<Unit, Unit> MoveProgramDownCommand { get; }
+
+    // Playback kontrol komutları
+    // Requirements: 7.1, 7.4, 7.5
+    public ReactiveCommand<Unit, Unit> PlayCommand { get; }
+    public ReactiveCommand<Unit, Unit> PauseCommand { get; }
+    public ReactiveCommand<Unit, Unit> NextProgramCommand { get; }
+    public ReactiveCommand<Unit, Unit> PreviousProgramCommand { get; }
+
+    // Ara durak yönetimi komutları
+    // Requirements: 4.3, 4.4, 4.5, 4.7, 4.8
+    public ReactiveCommand<Unit, Unit> AddIntermediateStopCommand { get; }
+    public ReactiveCommand<Unit, Unit> RemoveIntermediateStopCommand { get; }
+    public ReactiveCommand<Unit, Unit> MoveStopUpCommand { get; }
+    public ReactiveCommand<Unit, Unit> MoveStopDownCommand { get; }
+
     #endregion
 
     public event Action? ItemsChanged;
@@ -482,6 +813,31 @@ public class UnifiedEditorViewModel : ViewModelBase
         DisableColoredSegmentsCommand = ReactiveCommand.Create(DisableColoredSegments, isTextSelected);
         ApplyRainbowColorsCommand = ReactiveCommand.Create(ApplyRainbowColors, isTextSelected);
 
+        // Program yönetimi komutları
+        // Requirements: 1.1, 1.2, 1.5, 1.6, 1.7
+        var canRemoveProgram = this.WhenAnyValue(x => x.CanRemoveProgram);
+        var hasPrograms = this.WhenAnyValue(x => x.HasPrograms);
+        var hasSelectedProgram = this.WhenAnyValue(x => x.SelectedProgram).Select(p => p != null);
+        
+        AddProgramCommand = ReactiveCommand.Create(AddProgram);
+        RemoveProgramCommand = ReactiveCommand.Create(RemoveSelectedProgram, canRemoveProgram);
+        MoveProgramUpCommand = ReactiveCommand.Create(MoveProgramUp, hasSelectedProgram);
+        MoveProgramDownCommand = ReactiveCommand.Create(MoveProgramDown, hasSelectedProgram);
+
+        // Playback kontrol komutları
+        // Requirements: 7.1, 7.4, 7.5
+        PlayCommand = ReactiveCommand.Create(PlayPrograms, hasPrograms);
+        PauseCommand = ReactiveCommand.Create(PausePrograms);
+        NextProgramCommand = ReactiveCommand.Create(GoToNextProgram, hasPrograms);
+        PreviousProgramCommand = ReactiveCommand.Create(GoToPreviousProgram, hasPrograms);
+
+        // Ara durak yönetimi komutları
+        // Requirements: 4.3, 4.4, 4.5, 4.7, 4.8
+        AddIntermediateStopCommand = ReactiveCommand.Create(AddIntermediateStop, isTextSelected);
+        RemoveIntermediateStopCommand = ReactiveCommand.Create(RemoveSelectedIntermediateStop, isTextSelected);
+        MoveStopUpCommand = ReactiveCommand.Create(MoveStopUp, isTextSelected);
+        MoveStopDownCommand = ReactiveCommand.Create(MoveStopDown, isTextSelected);
+
         Items.CollectionChanged += (s, e) =>
         {
             if (e.NewItems != null)
@@ -503,7 +859,8 @@ public class UnifiedEditorViewModel : ViewModelBase
             }
         };
 
-        AddDefaultItems();
+        // Varsayılan program oluştur
+        InitializeDefaultProgram();
     }
 
     private void OnItemPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -571,20 +928,35 @@ public class UnifiedEditorViewModel : ViewModelBase
         Items.Add(guzergah2);
 
         SelectedItem = hatKodu;
+        
+        // Varsayılan öğeleri seçili programa da ekle
+        if (SelectedProgram != null)
+        {
+            SelectedProgram.Items.Clear();
+            foreach (var item in Items)
+            {
+                SelectedProgram.Items.Add(item);
+            }
+        }
+        
         OnItemsChanged();
     }
 
     private void AddTextItem()
     {
+        var itemWidth = Math.Min(60, DisplayWidth);
+        var itemHeight = Math.Min(DisplayHeight, DisplayHeight);
+        var (x, y) = FindEmptySpace(itemWidth, itemHeight);
+        
         var item = new TabelaItem
         {
             Id = _nextItemId++,
             Name = $"Metin {Items.Count + 1}",
             Content = "YENİ METİN",
             ItemType = TabelaItemType.Text,
-            X = 0, Y = 0,
-            Width = Math.Min(60, DisplayWidth),
-            Height = Math.Min(DisplayHeight, DisplayHeight),
+            X = x, Y = y,
+            Width = itemWidth,
+            Height = itemHeight,
             Color = Color.FromRgb(255, 176, 0),
             HAlign = Models.HorizontalAlignment.Center,
             VAlign = Models.VerticalAlignment.Center
@@ -597,6 +969,8 @@ public class UnifiedEditorViewModel : ViewModelBase
     private void AddSymbolItem()
     {
         var symbolSize = Math.Min(16, Math.Min(DisplayWidth, DisplayHeight));
+        var (x, y) = FindEmptySpace(symbolSize, symbolSize);
+        
         var item = new TabelaItem
         {
             Id = _nextItemId++,
@@ -605,8 +979,8 @@ public class UnifiedEditorViewModel : ViewModelBase
             ItemType = TabelaItemType.Symbol,
             SymbolName = "",
             SymbolSize = symbolSize,
-            X = Math.Max(0, DisplayWidth - symbolSize - 2),
-            Y = Math.Max(0, (DisplayHeight - symbolSize) / 2),
+            X = x,
+            Y = y,
             Width = symbolSize,
             Height = symbolSize,
             Color = Color.FromRgb(255, 176, 0),
@@ -616,6 +990,55 @@ public class UnifiedEditorViewModel : ViewModelBase
         Items.Add(item);
         SelectedItem = item;
         OnItemsChanged();
+    }
+
+    /// <summary>
+    /// Tabelada boş alan bulur. Bulamazsa (0,0) döner.
+    /// </summary>
+    private (int x, int y) FindEmptySpace(int width, int height)
+    {
+        // Önce mevcut öğelerin kapladığı alanları belirle
+        var occupiedRects = Items.Select(i => new { i.X, i.Y, Right = i.X + i.Width, Bottom = i.Y + i.Height }).ToList();
+        
+        // Satır satır tara, boş alan bul
+        for (int y = 0; y <= DisplayHeight - height; y++)
+        {
+            for (int x = 0; x <= DisplayWidth - width; x++)
+            {
+                // Bu pozisyon boş mu kontrol et
+                bool isEmpty = true;
+                foreach (var rect in occupiedRects)
+                {
+                    // Çakışma kontrolü
+                    if (x < rect.Right && x + width > rect.X &&
+                        y < rect.Bottom && y + height > rect.Y)
+                    {
+                        isEmpty = false;
+                        // Çakışan öğenin sağına atla
+                        x = rect.Right - 1; // for döngüsü x++ yapacak
+                        break;
+                    }
+                }
+                
+                if (isEmpty)
+                {
+                    return (x, y);
+                }
+            }
+        }
+        
+        // Boş alan bulunamadı, sağ alt köşeye yerleştir (mevcut öğelerin altına)
+        if (occupiedRects.Count > 0)
+        {
+            var maxBottom = occupiedRects.Max(r => r.Bottom);
+            if (maxBottom < DisplayHeight)
+            {
+                return (0, Math.Min(maxBottom, DisplayHeight - height));
+            }
+        }
+        
+        // Hiç yer yoksa (0,0)
+        return (0, 0);
     }
 
     private void DeleteSelectedItem()
@@ -829,7 +1252,24 @@ public class UnifiedEditorViewModel : ViewModelBase
 
     public void OnItemsChanged()
     {
+        // Öğeler değiştiğinde mevcut programa kaydet
+        SyncItemsToCurrentProgram();
         ItemsChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Items koleksiyonunu mevcut programa senkronize eder
+    /// </summary>
+    private void SyncItemsToCurrentProgram()
+    {
+        if (SelectedProgram == null) return;
+        
+        // Programın Items koleksiyonunu güncelle
+        SelectedProgram.Items.Clear();
+        foreach (var item in Items)
+        {
+            SelectedProgram.Items.Add(item);
+        }
     }
 
     /// <summary>
@@ -1038,6 +1478,523 @@ public class UnifiedEditorViewModel : ViewModelBase
             SelectedItem.ColoredSegments[i].Color = color;
         }
         OnItemsChanged();
+    }
+
+    #endregion
+
+    #region Program Yönetimi Metodları
+    // Requirements: 1.1, 1.2, 1.5, 1.6, 1.7
+
+    /// <summary>
+    /// Varsayılan program oluşturur
+    /// </summary>
+    private void InitializeDefaultProgram()
+    {
+        if (Programs.Count == 0)
+        {
+            var defaultProgram = new TabelaProgram
+            {
+                Id = _nextProgramId++,
+                Name = "Program 1"
+            };
+            Programs.Add(defaultProgram);
+            SelectedProgram = defaultProgram;
+        }
+        
+        // Varsayılan öğeleri ekle
+        AddDefaultItems();
+    }
+
+    /// <summary>
+    /// Sonraki program ID'sini günceller
+    /// </summary>
+    private void UpdateNextProgramId()
+    {
+        if (Programs.Count > 0)
+        {
+            _nextProgramId = Programs.Max(p => p.Id) + 1;
+        }
+        else
+        {
+            _nextProgramId = 1;
+        }
+    }
+
+    /// <summary>
+    /// Yeni program ekler
+    /// Requirements: 1.1, 1.2
+    /// </summary>
+    public void AddProgram()
+    {
+        var newProgram = new TabelaProgram
+        {
+            Id = _nextProgramId++,
+            Name = $"Program {Programs.Count + 1}"
+        };
+        Programs.Add(newProgram);
+        SelectedProgram = newProgram;
+        
+        this.RaisePropertyChanged(nameof(HasPrograms));
+        this.RaisePropertyChanged(nameof(CanRemoveProgram));
+        this.RaisePropertyChanged(nameof(CurrentProgramDisplay));
+    }
+
+    /// <summary>
+    /// Seçili programı siler
+    /// Requirements: 1.7, 1.8
+    /// </summary>
+    public void RemoveSelectedProgram()
+    {
+        if (SelectedProgram == null || Programs.Count <= 1)
+            return;
+
+        var index = Programs.IndexOf(SelectedProgram);
+        Programs.Remove(SelectedProgram);
+        
+        // Yeni seçim yap
+        if (Programs.Count > 0)
+        {
+            SelectedProgram = Programs[Math.Min(index, Programs.Count - 1)];
+        }
+        
+        this.RaisePropertyChanged(nameof(HasPrograms));
+        this.RaisePropertyChanged(nameof(CanRemoveProgram));
+        this.RaisePropertyChanged(nameof(CurrentProgramDisplay));
+    }
+
+    /// <summary>
+    /// Belirtilen programı seçer
+    /// Requirements: 1.5
+    /// </summary>
+    public void SelectProgram(TabelaProgram program)
+    {
+        if (program != null && Programs.Contains(program))
+        {
+            SelectedProgram = program;
+        }
+    }
+
+    /// <summary>
+    /// Seçili programı yukarı taşır (sıralama)
+    /// Requirements: 1.6
+    /// </summary>
+    public void MoveProgramUp()
+    {
+        if (SelectedProgram == null) return;
+        
+        var index = Programs.IndexOf(SelectedProgram);
+        if (index > 0)
+        {
+            Programs.Move(index, index - 1);
+            this.RaisePropertyChanged(nameof(CurrentProgramDisplay));
+        }
+    }
+
+    /// <summary>
+    /// Seçili programı aşağı taşır (sıralama)
+    /// Requirements: 1.6
+    /// </summary>
+    public void MoveProgramDown()
+    {
+        if (SelectedProgram == null) return;
+        
+        var index = Programs.IndexOf(SelectedProgram);
+        if (index < Programs.Count - 1)
+        {
+            Programs.Move(index, index + 1);
+            this.RaisePropertyChanged(nameof(CurrentProgramDisplay));
+        }
+    }
+
+    /// <summary>
+    /// Seçili programın öğelerini Items koleksiyonuna yükler
+    /// </summary>
+    private void LoadProgramItems(TabelaProgram program)
+    {
+        // Mevcut öğeleri temizle
+        Items.Clear();
+        SelectedItem = null;
+        
+        // Programın öğelerini yükle
+        foreach (var item in program.Items)
+        {
+            Items.Add(item);
+        }
+        
+        // İlk öğeyi seç
+        if (Items.Count > 0)
+        {
+            SelectedItem = Items[0];
+        }
+        
+        // NextItemId'yi güncelle
+        if (Items.Count > 0)
+        {
+            _nextItemId = Items.Max(i => i.Id) + 1;
+        }
+        else
+        {
+            _nextItemId = 1;
+        }
+        
+        OnItemsChanged();
+    }
+
+    /// <summary>
+    /// Mevcut Items koleksiyonunu seçili programa kaydeder
+    /// </summary>
+    public void SaveCurrentItemsToProgram()
+    {
+        if (SelectedProgram == null) return;
+        
+        SelectedProgram.Items.Clear();
+        foreach (var item in Items)
+        {
+            SelectedProgram.Items.Add(item);
+        }
+    }
+
+    /// <summary>
+    /// Programları bir Profile'dan yükler
+    /// </summary>
+    public void LoadProgramsFromProfile(Profile profile)
+    {
+        if (profile == null) return;
+        
+        // Minimum program garantisi
+        profile.EnsureMinimumProgram();
+        
+        Programs = profile.Programs;
+        
+        if (Programs.Count > 0)
+        {
+            SelectedProgram = Programs[0];
+        }
+        
+        // Sequencer'ı güncelle
+        if (_programSequencer != null)
+        {
+            _programSequencer.Programs = Programs;
+        }
+    }
+
+    #endregion
+
+    #region Playback Kontrol Metodları
+    // Requirements: 7.1, 7.4, 7.5
+
+    /// <summary>
+    /// Program döngüsünü başlatır
+    /// Requirements: 7.2
+    /// </summary>
+    private void PlayPrograms()
+    {
+        if (_programSequencer != null)
+        {
+            // Önce mevcut öğeleri kaydet
+            SaveCurrentItemsToProgram();
+            
+            // Sequencer'ın Programs referansını güncelle (Items değişmiş olabilir)
+            _programSequencer.Programs = Programs;
+            
+            _programSequencer.Play();
+        }
+        IsAnimationPlaying = true;
+    }
+
+    /// <summary>
+    /// Program döngüsünü duraklatır
+    /// Requirements: 7.3
+    /// </summary>
+    private void PausePrograms()
+    {
+        if (_programSequencer != null)
+        {
+            _programSequencer.Stop(); // Pause yerine Stop - ilk programa döner
+        }
+        IsAnimationPlaying = false;
+        
+        // İlk programa dön
+        if (Programs.Count > 0)
+        {
+            SaveCurrentItemsToProgram();
+            SelectedProgram = Programs[0];
+        }
+        
+        this.RaisePropertyChanged(nameof(CurrentProgramDisplay));
+    }
+
+    /// <summary>
+    /// Sonraki programa geçer
+    /// Requirements: 7.4
+    /// </summary>
+    private void GoToNextProgram()
+    {
+        if (_programSequencer != null)
+        {
+            SaveCurrentItemsToProgram();
+            _programSequencer.NextProgram();
+            
+            // Sequencer'ın mevcut programını seç
+            if (_programSequencer.CurrentProgram != null)
+            {
+                SelectedProgram = _programSequencer.CurrentProgram;
+            }
+        }
+        else if (Programs.Count > 0 && SelectedProgram != null)
+        {
+            var index = Programs.IndexOf(SelectedProgram);
+            var nextIndex = (index + 1) % Programs.Count;
+            SaveCurrentItemsToProgram();
+            SelectedProgram = Programs[nextIndex];
+        }
+        
+        this.RaisePropertyChanged(nameof(CurrentProgramDisplay));
+    }
+
+    /// <summary>
+    /// Önceki programa geçer
+    /// Requirements: 7.4
+    /// </summary>
+    private void GoToPreviousProgram()
+    {
+        if (_programSequencer != null)
+        {
+            SaveCurrentItemsToProgram();
+            _programSequencer.PreviousProgram();
+            
+            // Sequencer'ın mevcut programını seç
+            if (_programSequencer.CurrentProgram != null)
+            {
+                SelectedProgram = _programSequencer.CurrentProgram;
+            }
+        }
+        else if (Programs.Count > 0 && SelectedProgram != null)
+        {
+            var index = Programs.IndexOf(SelectedProgram);
+            var prevIndex = index > 0 ? index - 1 : Programs.Count - 1;
+            SaveCurrentItemsToProgram();
+            SelectedProgram = Programs[prevIndex];
+        }
+        
+        this.RaisePropertyChanged(nameof(CurrentProgramDisplay));
+    }
+
+    #endregion
+
+    #region Ara Durak Yönetimi Metodları
+    // Requirements: 4.3, 4.4, 4.5, 4.7, 4.8
+
+    // Seçili ara durak index'i
+    private int _selectedStopIndex = -1;
+    
+    /// <summary>
+    /// Seçili ara durak index'i
+    /// </summary>
+    public int SelectedStopIndex
+    {
+        get => _selectedStopIndex;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedStopIndex, value);
+            this.RaisePropertyChanged(nameof(SelectedStop));
+            this.RaisePropertyChanged(nameof(HasSelectedStop));
+        }
+    }
+
+    /// <summary>
+    /// Seçili ara durak
+    /// </summary>
+    public IntermediateStop? SelectedStop
+    {
+        get
+        {
+            if (SelectedItem?.IntermediateStops?.Stops == null) return null;
+            if (_selectedStopIndex < 0 || _selectedStopIndex >= SelectedItem.IntermediateStops.Stops.Count) return null;
+            return SelectedItem.IntermediateStops.Stops[_selectedStopIndex];
+        }
+    }
+
+    /// <summary>
+    /// Ara durak seçili mi
+    /// </summary>
+    public bool HasSelectedStop => SelectedStop != null;
+
+    /// <summary>
+    /// Yeni ara durak ekler
+    /// Requirements: 4.3, 4.4
+    /// </summary>
+    public void AddIntermediateStop()
+    {
+        if (SelectedItem == null || SelectedItem.ItemType != TabelaItemType.Text) return;
+        
+        var stops = SelectedItem.IntermediateStops.Stops;
+        var newStop = new IntermediateStop
+        {
+            Order = stops.Count,
+            StopName = $"Durak {stops.Count + 1}"
+        };
+        
+        stops.Add(newStop);
+        
+        // Ara durak sistemini aktif et
+        if (!SelectedItem.IntermediateStops.IsEnabled)
+        {
+            SelectedItem.IntermediateStops.IsEnabled = true;
+        }
+        
+        SelectedStopIndex = stops.Count - 1;
+        OnItemsChanged();
+    }
+
+    /// <summary>
+    /// Belirtilen isimle ara durak ekler
+    /// Requirements: 4.3, 4.4
+    /// </summary>
+    public void AddIntermediateStop(string stopName)
+    {
+        if (SelectedItem == null || SelectedItem.ItemType != TabelaItemType.Text) return;
+        
+        var stops = SelectedItem.IntermediateStops.Stops;
+        var newStop = new IntermediateStop
+        {
+            Order = stops.Count,
+            StopName = stopName ?? $"Durak {stops.Count + 1}"
+        };
+        
+        stops.Add(newStop);
+        
+        // Ara durak sistemini aktif et
+        if (!SelectedItem.IntermediateStops.IsEnabled)
+        {
+            SelectedItem.IntermediateStops.IsEnabled = true;
+        }
+        
+        SelectedStopIndex = stops.Count - 1;
+        OnItemsChanged();
+    }
+
+    /// <summary>
+    /// Seçili ara durağı siler
+    /// Requirements: 4.8
+    /// </summary>
+    public void RemoveSelectedIntermediateStop()
+    {
+        if (SelectedItem == null || SelectedStop == null) return;
+        
+        var stops = SelectedItem.IntermediateStops.Stops;
+        var index = _selectedStopIndex;
+        
+        stops.RemoveAt(index);
+        
+        // Order değerlerini güncelle
+        for (int i = 0; i < stops.Count; i++)
+        {
+            stops[i].Order = i;
+        }
+        
+        // Yeni seçim yap
+        if (stops.Count > 0)
+        {
+            SelectedStopIndex = Math.Min(index, stops.Count - 1);
+        }
+        else
+        {
+            SelectedStopIndex = -1;
+        }
+        
+        OnItemsChanged();
+    }
+
+    /// <summary>
+    /// Belirtilen ara durağı siler
+    /// Requirements: 4.8
+    /// </summary>
+    public void RemoveIntermediateStop(IntermediateStop stop)
+    {
+        if (SelectedItem == null || stop == null) return;
+        
+        var stops = SelectedItem.IntermediateStops.Stops;
+        stops.Remove(stop);
+        
+        // Order değerlerini güncelle
+        for (int i = 0; i < stops.Count; i++)
+        {
+            stops[i].Order = i;
+        }
+        
+        OnItemsChanged();
+    }
+
+    /// <summary>
+    /// Seçili ara durağı yukarı taşır
+    /// Requirements: 4.7
+    /// </summary>
+    public void MoveStopUp()
+    {
+        if (SelectedItem == null || SelectedStop == null) return;
+        
+        var stops = SelectedItem.IntermediateStops.Stops;
+        var index = _selectedStopIndex;
+        
+        if (index > 0)
+        {
+            // Swap
+            var temp = stops[index];
+            stops[index] = stops[index - 1];
+            stops[index - 1] = temp;
+            
+            // Order değerlerini güncelle
+            stops[index].Order = index;
+            stops[index - 1].Order = index - 1;
+            
+            SelectedStopIndex = index - 1;
+            OnItemsChanged();
+        }
+    }
+
+    /// <summary>
+    /// Seçili ara durağı aşağı taşır
+    /// Requirements: 4.7
+    /// </summary>
+    public void MoveStopDown()
+    {
+        if (SelectedItem == null || SelectedStop == null) return;
+        
+        var stops = SelectedItem.IntermediateStops.Stops;
+        var index = _selectedStopIndex;
+        
+        if (index < stops.Count - 1)
+        {
+            // Swap
+            var temp = stops[index];
+            stops[index] = stops[index + 1];
+            stops[index + 1] = temp;
+            
+            // Order değerlerini güncelle
+            stops[index].Order = index;
+            stops[index + 1].Order = index + 1;
+            
+            SelectedStopIndex = index + 1;
+            OnItemsChanged();
+        }
+    }
+
+    /// <summary>
+    /// Ara durak seçer
+    /// </summary>
+    public void SelectStop(int index)
+    {
+        if (SelectedItem?.IntermediateStops?.Stops == null) return;
+        
+        if (index >= 0 && index < SelectedItem.IntermediateStops.Stops.Count)
+        {
+            SelectedStopIndex = index;
+        }
+        else
+        {
+            SelectedStopIndex = -1;
+        }
     }
 
     #endregion

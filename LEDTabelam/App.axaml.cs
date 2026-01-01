@@ -35,6 +35,7 @@ public partial class App : Application
             var zoneManager = new ZoneManager();
             var multiLineTextRenderer = new MultiLineTextRenderer(fontLoader);
             var previewRenderer = new PreviewRenderer(fontLoader, multiLineTextRenderer);
+            var programSequencer = new ProgramSequencer();
             
             // SVG Renderer ve Asset Library oluştur
             var svgRenderer = new SvgRenderer();
@@ -66,7 +67,8 @@ public partial class App : Application
                     profileManager,
                     slotManager,
                     zoneManager,
-                    engineServices);
+                    engineServices,
+                    programSequencer);
                 
                 mainWindowViewModel.LoadProfile(profile);
                 mainWindowViewModel.UnifiedEditor.SetAssetLibrary(assetLibrary);

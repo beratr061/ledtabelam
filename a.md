@@ -1,87 +1,162 @@
-Sorun şu: Hesaplama yapılıyor ama çizim (render) sırasında kullanılmıyor.
+Şu anki sistemde tüm ekran tek bir resim gibi çiziliyor. Oysa senin istediğinde:
 
-Sorunun Teknik Analizi
-ViewModel Tarafı (Doğru Hesaplıyor ama Saklıyor): ControlPanelViewModel.cs dosyasında ActualWidth diye bir özellik var. Sen P5 seçtiğinde bu özellik gerçekten 2 katına çıkıyor (örneğin 150 -> 300 oluyor). ANCAK, bu hesaplanan "Gerçek Çözünürlük" değeri, DisplaySettings nesnesine aktarılmıyor veya aktarılsa bile LedRenderer bunu kullanmıyor.
+Zone 1 (Sol): Sabit duracak (19K).
 
-Model Tarafı (Hata Burada): DisplaySettings sınıfı sadece ham PanelWidth (150) ve PanelHeight (24) değerlerini taşıyor. "Hesaplanmış/Çarpılmış Çözünürlük" (ActualWidth) bu ayar paketinin içinde yok veya renderer bunu dikkate almıyor.
+Zone 2 (Sağ Üst): Sabit duracak (KADIKÖY).
 
-Render Tarafı (Çizim Hatası): LedRenderer.RenderDisplay metoduna bakıldığında:
+Zone 3 (Sağ Alt): Kayan yazı olacak (Durak 1 > Durak 2...).
 
-C#
+İşte bu sistemi kurmak için yapman gerekenler:
 
-// LedRenderer.cs
-public SKBitmap RenderDisplay(bool[,] pixelMatrix, DisplaySettings settings)
-{
-    // Matrix boyutu ne gelirse onu çiziyor.
-    int matrixWidth = pixelMatrix.GetLength(0);
-    int matrixHeight = pixelMatrix.GetLength(1);
+Adım 1: Model Güncellemesi (Zone.cs)
+Her bölgenin kendine ait bir animasyonu ve kendine ait bir metin listesi olmalı.
 
-    // ÖNEMLİ HATA: P5 veya P10 olması, matrisin boyutunu değiştirmiyor!
-    // Sadece LED'in (dairenin) çapını değiştiriyor (ledRatio).
-    double ledRatio = settings.Pitch.GetLedDiameterRatio();
-    // ...
-}
-Yani renderer, "Ben P5'im, o zaman çözünürlüğü 2 ile çarpayım" demiyor. Ona 150x24'lük bir matris gelirse, 150x24 çiziyor. Sadece P5 seçili olduğu için ledRatio değişiyor ve piksellerin çapı (görsel boyutu) değişiyor. Bu yüzden sen "çözünürlük aynı kalıyor, pikseller büyüyor/küçülüyor" diyorsun.
-
-Çözüm: "Sanal Matris" Yerine "Gerçek Matris" Kullanımı
-Bu mantığı düzeltmek için ControlPanelViewModel ve DisplaySettings arasındaki veri akışını değiştirmemiz lazım. "Panel Boyutu" dediğimiz şey Modül Sayısı (Kasa Boyutu) olmalı, Piksel Sayısı ise hesaplanmalı.
-
-Şu anki yapıda "Panel Boyutu" doğrudan "Piksel Sayısı" olarak kullanılıyor.
-
-Düzeltme Planı:
-
-DisplaySettings.cs içine ActualWidth ve ActualHeight özelliklerini ekle (veya hesaplanmış halini gönder).
-
-ControlPanelViewModel.cs içinde CurrentSettings oluşturulurken, PanelWidth yerine P değeriyle çarpılmış ActualWidth gönderilmemeli, fakat matris oluşturulurken bu dikkate alınmalı.
-
-Asıl sorun şu: ControlPanelViewModel içinde UpdateCurrentSettings metodu, DisplaySettings objesini oluştururken PanelWidth'i (150) olduğu gibi gönderiyor.
-
-Düzeltilmiş Kod Önerisi (ControlPanelViewModel.cs):
-
-Şu anki UpdateCurrentSettings metodunu şöyle güncellemelisin. Bu sayede P5 seçtiğinde renderer'a giden bilgi 2 katı büyüklüğünde olacak.
+Models/Zone.cs dosyasını aç ve şu özellikleri ekle:
 
 C#
 
-// ControlPanelViewModel.cs içindeki metodun düzeltilmiş hali
-private void UpdateCurrentSettings()
+public class Zone : ViewModelBase // INotifyPropertyChanged için
 {
-    // P değerine göre çarpanı al (P10=1, P5=2, P2.5=4 gibi)
-    // Eğer GetMultiplier gibi bir metodun yoksa manuel hesaplayabiliriz veya GetActualResolution mantığını kullanırız.
-    
-    // NOT: Senin ActualWidth property'n zaten hesaplıyordu, onu kullanalım.
-    // Ancak DisplaySettings modelin sadece PanelWidth tutuyor olabilir. 
-    // Eğer DisplaySettings.PanelWidth "Piksel Sayısı" demekse, ona ActualWidth'i atamalıyız.
-    
-    CurrentSettings = new DisplaySettings
+    // ... Mevcut X, Y, Width, Height özelliklerin ...
+
+    private AnimationType _animationType;
+    public AnimationType AnimationType
     {
-        // BURASI KRİTİK DEĞİŞİKLİK:
-        // Eskiden: PanelWidth = PanelWidth (yani 150)
-        // Şimdi: PanelWidth = ActualWidth (yani P5 ise 300)
-        PanelWidth = ActualWidth,   
-        PanelHeight = ActualHeight, 
+        get => _animationType;
+        set => this.RaiseAndSetIfChanged(ref _animationType, value);
+    }
 
-        ColorType = SelectedColorType,
-        Brightness = Brightness,
-        BackgroundDarkness = BackgroundDarkness,
-        PixelSize = PixelSize,
-        Pitch = SelectedPitch,
-        CustomPitchRatio = CustomPitchRatio,
-        Shape = SelectedShape,
-        InvertColors = InvertColors,
-        AgingPercent = AgingPercent,
-        LineSpacing = LineSpacing
-    };
+    // Tek bir metin yerine durak listesi tutmak için:
+    private ObservableCollection<string> _items = new();
+    public ObservableCollection<string> Items
+    {
+        get => _items;
+        set => this.RaiseAndSetIfChanged(ref _items, value);
+    }
+    
+    // Yardımcı: Eğer listede birden fazla şey varsa aralarına ok koyarak birleştirir
+    public string GetFormattedText()
+    {
+        if (Items.Count == 0) return "";
+        if (Items.Count == 1) return Items[0];
+        // Duraklar arasına " >> " veya " - " koyar
+        return string.Join("  >>  ", Items);
+    }
 }
-Bunu yaptığında ne olacak?
+Adım 2: Çizim Motorunu "Akıllandırma" (LedRenderer.cs)
+LedRenderer artık tüm ekranı tek seferde çizmemeli. Her bölgeyi ayrı ayrı çizmeli ve her birine farklı efekt uygulamalı.
 
-Sen arayüzde 150x24 yazacaksın (Bu senin fiziksel P10 referansın).
+Services/LedRenderer.cs içindeki RenderDisplay metodunu baştan tasarlayalım:
 
-P5 seçtiğinde ActualWidth 300 olacak.
+C#
 
-DisplaySettings içine 300x48 olarak gidecek.
+// NOT: Bu metoda 'frameIndex' veya 'time' parametresi eklemelisin ki animasyon ilerlesin.
+public SKBitmap RenderDisplay(Profile profile, DisplaySettings settings, long frameCounter)
+{
+    // 1. Ana Tuvali (Siyah Panel) Oluştur
+    var mainBitmap = new SKBitmap(settings.ActualWidth, settings.ActualHeight);
+    using var canvas = new SKCanvas(mainBitmap);
+    canvas.Clear(SKColors.Black);
 
-LedRenderer 300x48'lik bir matris çizecek.
+    // 2. Her Bölgeyi (Zone) Ayrı Ayrı Çiz ve Yapıştır
+    foreach (var zone in profile.Zones)
+    {
+        // Bölgenin kendi küçük resmini oluştur
+        using var zoneBitmap = new SKBitmap(zone.Width, zone.Height);
+        using var zoneCanvas = new SKCanvas(zoneBitmap);
+        zoneCanvas.Clear(SKColors.Black); // Bölge arkaplanı
 
-Ekranda pikseller daha sıklaşacak (çözünürlük artacak).
+        // Metni al (Liste ise birleştirilmiş halini al)
+        string textToDraw = zone.GetFormattedText();
+        
+        // --- ANİMASYON MANTIĞI ---
+        float xPosition = 0;
+        
+        if (zone.AnimationType == AnimationType.ScrollLeft)
+        {
+            // Metin genişliğini hesapla
+            float textWidth = MeasureTextWidth(textToDraw, zone.Font); // Bu metodun var sayıyorum
+            
+            // Eğer metin bölgeye sığıyorsa kaydırma
+            if (textWidth <= zone.Width) 
+            {
+                xPosition = (zone.Width - textWidth) / 2; // Ortala
+            }
+            else
+            {
+                // Kayan Yazı Formülü: (Zaman * Hız) % Toplam Uzunluk
+                // frameCounter: Animasyon servisinden gelen sayaç
+                int speed = 2; // Hız ayarı
+                long totalPixels = (long)(textWidth + zone.Width); 
+                long currentStep = (frameCounter * speed) % totalPixels;
+                xPosition = zone.Width - currentStep;
+            }
+        }
+        else // Sabit (Static)
+        {
+            // Ortala
+            float textWidth = MeasureTextWidth(textToDraw, zone.Font);
+            xPosition = (zone.Width - textWidth) / 2;
+        }
 
-Bu değişikliği ControlPanelViewModel.cs dosyasında UpdateCurrentSettings metoduna uygularsan sorunun çözülecektir. Piksellerin sadece büyümesi değil, sayısının artması sağlanacaktır.
+        // Metni Bölge Canvas'ına Çiz
+        // (Burada senin mevcut DrawText metodunu kullanacaksın)
+        DrawTextToCanvas(zoneCanvas, textToDraw, xPosition, 2, zone.TextColor); 
+
+        // 3. Bölgeyi Ana Ekrana Yapıştır (X, Y koordinatına)
+        canvas.DrawBitmap(zoneBitmap, zone.X, zone.Y);
+    }
+
+    // 4. (Opsiyonel) Izgara / Glow Efektlerini Ana Resme Uygula
+    // ApplyPostEffects(mainBitmap); 
+
+    return mainBitmap;
+}
+Adım 3: Arayüz İyileştirmesi (VisualZoneEditor)
+Kullanıcının "Duraklar" kısmına birden fazla yazı girebilmesi için arayüzü güncellemelisin.
+
+Views/UnifiedEditor.axaml veya ilgili editör dosyasında, seçili Zone'un özelliklerini gösteren paneli şöyle güncelle:
+
+XML
+
+<ComboBox SelectedItem="{Binding SelectedZone.AnimationType}"
+          ItemsSource="{Binding AnimationTypes}" 
+          Header="Animasyon Tipi"/>
+
+<TextBlock Text="İçerik / Duraklar" Margin="0,10,0,5"/>
+
+<ItemsControl ItemsSource="{Binding SelectedZone.Items}">
+    <ItemsControl.ItemTemplate>
+        <DataTemplate>
+            <Grid ColumnDefinitions="*, Auto">
+                <TextBox Text="{Binding .}" Margin="0,2"/>
+                <Button Content="Sil" Command="{Binding $parent[UserControl].DataContext.RemoveItemCommand}" 
+                        CommandParameter="{Binding .}" Grid.Column="1"/>
+            </Grid>
+        </DataTemplate>
+    </ItemsControl.ItemTemplate>
+</ItemsControl>
+
+<StackPanel Orientation="Horizontal" Margin="0,5">
+    <TextBox x:Name="NewItemBox" Watermark="Yeni Durak Ekle..." Width="150"/>
+    <Button Content="Ekle" Command="{Binding AddItemCommand}" 
+            CommandParameter="{Binding #NewItemBox.Text}"/>
+</StackPanel>
+Sonuç Ne Olacak?
+Bu yapıyı kurduğunda "Polaris Modu" şöyle çalışır:
+
+Uygulamada 3 tane Zone oluşturursun.
+
+Sol Zone: Metin="19K", Animasyon="None".
+
+Üst Zone: Metin="KADIKÖY", Animasyon="None".
+
+Alt Zone: Metinler=["Ayrılık Çeşmesi", "Acıbadem", "Altunizade"], Animasyon="ScrollLeft".
+
+Uygulama çalışınca:
+
+Sol ve Üst sabit kalır.
+
+Alt kısımda yazılar birleşir: "Ayrılık Çeşmesi >> Acıbadem >> Altunizade" ve sadece bu kısım kayar.
+
+Bu tam olarak profesyonel otobüs tabelalarının çalışma mantığıdır. Önce Adım 2'deki Render mantığını (döngü içinde ayrı canvas kullanımı) uygulamanı tavsiye ederim.

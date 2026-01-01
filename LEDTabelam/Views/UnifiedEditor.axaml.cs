@@ -853,4 +853,119 @@ public partial class UnifiedEditor : UserControl
     }
 
     #endregion
+
+    #region Program Events
+
+    /// <summary>
+    /// Program geçiş tipi değiştiğinde
+    /// Requirements: 3.1
+    /// </summary>
+    private void OnProgramTransitionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox combo && ViewModel?.SelectedProgram != null)
+        {
+            var transition = combo.SelectedIndex switch
+            {
+                0 => Models.ProgramTransitionType.Direct,
+                1 => Models.ProgramTransitionType.Fade,
+                2 => Models.ProgramTransitionType.SlideLeft,
+                3 => Models.ProgramTransitionType.SlideRight,
+                4 => Models.ProgramTransitionType.SlideUp,
+                5 => Models.ProgramTransitionType.SlideDown,
+                _ => Models.ProgramTransitionType.Direct
+            };
+            ViewModel.SelectedProgram.Transition = transition;
+        }
+    }
+
+    #endregion
+
+    #region Ara Durak Events
+    // Requirements: 4.2, 4.3, 4.4, 5.6, 6.1
+
+    /// <summary>
+    /// Yeni durak ekleme butonuna tıklandığında
+    /// Requirements: 4.3, 4.4
+    /// </summary>
+    private void OnAddStopClick(object? sender, RoutedEventArgs e)
+    {
+        var textBox = this.FindControl<TextBox>("NewStopNameTextBox");
+        if (textBox == null || ViewModel == null) return;
+        
+        var stopName = textBox.Text?.Trim();
+        if (string.IsNullOrEmpty(stopName))
+        {
+            // Boş isimle varsayılan isim kullan
+            ViewModel.AddIntermediateStop();
+        }
+        else
+        {
+            ViewModel.AddIntermediateStop(stopName);
+        }
+        
+        // TextBox'ı temizle
+        textBox.Text = string.Empty;
+        textBox.Focus();
+    }
+
+    /// <summary>
+    /// Yeni durak TextBox'ında Enter tuşuna basıldığında
+    /// Requirements: 4.3, 4.4
+    /// </summary>
+    private void OnNewStopKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            OnAddStopClick(sender, e);
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>
+    /// Ara durak animasyon tipi değiştiğinde
+    /// Requirements: 6.1
+    /// </summary>
+    private void OnStopAnimationChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox combo && ViewModel?.SelectedItem?.IntermediateStops != null)
+        {
+            var animation = combo.SelectedIndex switch
+            {
+                0 => Models.StopAnimationType.Direct,
+                1 => Models.StopAnimationType.Fade,
+                2 => Models.StopAnimationType.SlideUp,
+                3 => Models.StopAnimationType.SlideDown,
+                _ => Models.StopAnimationType.Direct
+            };
+            ViewModel.SelectedItem.IntermediateStops.Animation = animation;
+        }
+    }
+
+    #endregion
+
+    #region Playback Events
+    // Requirements: 7.1, 7.2, 7.3
+
+    /// <summary>
+    /// Play/Pause toggle butonuna tıklandığında
+    /// Requirements: 7.1, 7.2, 7.3
+    /// </summary>
+    private void OnPlayPauseToggle(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel == null) return;
+        
+        // Toggle: mevcut durumun tersini yap
+        if (ViewModel.IsAnimationPlaying)
+        {
+            // Oynatılıyorsa duraklat
+            ViewModel.PauseCommand.Execute().Subscribe();
+        }
+        else
+        {
+            // Duraklatılmışsa oynat
+            ViewModel.PlayCommand.Execute().Subscribe();
+        }
+    }
+
+    #endregion
 }

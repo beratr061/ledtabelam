@@ -79,6 +79,9 @@ public class ProfileManager : IProfileManager
                 var profile = JsonSerializer.Deserialize<Profile>(json, _jsonOptions);
                 if (profile != null)
                 {
+                    // Geriye dönük uyumluluk: eski profillerde Programs koleksiyonu boş olabilir
+                    // Requirements: 9.3, 9.4
+                    profile.EnsureMinimumProgram();
                     profiles.Add(profile);
                 }
             }
@@ -103,7 +106,17 @@ public class ProfileManager : IProfileManager
         try
         {
             var json = await File.ReadAllTextAsync(path);
-            return JsonSerializer.Deserialize<Profile>(json, _jsonOptions);
+            var profile = JsonSerializer.Deserialize<Profile>(json, _jsonOptions);
+            
+            if (profile != null)
+            {
+                // Geriye dönük uyumluluk: eski profillerde Programs koleksiyonu boş olabilir
+                // Bu durumda varsayılan bir program oluştur
+                // Requirements: 9.3, 9.4
+                profile.EnsureMinimumProgram();
+            }
+            
+            return profile;
         }
         catch (Exception)
         {
@@ -189,6 +202,10 @@ public class ProfileManager : IProfileManager
             throw new InvalidOperationException("Geçersiz profil dosyası.");
         }
 
+        // Geriye dönük uyumluluk: eski profillerde Programs koleksiyonu boş olabilir
+        // Requirements: 9.3, 9.4
+        profile.EnsureMinimumProgram();
+
         // Aynı isimde profil varsa yeni isim oluştur
         var originalName = profile.Name;
         var counter = 1;
@@ -225,11 +242,11 @@ public class ProfileManager : IProfileManager
 
     /// <summary>
     /// Varsayılan profili oluşturur
-    /// Requirements: 9.12
+    /// Requirements: 9.12, 9.3, 9.4
     /// </summary>
     private static Profile CreateDefaultProfile()
     {
-        return new Profile
+        var profile = new Profile
         {
             Name = DefaultProfileName,
             Settings = new DisplaySettings
@@ -252,6 +269,12 @@ public class ProfileManager : IProfileManager
             CreatedAt = DateTime.UtcNow,
             ModifiedAt = DateTime.UtcNow
         };
+        
+        // Varsayılan program oluştur
+        // Requirements: 9.3, 9.4
+        profile.EnsureMinimumProgram();
+        
+        return profile;
     }
 
     /// <summary>

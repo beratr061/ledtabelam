@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using ReactiveUI;
 
@@ -18,6 +19,7 @@ public class Profile : ReactiveObject
     private Dictionary<int, TabelaSlot> _slots = new();
     private DateTime _createdAt = DateTime.UtcNow;
     private DateTime _modifiedAt = DateTime.UtcNow;
+    private ObservableCollection<TabelaProgram> _programs = new();
 
     /// <summary>
     /// Profil adı (örn: "Metrobüs Tabelaları", "Belediye Otobüsü")
@@ -83,6 +85,17 @@ public class Profile : ReactiveObject
     }
 
     /// <summary>
+    /// Tabela programları koleksiyonu
+    /// Her program kendi öğelerini içerir ve belirli bir süre ekranda kalır
+    /// Requirements: 9.1
+    /// </summary>
+    public ObservableCollection<TabelaProgram> Programs
+    {
+        get => _programs;
+        set => this.RaiseAndSetIfChanged(ref _programs, value ?? new ObservableCollection<TabelaProgram>());
+    }
+
+    /// <summary>
     /// Belirtilen slot numarasındaki slot'u döndürür
     /// </summary>
     public TabelaSlot? GetSlot(int slotNumber)
@@ -107,4 +120,75 @@ public class Profile : ReactiveObject
     /// Tanımlı slot sayısını döndürür
     /// </summary>
     public int DefinedSlotCount => Slots.Count(s => s.Value.IsDefined);
+
+    /// <summary>
+    /// Profil yüklendiğinde geriye dönük uyumluluk için migration uygular.
+    /// Eğer Programs koleksiyonu boşsa, varsayılan bir program oluşturur.
+    /// Requirements: 9.1
+    /// </summary>
+    public void EnsureMinimumProgram()
+    {
+        if (Programs.Count == 0)
+        {
+            Programs.Add(new TabelaProgram
+            {
+                Id = 1,
+                Name = "Program 1"
+            });
+        }
+    }
+
+    /// <summary>
+    /// Belirtilen ID'ye sahip programı döndürür
+    /// </summary>
+    public TabelaProgram? GetProgramById(int id)
+    {
+        return Programs.FirstOrDefault(p => p.Id == id);
+    }
+
+    /// <summary>
+    /// Yeni bir program ekler ve benzersiz ID atar
+    /// Requirements: 1.1, 1.2, 1.3
+    /// </summary>
+    public TabelaProgram AddProgram(string name = "Yeni Program")
+    {
+        var newId = Programs.Count > 0 ? Programs.Max(p => p.Id) + 1 : 1;
+        var program = new TabelaProgram
+        {
+            Id = newId,
+            Name = name
+        };
+        Programs.Add(program);
+        ModifiedAt = DateTime.UtcNow;
+        return program;
+    }
+
+    /// <summary>
+    /// Belirtilen programı siler. Son program silinemez.
+    /// Requirements: 1.7, 1.8
+    /// </summary>
+    /// <returns>Silme başarılı ise true, son program ise false</returns>
+    public bool RemoveProgram(TabelaProgram program)
+    {
+        if (Programs.Count <= 1)
+            return false;
+
+        var result = Programs.Remove(program);
+        if (result)
+            ModifiedAt = DateTime.UtcNow;
+        return result;
+    }
+
+    /// <summary>
+    /// Belirtilen ID'ye sahip programı siler. Son program silinemez.
+    /// Requirements: 1.7, 1.8
+    /// </summary>
+    /// <returns>Silme başarılı ise true, son program veya bulunamadı ise false</returns>
+    public bool RemoveProgramById(int id)
+    {
+        var program = GetProgramById(id);
+        if (program == null)
+            return false;
+        return RemoveProgram(program);
+    }
 }

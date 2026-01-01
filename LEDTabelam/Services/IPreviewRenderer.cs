@@ -16,6 +16,12 @@ public interface IPreviewRenderer
     void SetAssetLibrary(IAssetLibrary assetLibrary);
 
     /// <summary>
+    /// ProgramSequencer'ı ayarlar (ara durak render için gerekli)
+    /// Requirements: 8.1, 8.2
+    /// </summary>
+    void SetProgramSequencer(IProgramSequencer? sequencer);
+
+    /// <summary>
     /// Zone listesini renk matrisine render eder
     /// </summary>
     /// <param name="font">Kullanılacak font</param>
@@ -37,6 +43,23 @@ public interface IPreviewRenderer
         BitmapFont? defaultFont,
         System.Func<string, BitmapFont?> fontResolver,
         DisplaySettings settings);
+
+    /// <summary>
+    /// Program öğelerini ara durak desteği ile renk matrisine render eder
+    /// Requirements: 8.1, 8.2
+    /// </summary>
+    /// <param name="items">Program öğeleri</param>
+    /// <param name="defaultFont">Varsayılan font</param>
+    /// <param name="fontResolver">Font adından font çözümleyici</param>
+    /// <param name="settings">Display ayarları</param>
+    /// <param name="stopIndexResolver">Item ID'den mevcut durak index'ini çözümleyici</param>
+    /// <returns>Renk matrisi</returns>
+    SKColor[,] RenderProgramWithStopsToColorMatrix(
+        IReadOnlyList<TabelaItem> items,
+        BitmapFont? defaultFont,
+        System.Func<string, BitmapFont?> fontResolver,
+        DisplaySettings settings,
+        System.Func<int, int> stopIndexResolver);
 
     /// <summary>
     /// Tek metin satırını piksel matrisine render eder

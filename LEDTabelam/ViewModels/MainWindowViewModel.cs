@@ -18,6 +18,7 @@ public class MainWindowViewModel : ViewModelBase
     private readonly ISlotManager _slotManager;
     private readonly IZoneManager _zoneManager;
     private readonly IEngineServices _engineServices;
+    private readonly IProgramSequencer _programSequencer;
 
     // Kolay erişim için kısayollar
     private IFontLoader FontLoader => _engineServices.FontLoader;
@@ -146,6 +147,9 @@ public class MainWindowViewModel : ViewModelBase
     {
         CurrentProfile = profile;
         ControlPanel.SelectedProfile = profile;
+        
+        // Programları UnifiedEditor'a yükle
+        UnifiedEditor.LoadProgramsFromProfile(profile);
     }
 
     /// <summary>
@@ -155,18 +159,34 @@ public class MainWindowViewModel : ViewModelBase
         IProfileManager profileManager,
         ISlotManager slotManager,
         IZoneManager zoneManager,
-        IEngineServices engineServices)
+        IEngineServices engineServices,
+        IProgramSequencer programSequencer)
     {
         _profileManager = profileManager ?? throw new ArgumentNullException(nameof(profileManager));
         _slotManager = slotManager ?? throw new ArgumentNullException(nameof(slotManager));
         _zoneManager = zoneManager ?? throw new ArgumentNullException(nameof(zoneManager));
         _engineServices = engineServices ?? throw new ArgumentNullException(nameof(engineServices));
+        _programSequencer = programSequencer ?? throw new ArgumentNullException(nameof(programSequencer));
 
         // Alt ViewModel'leri oluştur
         ControlPanel = new ControlPanelViewModel(_profileManager, _slotManager, FontLoader, _zoneManager);
         Preview = new PreviewViewModel(LedRenderer, AnimationService);
         Playlist = new PlaylistViewModel(AnimationService);
         UnifiedEditor = new UnifiedEditorViewModel();
+        
+        // ProgramSequencer'ı UnifiedEditor'a bağla
+        // Requirements: 3.3, 6.3, 8.3
+        UnifiedEditor.ProgramSequencer = _programSequencer;
+        
+        // ProgramSequencer'ı PreviewRenderer'a bağla (ara durak render için)
+        // Requirements: 8.1, 8.2
+        PreviewRenderer.SetProgramSequencer(_programSequencer);
+        
+        // ProgramSequencer event'lerini dinle (önizleme güncellemeleri için)
+        // Requirements: 8.1, 8.2
+        _programSequencer.ProgramChanged += OnProgramChanged;
+        _programSequencer.StopChanged += OnStopChanged;
+        _programSequencer.MainContentShowing += OnMainContentShowing;
 
         // Komutları oluştur
         SavePngCommand = ReactiveCommand.CreateFromTask(SavePngAsync);
@@ -465,8 +485,74 @@ public class MainWindowViewModel : ViewModelBase
         };
     }
 
+    /// <summary>
+    /// Program değiştiğinde önizlemeyi günceller
+    /// Requirements: 8.1
+    /// </summary>
+    private void OnProgramChanged(TabelaProgram program)
+    {
+        // UI thread'de çalıştır
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            // Yeni programın öğelerini UnifiedEditor'a yükle
+            if (program != null)
+            {
+                UnifiedEditor.SelectedProgram = program;
+            }
+            
+            // Önizlemeyi güncelle
+            RenderUnifiedEditorToPreview();
+            
+            // Status bar'ı güncelle
+            StatusMessage = $"Program: {program?.Name ?? "?"} ({UnifiedEditor.CurrentProgramDisplay})";
+        });
+    }
+
+    /// <summary>
+    /// Ara durak değiştiğinde önizlemeyi günceller
+    /// Requirements: 8.1, 8.2
+    /// </summary>
+    private void OnStopChanged(TabelaItem item, IntermediateStop stop)
+    {
+        // UI thread'de çalıştır
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            // Önizlemeyi güncelle (ara durak içeriği değişti)
+            RenderUnifiedEditorToPreview();
+            
+            // Status bar'ı güncelle
+            var stopIndex = item.IntermediateStops.Stops.IndexOf(stop) + 1;
+            var totalStops = item.IntermediateStops.Stops.Count;
+            StatusMessage = $"Durak: {stop.StopName} ({stopIndex}/{totalStops})";
+        });
+    }
+
+    /// <summary>
+    /// Ana içeriğe dönüldüğünde önizlemeyi günceller
+    /// Requirements: 8.1, 8.2
+    /// </summary>
+    private void OnMainContentShowing(TabelaItem item)
+    {
+        // UI thread'de çalıştır
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            // Önizlemeyi güncelle (ana içerik gösteriliyor)
+            RenderUnifiedEditorToPreview();
+            
+            // Status bar'ı güncelle
+            StatusMessage = $"Ana içerik: {item.Content}";
+        });
+    }
+
     private void OnAnimationTick(AnimationTick tick)
     {
+        // ProgramSequencer'ı güncelle (program ve ara durak timer'ları)
+        // Requirements: 3.3, 6.3, 8.3
+        if (UnifiedEditor.IsAnimationPlaying)
+        {
+            _programSequencer.OnTick(tick.DeltaTime);
+        }
+        
         // UnifiedEditor'daki kayan yazıları güncelle (UI thread'de çalıştır)
         if (UnifiedEditor.IsAnimationPlaying)
         {
@@ -487,6 +573,13 @@ public class MainWindowViewModel : ViewModelBase
             AnimationService.OnTick -= OnAnimationTick;
             UnifiedEditor.ItemsChanged -= OnUnifiedEditorItemsChanged;
             ControlPanel.SlotChanged -= OnSlotChanged;
+            
+            // ProgramSequencer event'lerinden çık
+            // Requirements: 8.1, 8.2
+            _programSequencer.ProgramChanged -= OnProgramChanged;
+            _programSequencer.StopChanged -= OnStopChanged;
+            _programSequencer.MainContentShowing -= OnMainContentShowing;
+            
             ControlPanel.Dispose();
             Preview.Dispose();
             Playlist.Dispose();

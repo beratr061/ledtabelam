@@ -49,6 +49,9 @@ public class TabelaItem : ReactiveObject
     // Durum
     private bool _isSelected = false;
     private bool _isVisible = true;
+    
+    // Ara Durak Sistemi
+    private IntermediateStopSettings _intermediateStops = new();
 
     /// <summary>
     /// Öğe ID'si
@@ -351,6 +354,23 @@ public class TabelaItem : ReactiveObject
         get => _border;
         set => this.RaiseAndSetIfChanged(ref _border, value ?? new BorderSettings());
     }
+
+    /// <summary>
+    /// Ara durak ayarları
+    /// Requirements: 4.1, 9.2
+    /// </summary>
+    public IntermediateStopSettings IntermediateStops
+    {
+        get => _intermediateStops;
+        set => this.RaiseAndSetIfChanged(ref _intermediateStops, value ?? new IntermediateStopSettings());
+    }
+
+    /// <summary>
+    /// Ara durak aktif mi ve durak var mı
+    /// Requirements: 4.1
+    /// </summary>
+    public bool HasIntermediateStops => 
+        IntermediateStops.IsEnabled && IntermediateStops.Stops.Count > 0;
 
     /// <summary>
     /// Öğenin sağ kenarı (X + Width)

@@ -15,6 +15,7 @@ public class PreviewRenderer : IPreviewRenderer
     private readonly IFontLoader _fontLoader;
     private readonly IMultiLineTextRenderer _multiLineTextRenderer;
     private IAssetLibrary? _assetLibrary;
+    private IProgramSequencer? _programSequencer;
 
     public PreviewRenderer(IFontLoader fontLoader, IMultiLineTextRenderer multiLineTextRenderer)
     {
@@ -28,6 +29,15 @@ public class PreviewRenderer : IPreviewRenderer
     public void SetAssetLibrary(IAssetLibrary assetLibrary)
     {
         _assetLibrary = assetLibrary;
+    }
+
+    /// <summary>
+    /// ProgramSequencer'ı ayarlar (ara durak render için gerekli)
+    /// Requirements: 8.1, 8.2
+    /// </summary>
+    public void SetProgramSequencer(IProgramSequencer? sequencer)
+    {
+        _programSequencer = sequencer;
     }
 
     /// <inheritdoc/>
@@ -297,6 +307,30 @@ public class PreviewRenderer : IPreviewRenderer
         Func<string, BitmapFont?> fontResolver,
         DisplaySettings settings)
     {
+        // Varsayılan olarak ara durak desteği ile render et
+        // ProgramSequencer varsa mevcut durak index'lerini kullan
+        return RenderProgramWithStopsToColorMatrix(
+            items,
+            defaultFont,
+            fontResolver,
+            settings,
+            itemId => _programSequencer is ProgramSequencer sequencer 
+                ? sequencer.GetCurrentStopIndex(itemId) 
+                : 0);
+    }
+
+    /// <inheritdoc/>
+    /// <summary>
+    /// Program öğelerini ara durak desteği ile renk matrisine render eder
+    /// Requirements: 8.1, 8.2
+    /// </summary>
+    public SKColor[,] RenderProgramWithStopsToColorMatrix(
+        IReadOnlyList<TabelaItem> items,
+        BitmapFont? defaultFont,
+        Func<string, BitmapFont?> fontResolver,
+        DisplaySettings settings,
+        Func<int, int> stopIndexResolver)
+    {
         int totalWidth = settings.Width;
         int totalHeight = settings.Height;
         var colorMatrix = new SKColor[totalWidth, totalHeight];
@@ -313,8 +347,12 @@ public class PreviewRenderer : IPreviewRenderer
                 continue;
             }
 
+            // Ara durak içeriğini belirle
+            // Requirements: 8.1, 8.2
+            string displayContent = GetDisplayContent(item, stopIndexResolver);
+            
             // Metin öğesi için normal render
-            if (string.IsNullOrEmpty(item.Content))
+            if (string.IsNullOrEmpty(displayContent))
                 continue;
 
             var itemFont = fontResolver(item.FontName) ?? defaultFont;
@@ -322,10 +360,77 @@ public class PreviewRenderer : IPreviewRenderer
 
             var itemColor = new SKColor(item.Color.R, item.Color.G, item.Color.B);
             // Her öğenin kendi harf aralığını kullan
-            RenderProgramItem(itemFont, item, itemColor, totalWidth, totalHeight, colorMatrix, item.LetterSpacing);
+            RenderProgramItemWithContent(itemFont, item, displayContent, itemColor, totalWidth, totalHeight, colorMatrix, item.LetterSpacing);
         }
 
         return colorMatrix;
+    }
+
+    // Son gösterilen içeriği takip et (debug için)
+    private readonly Dictionary<int, string> _lastDisplayedContent = new();
+    private readonly Dictionary<int, int> _lastCycleIndex = new();
+    
+    /// <summary>
+    /// Ara durak cache'ini temizler (program döngüsünde çağrılmalı)
+    /// </summary>
+    public void ClearStopCache()
+    {
+        _lastCycleIndex.Clear();
+        _lastDisplayedContent.Clear();
+    }
+    
+    /// <summary>
+    /// Öğenin gösterilecek içeriğini belirler
+    /// Ara durak aktifse: Ana içerik → Durak1 → Durak2 → ... → Ana içerik → ... döngüsü
+    /// Requirements: 8.1, 8.2
+    /// </summary>
+    private string GetDisplayContent(TabelaItem item, Func<int, int> stopIndexResolver)
+    {
+        // Ara durak aktif ve durak varsa döngü mantığı uygula
+        if (item.HasIntermediateStops)
+        {
+            var stops = item.IntermediateStops.Stops;
+            int currentIndex = stopIndexResolver(item.Id);
+            
+            // Döngü: 0 = Ana içerik, 1 = Durak1, 2 = Durak2, ...
+            // Toplam adım sayısı = 1 (ana içerik) + durak sayısı
+            int totalSteps = stops.Count + 1;
+            int cycleIndex = currentIndex % totalSteps;
+            
+            string result;
+            if (cycleIndex == 0)
+            {
+                // İlk adım: Ana içerik göster
+                result = item.Content;
+            }
+            else
+            {
+                // Sonraki adımlar: Ara durakları göster
+                int stopIndex = cycleIndex - 1;
+                if (stopIndex >= 0 && stopIndex < stops.Count)
+                {
+                    result = stops[stopIndex].StopName;
+                }
+                else
+                {
+                    result = item.Content;
+                }
+            }
+            
+            // CycleIndex değiştiğinde veya ilk kez görüldüğünde güncelle
+            bool isFirstTime = !_lastCycleIndex.TryGetValue(item.Id, out var lastCycle);
+            bool changed = isFirstTime || lastCycle != cycleIndex;
+            if (changed)
+            {
+                _lastCycleIndex[item.Id] = cycleIndex;
+                _lastDisplayedContent[item.Id] = result;
+            }
+            
+            return result;
+        }
+        
+        // Ara durak yoksa normal içerik
+        return item.Content;
     }
 
     private void RenderSymbolItem(
@@ -420,6 +525,24 @@ public class PreviewRenderer : IPreviewRenderer
         SKColor[,] colorMatrix,
         int letterSpacing)
     {
+        // Varsayılan olarak item.Content kullan
+        RenderProgramItemWithContent(font, item, item.Content, itemColor, totalWidth, totalHeight, colorMatrix, letterSpacing);
+    }
+
+    /// <summary>
+    /// Program öğesini belirtilen içerik ile render eder
+    /// Requirements: 8.1, 8.2
+    /// </summary>
+    private void RenderProgramItemWithContent(
+        BitmapFont font,
+        TabelaItem item,
+        string displayContent,
+        SKColor itemColor,
+        int totalWidth,
+        int totalHeight,
+        SKColor[,] colorMatrix,
+        int letterSpacing)
+    {
         SKBitmap? textBitmap = null;
         int lineSpacing = 2;   // Varsayılan
 
@@ -451,8 +574,9 @@ public class PreviewRenderer : IPreviewRenderer
 
         try
         {
-            // Çok renkli metin modu kontrolü
-            if (item.UseColoredSegments && item.ColoredSegments.Count > 0)
+            // Çok renkli metin modu kontrolü - sadece ara durak yoksa kullan
+            // Ara durak varsa displayContent kullanılır (tek renkli)
+            if (item.UseColoredSegments && item.ColoredSegments.Count > 0 && !item.HasIntermediateStops)
             {
                 // Çok renkli metin render
                 var segments = item.ColoredSegments.Select(s => 
@@ -461,11 +585,11 @@ public class PreviewRenderer : IPreviewRenderer
             }
             else
             {
-                // Normal tek renkli metin render
-                int lineCount = _multiLineTextRenderer.GetLineCount(item.Content);
+                // Normal tek renkli metin render (displayContent kullan)
+                int lineCount = _multiLineTextRenderer.GetLineCount(displayContent);
                 textBitmap = lineCount > 1
-                    ? _multiLineTextRenderer.RenderMultiLineText(font, item.Content, itemColor, lineSpacing, letterSpacing)
-                    : _fontLoader.RenderText(font, item.Content, itemColor, letterSpacing);
+                    ? _multiLineTextRenderer.RenderMultiLineText(font, displayContent, itemColor, lineSpacing, letterSpacing)
+                    : _fontLoader.RenderText(font, displayContent, itemColor, letterSpacing);
             }
 
             if (textBitmap == null) return;
@@ -539,7 +663,7 @@ public class PreviewRenderer : IPreviewRenderer
 
             // Pikselleri kopyala (içerik alanı sınırları içinde - clipping)
             // Çok renkli modda orijinal piksel rengini kullan
-            bool useOriginalColors = item.UseColoredSegments && item.ColoredSegments.Count > 0;
+            bool useOriginalColors = item.UseColoredSegments && item.ColoredSegments.Count > 0 && !item.HasIntermediateStops;
             
             for (int y = 0; y < textHeight; y++)
             {

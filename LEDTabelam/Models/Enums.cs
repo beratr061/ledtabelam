@@ -187,3 +187,30 @@ public enum VerticalAlignment
     Center, // Orta
     Bottom  // Alt
 }
+
+
+/// <summary>
+/// Program geçiş efekti tipleri
+/// Requirements: 3.1
+/// </summary>
+public enum ProgramTransitionType
+{
+    Direct,      // Kesme (anında geçiş)
+    Fade,        // Solma efekti
+    SlideLeft,   // Sola kayma
+    SlideRight,  // Sağa kayma
+    SlideUp,     // Yukarı kayma
+    SlideDown    // Aşağı kayma
+}
+
+/// <summary>
+/// Ara durak animasyon tipleri
+/// Requirements: 6.1
+/// </summary>
+public enum StopAnimationType
+{
+    Direct,      // Kesme (anında geçiş)
+    Fade,        // Solma efekti
+    SlideUp,     // Yukarı kayma
+    SlideDown    // Aşağı kayma
+}
