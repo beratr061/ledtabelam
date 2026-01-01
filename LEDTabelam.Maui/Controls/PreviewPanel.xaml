@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:LEDTabelam.Maui.ViewModels"
+             xmlns:skia="clr-namespace:SkiaSharp.Views.Maui.Controls;assembly=SkiaSharp.Views.Maui.Controls"
+             x:Class="LEDTabelam.Maui.Controls.PreviewPanel"
+             x:DataType="vm:PreviewViewModel">
+
+    <Grid RowDefinitions="Auto,*,Auto" Background="{StaticResource BackgroundDark}">
+        
+        <!-- Row 0: Preview Header with Page Navigation -->
+        <Frame Grid.Row="0" 
+               BackgroundColor="{StaticResource PanelHeader}"
+               BorderColor="Transparent"
+               CornerRadius="0"
+               HasShadow="False"
+               Padding="8,6">
+            <Grid ColumnDefinitions="*,Auto">
+                <!-- Title and Resolution Info -->
+                <HorizontalStackLayout Grid.Column="0" Spacing="8">
+                    <Label Text="{StaticResource PreviewTitle}" 
+                           Style="{StaticResource PanelHeaderStyle}"
+                           TextColor="{StaticResource TextPrimary}"
+                           VerticalOptions="Center"/>
+                    <Label Text="{Binding DisplaySettings.Width, StringFormat='{0}'}"
+                           TextColor="{StaticResource TextSecondary}"
+                           VerticalOptions="Center"
+                           FontSize="11"/>
+                    <Label Text="×"
+                           TextColor="{StaticResource TextMuted}"
+                           VerticalOptions="Center"
+                           FontSize="11"/>
+                    <Label Text="{Binding DisplaySettings.Height, StringFormat='{0}'}"
+                           TextColor="{StaticResource TextSecondary}"
+                           VerticalOptions="Center"
+                           FontSize="11"/>
+                </HorizontalStackLayout>
+                
+                <!-- Page Navigation -->
+                <HorizontalStackLayout Grid.Column="1" Spacing="4">
+                    <Button Text="◀" 
+                            Style="{StaticResource SmallButtonStyle}"
+                            ToolTipProperties.Text="{StaticResource PreviewPrevious}"
+                            Command="{Binding PreviousPageCommand}"
+                            IsEnabled="{Binding CanGoPrevious}"/>
+                    <Label Text="{Binding PageInfo}" 
+                           TextColor="{StaticResource TextSecondary}"
+                           VerticalOptions="Center"
+                           FontSize="12"
+                           WidthRequest="40"
+                           HorizontalTextAlignment="Center"/>
+                    <Button Text="▶" 
+                            Style="{StaticResource SmallButtonStyle}"
+                            ToolTipProperties.Text="{StaticResource PreviewNext}"
+                            Command="{Binding NextPageCommand}"
+                            IsEnabled="{Binding CanGoNext}"/>
+                </HorizontalStackLayout>
+            </Grid>
+        </Frame>
+        
+        <!-- Row 1: LED Preview Canvas Area -->
+        <Grid Grid.Row="1" 
+              Background="{StaticResource LedBackground}"
+              x:Name="PreviewContainer"
+              MinimumHeightRequest="200">
+            
+            <!-- SkiaSharp Canvas for LED rendering -->
+            <skia:SKCanvasView x:Name="LedCanvas"
+                               PaintSurface="OnCanvasPaintSurface"
+                               HorizontalOptions="Fill"
+                               VerticalOptions="Fill"
+                               MinimumHeightRequest="200"
+                               MinimumWidthRequest="400"
+                               EnableTouchEvents="True"
+                               Touch="OnCanvasTouch"/>
+            
+            <!-- Empty State Overlay -->
+            <VerticalStackLayout x:Name="EmptyStateOverlay"
+                                 IsVisible="True"
+                                 VerticalOptions="Center"
+                                 HorizontalOptions="Center"
+                                 Spacing="8">
+                <Label Text="📺"
+                       FontSize="48"
+                       HorizontalOptions="Center"
+                       TextColor="{StaticResource TextMuted}"/>
+                <Label Text="{StaticResource PreviewEmpty}"
+                       TextColor="{StaticResource TextMuted}"
+                       HorizontalTextAlignment="Center"
+                       FontSize="12"/>
+            </VerticalStackLayout>
+        </Grid>
+        
+        <!-- Row 2: Preview Controls (Zoom, Play, Fullscreen) -->
+        <Frame Grid.Row="2" 
+               BackgroundColor="{StaticResource PanelHeader}"
+               BorderColor="Transparent"
+               CornerRadius="0"
+               HasShadow="False"
+               Padding="8,6">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                
+                <!-- Left: Playback Controls -->
+                <HorizontalStackLayout Grid.Column="0" Spacing="4">
+                    <Button x:Name="PlayButton"
+                            Text="▶" 
+                            Style="{StaticResource SmallButtonStyle}"
+                            ToolTipProperties.Text="{StaticResource PreviewPlay}"
+                            Command="{Binding PlayCommand}"/>
+                    <Button Text="⏹" 
+                            Style="{StaticResource SmallButtonStyle}"
+                            ToolTipProperties.Text="{StaticResource PreviewStop}"
+                            Command="{Binding StopCommand}"/>
+                </HorizontalStackLayout>
+                
+                <!-- Center: Zoom Controls -->
+                <HorizontalStackLayout Grid.Column="1" 
+                                       Spacing="8" 
+                                       HorizontalOptions="Center">
+                    <Button Text="−" 
+                            Style="{StaticResource SmallButtonStyle}"
+                            ToolTipProperties.Text="{StaticResource PreviewZoomOut}"
+                            Command="{Binding ZoomOutCommand}"
+                            IsEnabled="{Binding CanZoomOut}"/>
+                    <Slider x:Name="ZoomSlider"
+                            Minimum="50" 
+                            Maximum="400" 
+                            Value="{Binding ZoomLevel}"
+                            WidthRequest="150"
+                            ThumbColor="{StaticResource Primary}"
+                            MinimumTrackColor="{StaticResource Primary}"
+                            MaximumTrackColor="{StaticResource InputBackground}"
+                            ValueChanged="OnZoomSliderValueChanged"/>
+                    <Button Text="+" 
+                            Style="{StaticResource SmallButtonStyle}"
+                            ToolTipProperties.Text="{StaticResource PreviewZoomIn}"
+                            Command="{Binding ZoomInCommand}"
+                            IsEnabled="{Binding CanZoomIn}"/>
+                    <Label Text="{Binding ZoomLevelText}"
+                           TextColor="{StaticResource TextSecondary}"
+                           WidthRequest="50"
+                           VerticalOptions="Center"
+                           HorizontalTextAlignment="Center"
+                           FontSize="12"/>
+                    <Button Text="⟲" 
+                            Style="{StaticResource SmallButtonStyle}"
+                            ToolTipProperties.Text="{StaticResource PreviewResetZoom}"
+                            Command="{Binding ResetZoomCommand}"/>
+                </HorizontalStackLayout>
+                
+                <!-- Right: Fullscreen Toggle -->
+                <HorizontalStackLayout Grid.Column="2" Spacing="4">
+                    <Button x:Name="FullscreenButton"
+                            Text="⛶" 
+                            Style="{StaticResource SmallButtonStyle}"
+                            ToolTipProperties.Text="{StaticResource PreviewFullscreen}"
+                            Command="{Binding ToggleFullscreenCommand}"/>
+                </HorizontalStackLayout>
+            </Grid>
+        </Frame>
+    </Grid>
+</ContentView>

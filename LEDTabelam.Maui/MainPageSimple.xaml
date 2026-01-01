@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="LEDTabelam.Maui.MainPageSimple"
+             Title="LEDTabelam Test"
+             BackgroundColor="#1E1E1E">
+
+    <VerticalStackLayout Padding="20" Spacing="20" VerticalOptions="Center">
+        <Label Text="LEDTabelam MAUI" 
+               FontSize="32" 
+               TextColor="White"
+               HorizontalOptions="Center"/>
+        <Label Text="Uygulama başarıyla yüklendi!" 
+               FontSize="18" 
+               TextColor="#CCCCCC"
+               HorizontalOptions="Center"/>
+        <Button Text="Test Butonu" 
+                BackgroundColor="#0E639C"
+                TextColor="White"
+                Clicked="OnTestClicked"/>
+    </VerticalStackLayout>
+
+</ContentPage>

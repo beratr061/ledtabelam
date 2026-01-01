@@ -1,0 +1,43 @@
+﻿<?xml version = "1.0" encoding = "UTF-8" ?>
+<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:LEDTabelam.Maui"
+             xmlns:converters="clr-namespace:LEDTabelam.Maui.Converters"
+             x:Class="LEDTabelam.Maui.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
+                <ResourceDictionary Source="Resources/Strings/StringsTR.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            
+            <!-- TreeView Converters -->
+            <converters:BoolToExpandIconConverter x:Key="BoolToExpandIconConverter"/>
+            <converters:ContentTypeToIconConverter x:Key="ContentTypeToIconConverter"/>
+            <converters:ZeroToVisibleConverter x:Key="ZeroToVisibleConverter"/>
+            <converters:SelectedToBackgroundConverter x:Key="SelectedToBackgroundConverter"/>
+            <converters:EqualityConverter x:Key="EqualityConverter"/>
+            
+            <!-- Properties Panel Converters -->
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
+            <converters:EffectTypeToNameConverter x:Key="EffectTypeToNameConverter"/>
+            <converters:DirectionToNameConverter x:Key="DirectionToNameConverter"/>
+            <converters:EffectTypeToDirectionVisibleConverter x:Key="EffectTypeToDirectionVisibleConverter"/>
+            <converters:BorderStyleToNameConverter x:Key="BorderStyleToNameConverter"/>
+            <converters:BorderStyleToCustomVisibleConverter x:Key="BorderStyleToCustomVisibleConverter"/>
+            <converters:BorderStyleToThicknessConverter x:Key="BorderStyleToThicknessConverter"/>
+            <converters:BorderStyleToDashArrayConverter x:Key="BorderStyleToDashArrayConverter"/>
+            <converters:MillisecondsToSecondsConverter x:Key="MillisecondsToSecondsConverter"/>
+            
+            <!-- Editor Panel Converters -->
+            <converters:BoolToSelectedColorConverter x:Key="BoolToSelectedColorConverter"/>
+            <converters:HAlignToLeftColorConverter x:Key="HAlignToLeftColorConverter"/>
+            <converters:HAlignToCenterColorConverter x:Key="HAlignToCenterColorConverter"/>
+            <converters:HAlignToRightColorConverter x:Key="HAlignToRightColorConverter"/>
+            <converters:VAlignToTopColorConverter x:Key="VAlignToTopColorConverter"/>
+            <converters:VAlignToMiddleColorConverter x:Key="VAlignToMiddleColorConverter"/>
+            <converters:VAlignToBottomColorConverter x:Key="VAlignToBottomColorConverter"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

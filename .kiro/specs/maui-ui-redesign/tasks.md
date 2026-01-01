@@ -1,0 +1,299 @@
+# Implementation Plan: MAUI UI Redesign
+
+## Overview
+
+Bu plan, LEDTabelam uygulamasını Avalonia UI'dan .NET MAUI'ye taşıyarak HD2020 benzeri profesyonel bir arayüz oluşturmayı hedeflemektedir. Mevcut servisler ve modeller korunarak yeni UI katmanı implement edilecektir.
+
+## Tasks
+
+- [x] 1. MAUI Proje Yapısı ve Temel Kurulum
+  - [x] 1.1 Yeni .NET MAUI projesi oluştur
+    - `dotnet new maui -n LEDTabelam.Maui`
+    - .NET 8.0 ve MAUI 8.x hedefle
+    - Windows masaüstü platformu için yapılandır
+    - _Requirements: 1.1, 1.2_
+  - [x] 1.2 NuGet paketlerini ekle
+    - SkiaSharp.Views.Maui
+    - CommunityToolkit.Mvvm
+    - CommunityToolkit.Maui
+    - System.Text.Json
+    - _Requirements: 1.4, 1.5_
+  - [x] 1.3 Proje klasör yapısını oluştur
+    - Models/, ViewModels/, Views/, Services/, Controls/, Converters/, Helpers/
+    - _Requirements: 1.1_
+  - [x] 1.4 Mevcut model sınıflarını kopyala ve uyumlu hale getir
+    - DisplaySettings, BitmapFont, Profile, TabelaSlot, Zone, PlaylistItem, TextStyle
+    - ReactiveObject → ObservableObject dönüşümü
+    - _Requirements: 1.6, 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7, 13.8_
+  - [x] 1.5 Mevcut servis sınıflarını kopyala ve uyumlu hale getir ✅
+    - FontLoader, LedRenderer, ProfileManager, SlotManager, ZoneManager
+    - AnimationService, ExportService, SvgRenderer, AssetLibrary
+    - Avalonia bağımlılıklarını MAUI eşdeğerleriyle değiştir
+    - _Requirements: 1.7, 13.3, 13.4, 13.5_
+  - [x] 1.6 Backward compatibility property testleri yaz ✅
+    - **Property 2: Model Backward Compatibility** - 7 serialization round-trip tests
+    - **Property 3: Service Backward Compatibility** - 7 computed property tests
+    - **Validates: Requirements 1.6, 1.7, 13.x**
+    - Test file: `LEDTabelam.Tests/MauiBackwardCompatibilityTests.cs`
+
+- [x] 2. Checkpoint - Temel kurulum tamamlandı
+  - Projenin derlendiğinden emin ol
+  - Mevcut servislerin çalıştığından emin ol
+  - Kullanıcıya soru varsa sor
+
+- [x] 3. Yeni Model Sınıflarını Implement Et
+  - [x] 3.1 Project model sınıfını oluştur
+    - Name, FilePath, Screens collection, GlobalSettings, CreatedAt, ModifiedAt
+    - ObservableObject'ten türet
+    - _Requirements: 8.5, 8.6, 8.7_
+  - [x] 3.2 ScreenNode model sınıfını oluştur
+    - Id, Name, Width, Height, Programs collection, IsExpanded
+    - _Requirements: 10.1, 10.2_
+  - [x] 3.3 ProgramNode model sınıfını oluştur
+    - Id, Name, Contents collection, IsLoop, TransitionType, IsExpanded
+    - _Requirements: 10.3, 10.4, 10.6, 10.7_
+  - [x] 3.4 ContentItem base sınıfını oluştur
+    - Id, Name, ContentType, X, Y, Width, Height, EntryEffect, ExitEffect, DurationMs
+    - _Requirements: 11.7_
+  - [x] 3.5 TextContent sınıfını oluştur
+    - Text, FontName, FontSize, ForegroundColor, BackgroundColor, Alignment, Style flags
+    - _Requirements: 11.1_
+  - [x] 3.6 ClockContent sınıfını oluştur
+    - Format, FontName, ForegroundColor, ShowSeconds, Is24Hour
+    - _Requirements: 11.3_
+  - [x] 3.7 DateContent sınıfını oluştur
+    - Format, FontName, ForegroundColor
+    - _Requirements: 11.4_
+  - [x] 3.8 CountdownContent sınıfını oluştur
+    - TargetDateTime, Format, FontName, ForegroundColor, CompletedText
+    - _Requirements: 11.5_
+  - [x] 3.9 EffectConfig sınıfını oluştur
+    - EffectType, SpeedMs, Direction enums
+    - _Requirements: 12.1, 12.2, 12.4, 12.5_
+  - [x] 3.10 Model sınıfları için property testleri yaz
+    - **Property 1: Project Round-Trip Consistency**
+    - **Property 8: Content Type Creation**
+    - **Validates: Requirements 8.x, 11.x**
+
+- [x] 4. Yeni Servisleri Implement Et
+  - [x] 4.1 IProjectManager interface ve implementasyonunu oluştur
+    - NewProject, LoadProject, SaveProject metodları
+    - AddScreen, RemoveScreen, AddProgram, RemoveProgram, AddContent, RemoveContent
+    - _Requirements: 8.5, 8.6, 8.7, 10.1_
+  - [x] 4.2 IContentManager interface ve implementasyonunu oluştur
+    - CreateTextContent, CreateClockContent, CreateDateContent, CreateCountdownContent
+    - UpdateContent, RenderContent metodları
+    - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6_
+  - [x] 4.3 IEffectService interface ve implementasyonunu oluştur
+    - ApplyEntryEffect, ApplyExitEffect, PlayEffectAsync, StopEffect
+    - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6_
+  - [x] 4.4 Yeni servisler için property testleri yaz
+    - **Property 5: Auto-Naming Uniqueness** ✅ (3 tests passed)
+    - **Property 9: Program Execution Order** ✅ (3 tests passed)
+    - **Property 10: Effect Application** ✅ (6 tests passed)
+    - **Validates: Requirements 3.8, 3.9, 10.4, 10.5, 12.x**
+    - Test file: `LEDTabelam.Tests/NewServicesPropertyTests.cs`
+
+- [x] 5. Checkpoint - Model ve servisler tamamlandı
+  - Tüm model ve servis testlerinin geçtiğinden emin ol
+  - Kullanıcıya soru varsa sor
+
+- [x] 6. ViewModels Implement Et
+  - [x] 6.1 MainViewModel'i implement et
+    - TreeView, Preview, Properties, Editor alt ViewModel'leri
+    - StatusMessage, ConnectionStatus
+    - NewProject, OpenProject, SaveProject, AddScreen, AddProgram commands
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 9.4_
+  - [x] 6.2 TreeViewModel'i implement et
+    - Screens collection binding
+    - SelectedItem, SelectItem command
+    - ExpandAll, CollapseAll, DeleteSelected, DuplicateSelected commands
+    - _Requirements: 3.1, 3.3, 3.5, 3.6, 3.7_
+  - [x] 6.3 PreviewViewModel'i implement et
+    - PreviewBitmap, ZoomLevel, CurrentPage, TotalPages, IsPlaying
+    - ZoomIn, ZoomOut, NextPage, PreviousPage, ToggleFullscreen, TogglePlay commands
+    - _Requirements: 4.1, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8_
+  - [x] 6.4 PropertiesViewModel'i implement et
+    - SelectedContent binding
+    - EntryEffect, ExitEffect, EffectSpeed, DisplayDuration
+    - ShowImmediately, IsTimed, BorderStyle, BackgroundColor
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9_
+  - [x] 6.5 EditorViewModel'i implement et
+    - EditingContent, Text, SelectedFont, FontSize, Colors
+    - Alignment, Style flags, Position, Size
+    - MiniPreview, AvailableFonts
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11_
+  - [x] 6.6 ViewModel'ler için property testleri yaz
+    - **Property 4: TreeView Hierarchy Consistency**
+    - **Property 6: Zoom Bounds Validation**
+    - **Property 7: Page Navigation Consistency**
+    - **Validates: Requirements 3.1, 4.4, 4.6, 4.7, 10.x**
+
+- [x] 7. Tema ve Stil Dosyalarını Oluştur
+  - [x] 7.1 Colors.xaml oluştur ✅
+    - Koyu tema renk paleti (HD2020 style dark theme)
+    - Primary, Secondary, Background, Surface, Text renkleri
+    - LED display colors (Amber, Green, Red, Blue, White)
+    - Panel, Toolbar, Menu, Input, Button colors
+    - _Requirements: 14.1, 14.2_
+  - [x] 7.2 Styles.xaml oluştur ✅
+    - Button, Label, Entry, Picker, Slider stilleri
+    - TreeView item stilleri (PanelHeader, SectionHeader, StatusText)
+    - Panel ve border stilleri (CardFrame, SecondaryButton, ToolbarButton)
+    - Visual states for hover, disabled, focused
+    - _Requirements: 14.3, 14.4, 14.5_
+  - [x] 7.3 Türkçe kaynak dosyasını oluştur ✅
+    - Tüm UI metinleri için Türkçe çeviriler (StringsTR.xaml)
+    - Menu, Toolbar, TreeView, Preview, Properties, Editor strings
+    - Dialog titles, buttons, messages
+    - Content types, effect types, status messages
+    - _Requirements: 14.6_
+
+- [x] 8. Ana Sayfa ve Layout Implement Et
+  - [x] 8.1 MainPage.xaml oluştur ✅
+    - 4 bölgeli Grid layout (Sol, Orta, Sağ, Alt)
+    - Menü çubuğu
+    - Araç çubuğu
+    - Durum çubuğu
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
+  - [x] 8.2 Menü çubuğunu implement et ✅
+    - Dosya menüsü (Yeni, Aç, Kaydet, Farklı Kaydet, Çıkış)
+    - Ayarlar menüsü
+    - Ekle menüsü
+    - Yardım menüsü
+    - _Requirements: 8.1, 8.2, 8.3, 8.4_
+  - [x] 8.3 Araç çubuğunu implement et ✅
+    - Program, Metin Yaz, Zaman-Alan, Saat, Kronmetre, Tarih butonları
+    - USB'ye Aktar, Gönder, Ara, Ön İzleme butonları
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12_
+  - [x] 8.4 Durum çubuğunu implement et ✅
+    - Çözünürlük, Zoom, Bağlantı durumu, Son işlem mesajı
+    - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
+
+- [x] 9. Sol Panel - TreeView Implement Et
+  - [x] 9.1 TreeViewPanel.xaml oluştur
+    - CollectionView ile hiyerarşik görünüm
+    - Ekran, Program, İçerik düğümleri için DataTemplate'ler
+    - İkon gösterimi
+    - _Requirements: 3.1, 3.2_
+  - [x] 9.2 TreeView etkileşimlerini implement et
+    - Seçim değişikliği
+    - Çift tıklama
+    - Genişletme/daraltma
+    - _Requirements: 3.3, 3.4, 3.7_
+  - [x] 9.3 Context menüsünü implement et
+    - Ekle, Sil, Kopyala, Yapıştır seçenekleri
+    - _Requirements: 3.6_
+  - [x] 9.4 Sürükle-bırak sıralama implement et
+    - Öğe sırasını değiştirme
+    - _Requirements: 3.5_
+
+- [x] 10. Orta Panel - Önizleme Implement Et
+  - [x] 10.1 PreviewPanel.xaml oluştur
+    - SKCanvasView ile LED önizleme
+    - Koyu arka plan
+    - Merkeze hizalama
+    - _Requirements: 4.1, 4.2_
+  - [x] 10.2 Zoom kontrollerini implement et
+    - Slider ve +/- butonları
+    - %50-%400 aralık
+    - _Requirements: 4.3, 4.6, 4.7_
+  - [x] 10.3 Sayfa navigasyonunu implement et
+    - Önceki/Sonraki butonları
+    - Sayfa numarası gösterimi (1/4)
+    - _Requirements: 4.4, 4.5_
+  - [x] 10.4 Tam ekran modunu implement et
+    - Toggle butonu
+    - _Requirements: 4.8_
+
+- [x] 11. Sağ Panel - Özellikler Implement Et
+  - [x] 11.1 PropertiesPanel.xaml oluştur
+    - Efekt bölümü
+    - Kayış süresi bölümü
+    - Arka plan bölümü
+    - _Requirements: 5.1, 5.2, 5.3_
+  - [x] 11.2 Efekt ayarlarını implement et
+    - Giriş/çıkış efekt seçiciler
+    - Hız slider'ı
+    - _Requirements: 5.4, 5.5_
+  - [x] 11.3 Süre ayarlarını implement et
+    - Hemen Göster checkbox
+    - Süreli checkbox ve süre girişi
+    - _Requirements: 5.6, 5.7_
+  - [x] 11.4 Çerçeve ayarlarını implement et
+    - Çerçeve stili seçici
+    - Özel çerçeve seçeneği
+    - _Requirements: 5.8, 5.9_
+
+- [x] 12. Alt Panel - Düzenleyici Implement Et
+  - [x] 12.1 EditorPanel.xaml oluştur
+    - Konum ve boyut ayarları (X, Y, Genişlik, Yükseklik)
+    - Font seçici ve boyut
+    - Renk seçiciler
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.8, 6.9_
+  - [x] 12.2 Metin düzenleme araçlarını implement et
+    - Hizalama butonları
+    - Kalın, italik, altı çizili butonları
+    - Sağ > Sol checkbox
+    - _Requirements: 6.5, 6.6, 6.7_
+  - [x] 12.3 Mini önizleme implement et
+    - Canlı LED önizleme
+    - Debounce ile güncelleme (100ms)
+    - _Requirements: 6.10, 6.11_
+
+- [x] 13. Checkpoint - UI tamamlandı
+  - Uygulamanın başlatılıp çalıştığından emin ol
+  - Temel UI etkileşimlerini test et
+  - Kullanıcıya soru varsa sor
+
+- [x] 14. Klavye Kısayollarını Implement Et
+  - [x] 14.1 Temel kısayolları implement et
+    - Ctrl+N: Yeni proje
+    - Ctrl+O: Proje aç
+    - Ctrl+S: Kaydet
+    - _Requirements: 15.1, 15.2, 15.3_
+  - [x] 14.2 Düzenleme kısayollarını implement et
+    - Ctrl+Z: Geri al
+    - Ctrl+Y: Yinele
+    - Delete: Sil
+    - Ctrl+C/V/X: Kopyala/Yapıştır/Kes
+    - _Requirements: 15.4, 15.5, 15.6, 15.7_
+  - [x] 14.3 Önizleme kısayolunu implement et
+    - F5: Önizleme başlat
+    - _Requirements: 15.8_
+
+- [x] 15. Dosya İşlemlerini Implement Et
+  - [x] 15.1 Proje kaydetme/yükleme implement et
+    - JSON serialization
+    - FilePicker kullanımı
+    - _Requirements: 8.5, 8.6, 8.7_
+  - [x] 15.2 Export işlemlerini MAUI'ye uyarla
+    - PNG, GIF, WebP export
+    - FileSaver kullanımı
+    - _Requirements: 13.5_
+
+- [x] 16. Mevcut Assets ve Fontları Taşı
+  - [x] 16.1 Font dosyalarını taşı
+    - Assets/Fonts/ klasörüne
+    - MauiAsset olarak yapılandır
+    - _Requirements: 13.3_
+  - [x] 16.2 İkon dosyalarını taşı
+    - Assets/Icons/ klasörüne
+    - _Requirements: 13.6_
+  - [x] 16.3 Varsayılan profili oluştur
+    - Yeni proje şablonu
+    - _Requirements: 13.2_
+
+- [x] 17. Final Checkpoint - Tüm özellikler tamamlandı
+  - Tüm testlerin geçtiğinden emin ol
+  - Uygulamayı baştan sona test et
+  - Mevcut Avalonia projesinden geçişi doğrula
+  - Kullanıcıya soru varsa sor
+
+## Notes
+
+- Tüm test task'ları zorunlu olarak işaretlendi (kapsamlı test coverage)
+- Her task spesifik requirements'a referans veriyor
+- Checkpoint'lar incremental validation sağlıyor
+- Mevcut servisler ve modeller mümkün olduğunca korunuyor
+- MAUI'ye özgü değişiklikler minimal tutulacak

@@ -1,0 +1,189 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:LEDTabelam.Maui.ViewModels"
+             xmlns:controls="clr-namespace:LEDTabelam.Maui.Controls"
+             x:Class="LEDTabelam.Maui.MainPage"
+             x:DataType="vm:MainViewModel"
+             Title="HD2020 - LEDTabelam">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+        
+        <!-- Row 0: Menu Bar -->
+        <Grid Grid.Row="0" 
+              Background="#2D2D30" 
+              Padding="4,2"
+              ColumnDefinitions="Auto,Auto,Auto,Auto,*">
+            
+            <!-- Dosya Menu -->
+            <HorizontalStackLayout Grid.Column="0" Spacing="2">
+                <Button Text="Dosya" 
+                        Style="{StaticResource MenuButtonStyle}"
+                        x:Name="FileMenuButton"
+                        Clicked="OnFileMenuClicked"/>
+            </HorizontalStackLayout>
+            
+            <!-- Ayarlar Menu -->
+            <HorizontalStackLayout Grid.Column="1" Spacing="2">
+                <Button Text="Ayarlar" 
+                        Style="{StaticResource MenuButtonStyle}"
+                        x:Name="SettingsMenuButton"
+                        Clicked="OnSettingsMenuClicked"/>
+            </HorizontalStackLayout>
+            
+            <!-- Ekle Menu -->
+            <HorizontalStackLayout Grid.Column="2" Spacing="2">
+                <Button Text="Ekle" 
+                        Style="{StaticResource MenuButtonStyle}"
+                        x:Name="AddMenuButton"
+                        Clicked="OnAddMenuClicked"/>
+            </HorizontalStackLayout>
+            
+            <!-- Yardım Menu -->
+            <HorizontalStackLayout Grid.Column="3" Spacing="2">
+                <Button Text="Yardım" 
+                        Style="{StaticResource MenuButtonStyle}"
+                        x:Name="HelpMenuButton"
+                        Clicked="OnHelpMenuClicked"/>
+            </HorizontalStackLayout>
+        </Grid>
+
+        <!-- Row 1: Toolbar -->
+        <ScrollView Grid.Row="1" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+            <HorizontalStackLayout Background="#3C3C3C" Padding="4" Spacing="2">
+                
+                <!-- Program Ekle -->
+                <Button Text="📁 Program"
+                        Style="{StaticResource ToolbarButtonStyle}"
+                        FontSize="12"
+                        ToolTipProperties.Text="Program Ekle"
+                        Command="{Binding AddProgramCommand}"/>
+                
+                <!-- Separator -->
+                <BoxView WidthRequest="1" BackgroundColor="#4A4A4A" Margin="4,4"/>
+                
+                <!-- Metin Yaz -->
+                <Button Text="✏ Metin"
+                        Style="{StaticResource ToolbarButtonStyle}"
+                        FontSize="12"
+                        ToolTipProperties.Text="Metin Ekle"
+                        Command="{Binding AddTextContentCommand}"/>
+                
+                <!-- Saat -->
+                <Button Text="🕐 Saat"
+                        Style="{StaticResource ToolbarButtonStyle}"
+                        FontSize="12"
+                        ToolTipProperties.Text="Saat Ekle"
+                        Command="{Binding AddClockContentCommand}"/>
+                
+                <!-- Tarih -->
+                <Button Text="📅 Tarih"
+                        Style="{StaticResource ToolbarButtonStyle}"
+                        FontSize="12"
+                        ToolTipProperties.Text="Tarih Ekle"
+                        Command="{Binding AddDateContentCommand}"/>
+                
+                <!-- Separator -->
+                <BoxView WidthRequest="1" BackgroundColor="#4A4A4A" Margin="4,4"/>
+                
+                <!-- Ön İzleme -->
+                <Button Text="▶ Önizle"
+                        Style="{StaticResource ToolbarButtonStyle}"
+                        FontSize="12"
+                        TextColor="#00FF00"
+                        ToolTipProperties.Text="Ön İzleme"
+                        Command="{Binding StartPreviewCommand}"/>
+            </HorizontalStackLayout>
+        </ScrollView>
+
+        <!-- Row 2: Main Content Area (3 columns) -->
+        <Grid Grid.Row="2" ColumnDefinitions="220,*,280">
+            
+            <!-- Left Panel: TreeView -->
+            <Frame Grid.Column="0"
+                   BackgroundColor="#2D2D30"
+                   BorderColor="#3F3F46"
+                   CornerRadius="0"
+                   Padding="0"
+                   Margin="2"
+                   HasShadow="False">
+                <controls:TreeViewPanel BindingContext="{Binding TreeView}"
+                                        NodeDoubleClicked="OnTreeViewNodeDoubleClicked"
+                                        AddRequested="OnTreeViewAddRequested"/>
+            </Frame>
+
+            <!-- Center Panel: Preview (top) + Editor (bottom) -->
+            <Grid Grid.Column="1" RowDefinitions="*,Auto">
+                <!-- Preview Panel -->
+                <Frame Grid.Row="0"
+                       BackgroundColor="#141414"
+                       BorderColor="#3F3F46"
+                       CornerRadius="0"
+                       Padding="0"
+                       Margin="2"
+                       HasShadow="False">
+                    <controls:PreviewPanel BindingContext="{Binding Preview}"/>
+                </Frame>
+                
+                <!-- Editor Panel (visible when content selected) -->
+                <Frame Grid.Row="1"
+                       BackgroundColor="#2D2D30"
+                       BorderColor="#3F3F46"
+                       CornerRadius="0"
+                       Padding="0"
+                       Margin="2"
+                       HasShadow="False"
+                       HeightRequest="280"
+                       IsVisible="{Binding Editor.HasEditingContent}">
+                    <controls:EditorPanel BindingContext="{Binding Editor}"/>
+                </Frame>
+            </Grid>
+
+            <!-- Right Panel: Properties -->
+            <Frame Grid.Column="2"
+                   BackgroundColor="#2D2D30"
+                   BorderColor="#3F3F46"
+                   CornerRadius="0"
+                   Padding="0"
+                   Margin="2"
+                   HasShadow="False">
+                <controls:PropertiesPanel BindingContext="{Binding Properties}"/>
+            </Frame>
+        </Grid>
+
+        <!-- Row 3: Status Bar -->
+        <Grid Grid.Row="3" 
+              Background="#3C3C3C"
+              Padding="8,4"
+              ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+            
+            <!-- Resolution -->
+            <HorizontalStackLayout Grid.Column="0" Spacing="4">
+                <Label Text="Çözünürlük:" TextColor="#808080" FontSize="11"/>
+                <Label Text="{Binding CurrentResolution}" TextColor="#CCCCCC" FontSize="11"/>
+            </HorizontalStackLayout>
+            
+            <BoxView Grid.Column="1" WidthRequest="1" BackgroundColor="#4A4A4A" Margin="8,2"/>
+            
+            <!-- Zoom -->
+            <HorizontalStackLayout Grid.Column="2" Spacing="4">
+                <Label Text="Zoom:" TextColor="#808080" FontSize="11"/>
+                <Label Text="100%" TextColor="#CCCCCC" FontSize="11"/>
+            </HorizontalStackLayout>
+            
+            <!-- Status Message -->
+            <Label Grid.Column="3" 
+                   Text="{Binding StatusMessage}" 
+                   TextColor="#CCCCCC"
+                   FontSize="11"
+                   HorizontalOptions="Center"/>
+            
+            <!-- Connection Status -->
+            <HorizontalStackLayout Grid.Column="4" Spacing="4">
+                <Label Text="Bağlantı:" TextColor="#808080" FontSize="11"/>
+                <Label Text="{Binding ConnectionStatus}" TextColor="#CC3333" FontSize="11"/>
+            </HorizontalStackLayout>
+        </Grid>
+    </Grid>
+
+</ContentPage>

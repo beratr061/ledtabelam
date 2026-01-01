@@ -244,46 +244,56 @@ public class ProgramSequencerPropertyTests
     /// and the stop duration expires, the next stop index SHALL be 0 (loop back to first).
     /// Validates: Requirements 5.4, 5.5
     /// </summary>
-    [Property(MaxTest = 100, Arbitrary = new[] { typeof(ProgramSequencerArbitraries) })]
-    public Property StopLoopsBackToFirstAfterLast(TabelaProgram programWithStops)
+    [Property(MaxTest = 100)]
+    public Property StopLoopsBackToFirstAfterLast()
     {
-        // Create a program with stops
-        var item = new TabelaItem
-        {
-            Id = 1,
-            ItemType = TabelaItemType.Text,
-            Content = "Test"
-        };
-        item.IntermediateStops.IsEnabled = true;
-        item.IntermediateStops.DurationSeconds = 1.0;
-        item.IntermediateStops.Stops.Add(new IntermediateStop(0, "Stop 1"));
-        item.IntermediateStops.Stops.Add(new IntermediateStop(1, "Stop 2"));
-        item.IntermediateStops.Stops.Add(new IntermediateStop(2, "Stop 3"));
+        return Prop.ForAll(
+            Gen.Choose(2, 8).ToArbitrary(), // stopCount
+            Gen.Choose(1, 5).ToArbitrary(), // stopDuration (seconds)
+            (stopCount, stopDurationInt) =>
+            {
+                double stopDuration = stopDurationInt;
+                
+                // Create a program with stops
+                var item = new TabelaItem
+                {
+                    Id = 1,
+                    ItemType = TabelaItemType.Text,
+                    Content = "Test"
+                };
+                item.IntermediateStops.IsEnabled = true;
+                item.IntermediateStops.DurationSeconds = stopDuration;
+                
+                for (int i = 0; i < stopCount; i++)
+                {
+                    item.IntermediateStops.Stops.Add(new IntermediateStop(i, $"Stop {i + 1}"));
+                }
 
-        var program = new TabelaProgram
-        {
-            Id = 1,
-            Name = "Test Program",
-            DurationSeconds = 30 // Long enough for multiple stop cycles
-        };
-        program.Items.Add(item);
+                var program = new TabelaProgram
+                {
+                    Id = 1,
+                    Name = "Test Program",
+                    DurationSeconds = 300 // Long enough for multiple stop cycles
+                };
+                program.Items.Add(item);
 
-        var sequencer = new ProgramSequencer();
-        sequencer.Programs = new ObservableCollection<TabelaProgram> { program };
-        sequencer.Play();
+                var sequencer = new ProgramSequencer();
+                sequencer.Programs = new ObservableCollection<TabelaProgram> { program };
+                sequencer.Play();
 
-        var stopCount = item.IntermediateStops.Stops.Count;
-        var stopDuration = item.IntermediateStops.DurationSeconds;
+                // Total steps = 1 (main content) + stopCount
+                int totalSteps = stopCount + 1;
 
-        // Simulate time passing through all stops
-        for (int i = 0; i < stopCount; i++)
-        {
-            sequencer.OnTick(stopDuration + 0.01);
-        }
+                // Simulate time passing through all steps (main + all stops)
+                for (int i = 0; i < totalSteps; i++)
+                {
+                    sequencer.OnTick(stopDuration + 0.01);
+                }
 
-        // After cycling through all stops, should be back at stop 0
-        var currentStopIndex = sequencer.GetCurrentStopIndex(item.Id);
-        return (currentStopIndex == 0).ToProperty();
+                // After cycling through all steps, should be back at step 0 (main content)
+                var currentStopIndex = sequencer.GetCurrentStopIndex(item.Id);
+                return currentStopIndex == 0;
+            });
     }
 
     /// <summary>

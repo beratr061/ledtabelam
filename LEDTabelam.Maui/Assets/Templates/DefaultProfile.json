@@ -1,0 +1,41 @@
+{
+  "name": "Varsayılan Profil",
+  "fontName": "PolarisRGB6x8",
+  "settings": {
+    "panelWidth": 160,
+    "panelHeight": 24,
+    "colorType": 0,
+    "customColor": "#FFFFB000",
+    "brightness": 100,
+    "backgroundDarkness": 100,
+    "pixelSize": 4,
+    "pitch": 0,
+    "customPitchRatio": 0.7,
+    "shape": 0,
+    "zoomLevel": 100,
+    "invertColors": false,
+    "agingPercent": 0,
+    "letterSpacing": 1
+  },
+  "defaultZones": [
+    {
+      "id": "zone-1",
+      "name": "Ana Bölge",
+      "x": 0,
+      "y": 0,
+      "width": 128,
+      "height": 32,
+      "isActive": true
+    }
+  ],
+  "slots": {},
+  "programs": [
+    {
+      "id": 1,
+      "name": "Program 1",
+      "items": []
+    }
+  ],
+  "createdAt": "2026-01-01T00:00:00Z",
+  "modifiedAt": "2026-01-01T00:00:00Z"
+}

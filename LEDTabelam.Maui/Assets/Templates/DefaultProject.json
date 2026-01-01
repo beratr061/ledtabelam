@@ -1,0 +1,76 @@
+{
+  "name": "Yeni Proje",
+  "filePath": "",
+  "screens": [
+    {
+      "id": "screen-1",
+      "name": "Ekran1",
+      "width": 128,
+      "height": 32,
+      "isExpanded": true,
+      "programs": [
+        {
+          "id": "program-1",
+          "name": "Program1",
+          "isLoop": true,
+          "transitionType": 0,
+          "isExpanded": true,
+          "contents": [
+            {
+              "id": "content-1",
+              "name": "Metin Yazı",
+              "contentType": 0,
+              "x": 0,
+              "y": 0,
+              "width": 128,
+              "height": 16,
+              "durationMs": 3000,
+              "showImmediately": true,
+              "entryEffect": {
+                "effectType": 0,
+                "speedMs": 500,
+                "direction": 0
+              },
+              "exitEffect": {
+                "effectType": 0,
+                "speedMs": 500,
+                "direction": 0
+              },
+              "text": "HOŞGELDİNİZ",
+              "fontName": "PolarisRGB6x8",
+              "fontSize": 8,
+              "foregroundColor": "#FFFFB000",
+              "backgroundColor": "#00000000",
+              "horizontalAlignment": 1,
+              "verticalAlignment": 1,
+              "isBold": false,
+              "isItalic": false,
+              "isUnderline": false,
+              "isRightToLeft": false,
+              "isScrolling": false,
+              "scrollSpeed": 20
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "globalSettings": {
+    "panelWidth": 160,
+    "panelHeight": 24,
+    "colorType": 0,
+    "customColor": "#FFFFB000",
+    "brightness": 100,
+    "backgroundDarkness": 100,
+    "pixelSize": 4,
+    "pitch": 0,
+    "customPitchRatio": 0.7,
+    "shape": 0,
+    "zoomLevel": 100,
+    "invertColors": false,
+    "agingPercent": 0,
+    "letterSpacing": 1
+  },
+  "createdAt": "2026-01-01T00:00:00Z",
+  "modifiedAt": "2026-01-01T00:00:00Z"
+}

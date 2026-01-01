@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:sys="clr-namespace:System;assembly=netstandard">
+
+    <!-- LEDTabelam Turkish Localization Strings -->
+    
+    <!-- Application -->
+    <x:String x:Key="AppTitle">HD2020 - LEDTabelam</x:String>
+    <x:String x:Key="AppVersion">Sürüm 1.0</x:String>
+    
+    <!-- Menu - File -->
+    <x:String x:Key="MenuFile">Dosya</x:String>
+    <x:String x:Key="MenuFileNew">Yeni Proje</x:String>
+    <x:String x:Key="MenuFileOpen">Proje Aç</x:String>
+    <x:String x:Key="MenuFileSave">Kaydet</x:String>
+    <x:String x:Key="MenuFileSaveAs">Farklı Kaydet</x:String>
+    <x:String x:Key="MenuFileExport">Dışa Aktar</x:String>
+    <x:String x:Key="MenuFileExit">Çıkış</x:String>
+    
+    <!-- Menu - Settings -->
+    <x:String x:Key="MenuSettings">Ayarlar</x:String>
+    <x:String x:Key="MenuSettingsDisplay">Ekran Ayarları</x:String>
+    <x:String x:Key="MenuSettingsConnection">Bağlantı Ayarları</x:String>
+    <x:String x:Key="MenuSettingsLanguage">Dil</x:String>
+    
+    <!-- Menu - Add -->
+    <x:String x:Key="MenuAdd">Ekle</x:String>
+    <x:String x:Key="MenuAddScreen">Ekran Ekle</x:String>
+    <x:String x:Key="MenuAddProgram">Program Ekle</x:String>
+    <x:String x:Key="MenuAddText">Metin Ekle</x:String>
+    <x:String x:Key="MenuAddImage">Resim Ekle</x:String>
+    <x:String x:Key="MenuAddClock">Saat Ekle</x:String>
+    <x:String x:Key="MenuAddDate">Tarih Ekle</x:String>
+    <x:String x:Key="MenuAddCountdown">Geri Sayım Ekle</x:String>
+    
+    <!-- Menu - Help -->
+    <x:String x:Key="MenuHelp">Yardım</x:String>
+    <x:String x:Key="MenuHelpAbout">Hakkında</x:String>
+    <x:String x:Key="MenuHelpManual">Kullanım Kılavuzu</x:String>
+    
+    <!-- Toolbar -->
+    <x:String x:Key="ToolbarProgram">Program</x:String>
+    <x:String x:Key="ToolbarText">Metin Yaz</x:String>
+    <x:String x:Key="ToolbarTimeZone">Zaman-Alan</x:String>
+    <x:String x:Key="ToolbarClock">Saat</x:String>
+    <x:String x:Key="ToolbarStopwatch">Kronmetre</x:String>
+    <x:String x:Key="ToolbarDate">Tarih</x:String>
+    <x:String x:Key="ToolbarClockSettings">Saat Ayarı</x:String>
+    <x:String x:Key="ToolbarExportUSB">USB'ye Aktar</x:String>
+    <x:String x:Key="ToolbarSend">Gönder</x:String>
+    <x:String x:Key="ToolbarSearch">Ara</x:String>
+    <x:String x:Key="ToolbarPreview">Ön İzleme</x:String>
+    
+    <!-- TreeView Panel -->
+    <x:String x:Key="TreeViewTitle">Alan Sözlüğü</x:String>
+    <x:String x:Key="TreeViewScreen">Ekran</x:String>
+    <x:String x:Key="TreeViewProgram">Program</x:String>
+    <x:String x:Key="TreeViewContent">İçerik</x:String>
+    <x:String x:Key="TreeViewExpandAll">Tümünü Genişlet</x:String>
+    <x:String x:Key="TreeViewCollapseAll">Tümünü Daralt</x:String>
+    
+    <!-- Context Menu -->
+    <x:String x:Key="ContextAdd">Ekle</x:String>
+    <x:String x:Key="ContextDelete">Sil</x:String>
+    <x:String x:Key="ContextCopy">Kopyala</x:String>
+    <x:String x:Key="ContextPaste">Yapıştır</x:String>
+    <x:String x:Key="ContextCut">Kes</x:String>
+    <x:String x:Key="ContextDuplicate">Çoğalt</x:String>
+    <x:String x:Key="ContextRename">Yeniden Adlandır</x:String>
+    <x:String x:Key="ContextMoveUp">Yukarı Taşı</x:String>
+    <x:String x:Key="ContextMoveDown">Aşağı Taşı</x:String>
+    
+    <!-- Preview Panel -->
+    <x:String x:Key="PreviewTitle">Önizleme</x:String>
+    <x:String x:Key="PreviewZoomIn">Yakınlaştır</x:String>
+    <x:String x:Key="PreviewZoomOut">Uzaklaştır</x:String>
+    <x:String x:Key="PreviewFitToWindow">Pencereye Sığdır</x:String>
+    <x:String x:Key="PreviewActualSize">Gerçek Boyut</x:String>
+    <x:String x:Key="PreviewFullscreen">Tam Ekran</x:String>
+    <x:String x:Key="PreviewPlay">Oynat</x:String>
+    <x:String x:Key="PreviewPause">Duraklat</x:String>
+    <x:String x:Key="PreviewStop">Durdur</x:String>
+    <x:String x:Key="PreviewPrevious">Önceki</x:String>
+    <x:String x:Key="PreviewNext">Sonraki</x:String>
+    <x:String x:Key="PreviewPageFormat">{0}/{1}</x:String>
+    <x:String x:Key="PreviewResetZoom">Zoom Sıfırla</x:String>
+    <x:String x:Key="PreviewEmpty">İçerik seçin veya program ekleyin</x:String>
+    
+    <!-- Properties Panel -->
+    <x:String x:Key="PropertiesTitle">Özellikler</x:String>
+    <x:String x:Key="PropertiesEffect">Efekt</x:String>
+    <x:String x:Key="PropertiesEntryEffect">Giriş Efekti</x:String>
+    <x:String x:Key="PropertiesExitEffect">Çıkış Efekti</x:String>
+    <x:String x:Key="PropertiesEffectSpeed">Hız</x:String>
+    <x:String x:Key="PropertiesDisplayTime">Kayış Süresi</x:String>
+    <x:String x:Key="PropertiesDuration">Süre</x:String>
+    <x:String x:Key="PropertiesShowImmediately">Hemen Göster</x:String>
+    <x:String x:Key="PropertiesTimed">Süreli</x:String>
+    <x:String x:Key="PropertiesSeconds">saniye</x:String>
+    <x:String x:Key="PropertiesBackground">Arka Plan</x:String>
+    <x:String x:Key="PropertiesBorder">Çerçeve</x:String>
+    <x:String x:Key="PropertiesBorderStyle">Çerçeve Stili</x:String>
+    <x:String x:Key="PropertiesCustomBorder">Özel Çerçeve</x:String>
+    
+    <!-- Effect Types -->
+    <x:String x:Key="EffectImmediate">Hemen Göster</x:String>
+    <x:String x:Key="EffectSlideIn">Kayarak Gir</x:String>
+    <x:String x:Key="EffectFadeIn">Solarak Gir</x:String>
+    <x:String x:Key="EffectNone">Efekt Yok</x:String>
+    <x:String x:Key="EffectSlideLeft">Soldan Kayarak</x:String>
+    <x:String x:Key="EffectSlideRight">Sağdan Kayarak</x:String>
+    <x:String x:Key="EffectSlideUp">Yukarıdan Kayarak</x:String>
+    <x:String x:Key="EffectSlideDown">Aşağıdan Kayarak</x:String>
+    
+    <!-- Border Styles -->
+    <x:String x:Key="BorderNone">Yok</x:String>
+    <x:String x:Key="BorderSolid">Düz</x:String>
+    <x:String x:Key="BorderDashed">Kesikli</x:String>
+    <x:String x:Key="BorderCustom">Özel</x:String>
+    
+    <!-- Editor Panel -->
+    <x:String x:Key="EditorTitle">Düzenleyici</x:String>
+    <x:String x:Key="EditorPosition">Konum</x:String>
+    <x:String x:Key="EditorPositionX">X:</x:String>
+    <x:String x:Key="EditorPositionY">Y:</x:String>
+    <x:String x:Key="EditorSize">Boyut</x:String>
+    <x:String x:Key="EditorWidth">Genişlik:</x:String>
+    <x:String x:Key="EditorHeight">Yükseklik:</x:String>
+    <x:String x:Key="EditorLockAspect">En-Boy Oranını Kilitle</x:String>
+    <x:String x:Key="EditorFont">Yazı Tipi</x:String>
+    <x:String x:Key="EditorFontSize">Boyut</x:String>
+    <x:String x:Key="EditorForeground">Yazı Rengi</x:String>
+    <x:String x:Key="EditorBackground">Arka Plan</x:String>
+    <x:String x:Key="EditorAlignment">Hizalama</x:String>
+    <x:String x:Key="EditorAlignLeft">Sola Hizala</x:String>
+    <x:String x:Key="EditorAlignCenter">Ortala</x:String>
+    <x:String x:Key="EditorAlignRight">Sağa Hizala</x:String>
+    <x:String x:Key="EditorBold">Kalın</x:String>
+    <x:String x:Key="EditorItalic">İtalik</x:String>
+    <x:String x:Key="EditorUnderline">Altı Çizili</x:String>
+    <x:String x:Key="EditorRTL">Sağ - Sol</x:String>
+    <x:String x:Key="EditorTable">Tablo</x:String>
+    
+    <!-- Content Types -->
+    <x:String x:Key="ContentText">Metin Yazı</x:String>
+    <x:String x:Key="ContentImage">Resim</x:String>
+    <x:String x:Key="ContentClock">Saat</x:String>
+    <x:String x:Key="ContentDate">Tarih</x:String>
+    <x:String x:Key="ContentCountdown">Geri Sayım</x:String>
+    
+    <!-- Clock Content -->
+    <x:String x:Key="ClockFormat">Format</x:String>
+    <x:String x:Key="ClockShowSeconds">Saniye Göster</x:String>
+    <x:String x:Key="Clock24Hour">24 Saat Formatı</x:String>
+    <x:String x:Key="Clock12Hour">12 Saat Formatı</x:String>
+    
+    <!-- Date Content -->
+    <x:String x:Key="DateFormat">Tarih Formatı</x:String>
+    <x:String x:Key="DateFormatDMY">GG.AA.YYYY</x:String>
+    <x:String x:Key="DateFormatMDY">AA/GG/YYYY</x:String>
+    <x:String x:Key="DateFormatYMD">YYYY-AA-GG</x:String>
+    
+    <!-- Countdown Content -->
+    <x:String x:Key="CountdownTarget">Hedef Tarih/Saat</x:String>
+    <x:String x:Key="CountdownCompletedText">Tamamlandı Metni</x:String>
+    <x:String x:Key="CountdownDefaultCompleted">SÜRE DOLDU</x:String>
+    
+    <!-- Status Bar -->
+    <x:String x:Key="StatusResolution">Çözünürlük:</x:String>
+    <x:String x:Key="StatusZoom">Zoom:</x:String>
+    <x:String x:Key="StatusConnection">Bağlantı:</x:String>
+    <x:String x:Key="StatusOnline">Bağlı</x:String>
+    <x:String x:Key="StatusOffline">Çevrimdışı</x:String>
+    <x:String x:Key="StatusReady">Hazır</x:String>
+    <x:String x:Key="StatusSaving">Kaydediliyor...</x:String>
+    <x:String x:Key="StatusSaved">Kaydedildi</x:String>
+    <x:String x:Key="StatusLoading">Yükleniyor...</x:String>
+    <x:String x:Key="StatusExporting">Dışa Aktarılıyor...</x:String>
+    <x:String x:Key="StatusSending">Gönderiliyor...</x:String>
+    
+    <!-- Dialog Titles -->
+    <x:String x:Key="DialogNewProject">Yeni Proje</x:String>
+    <x:String x:Key="DialogOpenProject">Proje Aç</x:String>
+    <x:String x:Key="DialogSaveProject">Projeyi Kaydet</x:String>
+    <x:String x:Key="DialogExport">Dışa Aktar</x:String>
+    <x:String x:Key="DialogSettings">Ayarlar</x:String>
+    <x:String x:Key="DialogAbout">Hakkında</x:String>
+    <x:String x:Key="DialogConfirm">Onay</x:String>
+    <x:String x:Key="DialogError">Hata</x:String>
+    <x:String x:Key="DialogWarning">Uyarı</x:String>
+    <x:String x:Key="DialogInfo">Bilgi</x:String>
+    
+    <!-- Dialog Buttons -->
+    <x:String x:Key="ButtonOK">Tamam</x:String>
+    <x:String x:Key="ButtonCancel">İptal</x:String>
+    <x:String x:Key="ButtonYes">Evet</x:String>
+    <x:String x:Key="ButtonNo">Hayır</x:String>
+    <x:String x:Key="ButtonSave">Kaydet</x:String>
+    <x:String x:Key="ButtonDontSave">Kaydetme</x:String>
+    <x:String x:Key="ButtonApply">Uygula</x:String>
+    <x:String x:Key="ButtonClose">Kapat</x:String>
+    <x:String x:Key="ButtonBrowse">Gözat...</x:String>
+    
+    <!-- Dialog Messages -->
+    <x:String x:Key="MessageUnsavedChanges">Kaydedilmemiş değişiklikler var. Kaydetmek ister misiniz?</x:String>
+    <x:String x:Key="MessageDeleteConfirm">Bu öğeyi silmek istediğinizden emin misiniz?</x:String>
+    <x:String x:Key="MessageExportSuccess">Dışa aktarma başarılı!</x:String>
+    <x:String x:Key="MessageExportFailed">Dışa aktarma başarısız oldu.</x:String>
+    <x:String x:Key="MessageSaveSuccess">Proje başarıyla kaydedildi.</x:String>
+    <x:String x:Key="MessageSaveFailed">Proje kaydedilemedi.</x:String>
+    <x:String x:Key="MessageLoadFailed">Proje yüklenemedi.</x:String>
+    <x:String x:Key="MessageConnectionFailed">Bağlantı kurulamadı.</x:String>
+    <x:String x:Key="MessageSendSuccess">Gönderim başarılı!</x:String>
+    <x:String x:Key="MessageSendFailed">Gönderim başarısız oldu.</x:String>
+    
+    <!-- Display Settings -->
+    <x:String x:Key="SettingsDisplayTitle">Ekran Ayarları</x:String>
+    <x:String x:Key="SettingsWidth">Genişlik</x:String>
+    <x:String x:Key="SettingsHeight">Yükseklik</x:String>
+    <x:String x:Key="SettingsColorType">Renk Tipi</x:String>
+    <x:String x:Key="SettingsBrightness">Parlaklık</x:String>
+    <x:String x:Key="SettingsPitch">Piksel Aralığı</x:String>
+    <x:String x:Key="SettingsFullColor">Tam Renkli</x:String>
+    <x:String x:Key="SettingsAmber">Amber</x:String>
+    <x:String x:Key="SettingsGreen">Yeşil</x:String>
+    <x:String x:Key="SettingsRed">Kırmızı</x:String>
+    <x:String x:Key="SettingsWhite">Beyaz</x:String>
+    
+    <!-- Keyboard Shortcuts -->
+    <x:String x:Key="ShortcutNew">Ctrl+N</x:String>
+    <x:String x:Key="ShortcutOpen">Ctrl+O</x:String>
+    <x:String x:Key="ShortcutSave">Ctrl+S</x:String>
+    <x:String x:Key="ShortcutUndo">Ctrl+Z</x:String>
+    <x:String x:Key="ShortcutRedo">Ctrl+Y</x:String>
+    <x:String x:Key="ShortcutCopy">Ctrl+C</x:String>
+    <x:String x:Key="ShortcutPaste">Ctrl+V</x:String>
+    <x:String x:Key="ShortcutCut">Ctrl+X</x:String>
+    <x:String x:Key="ShortcutDelete">Delete</x:String>
+    <x:String x:Key="ShortcutPreview">F5</x:String>
+    
+    <!-- Default Names -->
+    <x:String x:Key="DefaultProjectName">Yeni Proje</x:String>
+    <x:String x:Key="DefaultScreenName">Ekran</x:String>
+    <x:String x:Key="DefaultProgramName">Program</x:String>
+    <x:String x:Key="DefaultTextName">Metin Yazı</x:String>
+    <x:String x:Key="DefaultImageName">Resim</x:String>
+    <x:String x:Key="DefaultClockName">Saat</x:String>
+    <x:String x:Key="DefaultDateName">Tarih</x:String>
+    <x:String x:Key="DefaultCountdownName">Geri Sayım</x:String>
+    
+    <!-- File Filters -->
+    <x:String x:Key="FilterProject">LED Proje Dosyası</x:String>
+    <x:String x:Key="FilterImage">Resim Dosyaları</x:String>
+    <x:String x:Key="FilterPNG">PNG Dosyası</x:String>
+    <x:String x:Key="FilterGIF">GIF Dosyası</x:String>
+    <x:String x:Key="FilterWebP">WebP Dosyası</x:String>
+    <x:String x:Key="FilterAll">Tüm Dosyalar</x:String>
+
+</ResourceDictionary>

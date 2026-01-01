@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:LEDTabelam.Maui.ViewModels"
+             xmlns:models="clr-namespace:LEDTabelam.Maui.Models"
+             xmlns:controls="clr-namespace:LEDTabelam.Maui.Controls"
+             x:Class="LEDTabelam.Maui.Controls.TreeViewPanel"
+             x:DataType="vm:TreeViewModel">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Panel Header with Expand/Collapse buttons -->
+        <Frame Grid.Row="0" 
+               BackgroundColor="{StaticResource PanelHeader}"
+               BorderColor="Transparent"
+               CornerRadius="0"
+               HasShadow="False"
+               Padding="8,6">
+            <Grid ColumnDefinitions="*,Auto,Auto">
+                <Label Text="{StaticResource TreeViewTitle}" 
+                       Style="{StaticResource PanelHeaderStyle}"
+                       TextColor="{StaticResource TextPrimary}"
+                       VerticalOptions="Center"/>
+                
+                <!-- Expand All Button -->
+                <Button Grid.Column="1" 
+                        Text="▼" 
+                        Style="{StaticResource SmallButtonStyle}"
+                        ToolTipProperties.Text="{StaticResource TreeViewExpandAll}"
+                        Command="{Binding ExpandAllCommand}"
+                        Margin="0,0,4,0"/>
+                
+                <!-- Collapse All Button -->
+                <Button Grid.Column="2" 
+                        Text="▲" 
+                        Style="{StaticResource SmallButtonStyle}"
+                        ToolTipProperties.Text="{StaticResource TreeViewCollapseAll}"
+                        Command="{Binding CollapseAllCommand}"/>
+            </Grid>
+        </Frame>
+        
+        <!-- TreeView Content - Hierarchical CollectionView -->
+        <ScrollView Grid.Row="1" Background="{StaticResource PanelBackground}">
+            <VerticalStackLayout x:Name="TreeViewContainer" 
+                                 BindableLayout.ItemsSource="{Binding Screens}"
+                                 Spacing="0">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="models:ScreenNode">
+                        <!-- Screen Node -->
+                        <VerticalStackLayout>
+                            <!-- Screen Header -->
+                            <Grid ColumnDefinitions="Auto,Auto,*" 
+                                  Padding="4,6"
+                                  BackgroundColor="{Binding IsSelected, Converter={StaticResource SelectedToBackgroundConverter}}"
+                                  x:Name="ScreenNodeGrid">
+                                <Grid.Behaviors>
+                                    <controls:DragDropBehavior/>
+                                </Grid.Behaviors>
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer 
+                                        Tapped="OnNodeTapped"
+                                        NumberOfTapsRequired="1"/>
+                                    <TapGestureRecognizer 
+                                        Tapped="OnNodeDoubleTapped"
+                                        NumberOfTapsRequired="2"/>
+                                </Grid.GestureRecognizers>
+                                <FlyoutBase.ContextFlyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutItem Text="{StaticResource MenuAddProgram}" 
+                                                        Clicked="OnContextAddProgram"/>
+                                        <MenuFlyoutItem Text="{StaticResource MenuAddScreen}" 
+                                                        Clicked="OnContextAddScreen"/>
+                                        <MenuFlyoutSeparator/>
+                                        <MenuFlyoutItem Text="{StaticResource ContextDuplicate}" 
+                                                        Clicked="OnContextDuplicate"/>
+                                        <MenuFlyoutItem Text="{StaticResource ContextRename}" 
+                                                        Clicked="OnContextRename"/>
+                                        <MenuFlyoutSeparator/>
+                                        <MenuFlyoutItem Text="{StaticResource ContextMoveUp}" 
+                                                        Clicked="OnContextMoveUp"/>
+                                        <MenuFlyoutItem Text="{StaticResource ContextMoveDown}" 
+                                                        Clicked="OnContextMoveDown"/>
+                                        <MenuFlyoutSeparator/>
+                                        <MenuFlyoutItem Text="{StaticResource ContextDelete}" 
+                                                        Clicked="OnContextDelete"/>
+                                    </MenuFlyout>
+                                </FlyoutBase.ContextFlyout>
+                                
+                                <!-- Expand/Collapse Toggle -->
+                                <Label Grid.Column="0" 
+                                       Text="{Binding IsExpanded, Converter={StaticResource BoolToExpandIconConverter}}"
+                                       TextColor="{StaticResource TextSecondary}"
+                                       FontSize="10"
+                                       WidthRequest="16"
+                                       VerticalOptions="Center"
+                                       HorizontalOptions="Center">
+                                    <Label.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnExpandToggleTapped"/>
+                                    </Label.GestureRecognizers>
+                                </Label>
+                                
+                                <!-- Screen Icon -->
+                                <Label Grid.Column="1" 
+                                       Text="🖥" 
+                                       FontSize="14"
+                                       VerticalOptions="Center"
+                                       Margin="4,0"/>
+                                
+                                <!-- Screen Name -->
+                                <Label Grid.Column="2" 
+                                       Text="{Binding Name}"
+                                       TextColor="{StaticResource TextPrimary}"
+                                       FontSize="13"
+                                       FontAttributes="Bold"
+                                       VerticalOptions="Center"/>
+                            </Grid>
+                            
+                            <!-- Programs Container (visible when expanded) -->
+                            <VerticalStackLayout IsVisible="{Binding IsExpanded}"
+                                                 BindableLayout.ItemsSource="{Binding Programs}"
+                                                 Margin="16,0,0,0">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="models:ProgramNode">
+                                        <!-- Program Node -->
+                                        <VerticalStackLayout>
+                                            <!-- Program Header -->
+                                            <Grid ColumnDefinitions="Auto,Auto,*" 
+                                                  Padding="4,5"
+                                                  BackgroundColor="{Binding IsSelected, Converter={StaticResource SelectedToBackgroundConverter}}"
+                                                  x:Name="ProgramNodeGrid">
+                                                <Grid.Behaviors>
+                                                    <controls:DragDropBehavior/>
+                                                </Grid.Behaviors>
+                                                <Grid.GestureRecognizers>
+                                                    <TapGestureRecognizer 
+                                                        Tapped="OnNodeTapped"
+                                                        NumberOfTapsRequired="1"/>
+                                                    <TapGestureRecognizer 
+                                                        Tapped="OnNodeDoubleTapped"
+                                                        NumberOfTapsRequired="2"/>
+                                                </Grid.GestureRecognizers>
+                                                <FlyoutBase.ContextFlyout>
+                                                    <MenuFlyout>
+                                                        <MenuFlyoutItem Text="{StaticResource MenuAddText}" 
+                                                                        Clicked="OnContextAddText"/>
+                                                        <MenuFlyoutItem Text="{StaticResource MenuAddClock}" 
+                                                                        Clicked="OnContextAddClock"/>
+                                                        <MenuFlyoutItem Text="{StaticResource MenuAddDate}" 
+                                                                        Clicked="OnContextAddDate"/>
+                                                        <MenuFlyoutItem Text="{StaticResource MenuAddCountdown}" 
+                                                                        Clicked="OnContextAddCountdown"/>
+                                                        <MenuFlyoutSeparator/>
+                                                        <MenuFlyoutItem Text="{StaticResource ContextDuplicate}" 
+                                                                        Clicked="OnContextDuplicate"/>
+                                                        <MenuFlyoutItem Text="{StaticResource ContextRename}" 
+                                                                        Clicked="OnContextRename"/>
+                                                        <MenuFlyoutSeparator/>
+                                                        <MenuFlyoutItem Text="{StaticResource ContextMoveUp}" 
+                                                                        Clicked="OnContextMoveUp"/>
+                                                        <MenuFlyoutItem Text="{StaticResource ContextMoveDown}" 
+                                                                        Clicked="OnContextMoveDown"/>
+                                                        <MenuFlyoutSeparator/>
+                                                        <MenuFlyoutItem Text="{StaticResource ContextDelete}" 
+                                                                        Clicked="OnContextDelete"/>
+                                                    </MenuFlyout>
+                                                </FlyoutBase.ContextFlyout>
+                                                
+                                                <!-- Expand/Collapse Toggle -->
+                                                <Label Grid.Column="0" 
+                                                       Text="{Binding IsExpanded, Converter={StaticResource BoolToExpandIconConverter}}"
+                                                       TextColor="{StaticResource TextSecondary}"
+                                                       FontSize="10"
+                                                       WidthRequest="16"
+                                                       VerticalOptions="Center"
+                                                       HorizontalOptions="Center">
+                                                    <Label.GestureRecognizers>
+                                                        <TapGestureRecognizer Tapped="OnExpandToggleTapped"/>
+                                                    </Label.GestureRecognizers>
+                                                </Label>
+                                                
+                                                <!-- Program Icon -->
+                                                <Label Grid.Column="1" 
+                                                       Text="📁" 
+                                                       FontSize="13"
+                                                       VerticalOptions="Center"
+                                                       Margin="4,0"/>
+                                                
+                                                <!-- Program Name -->
+                                                <Label Grid.Column="2" 
+                                                       Text="{Binding Name}"
+                                                       TextColor="{StaticResource TextPrimary}"
+                                                       FontSize="12"
+                                                       VerticalOptions="Center"/>
+                                            </Grid>
+                                            
+                                            <!-- Contents Container (visible when expanded) -->
+                                            <VerticalStackLayout IsVisible="{Binding IsExpanded}"
+                                                                 BindableLayout.ItemsSource="{Binding Contents}"
+                                                                 Margin="16,0,0,0">
+                                                <BindableLayout.ItemTemplate>
+                                                    <DataTemplate x:DataType="models:ContentItem">
+                                                        <!-- Content Node -->
+                                                        <Grid ColumnDefinitions="16,Auto,*" 
+                                                              Padding="4,4"
+                                                              BackgroundColor="{Binding IsSelected, Converter={StaticResource SelectedToBackgroundConverter}}"
+                                                              x:Name="ContentNodeGrid">
+                                                            <Grid.Behaviors>
+                                                                <controls:DragDropBehavior/>
+                                                            </Grid.Behaviors>
+                                                            <Grid.GestureRecognizers>
+                                                                <TapGestureRecognizer 
+                                                                    Tapped="OnNodeTapped"
+                                                                    NumberOfTapsRequired="1"/>
+                                                                <TapGestureRecognizer 
+                                                                    Tapped="OnNodeDoubleTapped"
+                                                                    NumberOfTapsRequired="2"/>
+                                                            </Grid.GestureRecognizers>
+                                                            <FlyoutBase.ContextFlyout>
+                                                                <MenuFlyout>
+                                                                    <MenuFlyoutItem Text="{StaticResource ContextDuplicate}" 
+                                                                                    Clicked="OnContextDuplicate"/>
+                                                                    <MenuFlyoutItem Text="{StaticResource ContextRename}" 
+                                                                                    Clicked="OnContextRename"/>
+                                                                    <MenuFlyoutSeparator/>
+                                                                    <MenuFlyoutItem Text="{StaticResource ContextMoveUp}" 
+                                                                                    Clicked="OnContextMoveUp"/>
+                                                                    <MenuFlyoutItem Text="{StaticResource ContextMoveDown}" 
+                                                                                    Clicked="OnContextMoveDown"/>
+                                                                    <MenuFlyoutSeparator/>
+                                                                    <MenuFlyoutItem Text="{StaticResource ContextDelete}" 
+                                                                                    Clicked="OnContextDelete"/>
+                                                                </MenuFlyout>
+                                                            </FlyoutBase.ContextFlyout>
+                                                            
+                                                            <!-- Spacer for alignment -->
+                                                            <BoxView Grid.Column="0"/>
+                                                            
+                                                            <!-- Content Icon based on type -->
+                                                            <Label Grid.Column="1" 
+                                                                   Text="{Binding ContentType, Converter={StaticResource ContentTypeToIconConverter}}"
+                                                                   FontSize="12"
+                                                                   VerticalOptions="Center"
+                                                                   Margin="4,0"/>
+                                                            
+                                                            <!-- Content Name -->
+                                                            <Label Grid.Column="2" 
+                                                                   Text="{Binding Name}"
+                                                                   TextColor="{StaticResource TextSecondary}"
+                                                                   FontSize="11"
+                                                                   VerticalOptions="Center"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </BindableLayout.ItemTemplate>
+                                            </VerticalStackLayout>
+                                        </VerticalStackLayout>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+        </ScrollView>
+        
+        <!-- Empty State -->
+        <VerticalStackLayout Grid.Row="1" 
+                             IsVisible="{Binding Screens.Count, Converter={StaticResource ZeroToVisibleConverter}}"
+                             VerticalOptions="Center" 
+                             HorizontalOptions="Center" 
+                             Padding="20">
+            <Label Text="📂"
+                   FontSize="32"
+                   HorizontalOptions="Center"
+                   TextColor="{StaticResource TextMuted}"/>
+            <Label Text="Proje yükleyin veya yeni proje oluşturun"
+                   TextColor="{StaticResource TextMuted}"
+                   HorizontalTextAlignment="Center"
+                   FontSize="11"
+                   Margin="0,8,0,0"/>
+        </VerticalStackLayout>
+        
+        <!-- Bottom Toolbar -->
+        <Frame Grid.Row="2" 
+               BackgroundColor="{StaticResource PanelHeader}"
+               BorderColor="Transparent"
+               CornerRadius="0"
+               HasShadow="False"
+               Padding="4">
+            <HorizontalStackLayout Spacing="4" HorizontalOptions="Center">
+                <Button Text="➕" 
+                        Style="{StaticResource SmallButtonStyle}"
+                        ToolTipProperties.Text="{StaticResource ContextAdd}"
+                        Clicked="OnAddClicked"/>
+                <Button Text="🗑" 
+                        Style="{StaticResource SmallButtonStyle}"
+                        ToolTipProperties.Text="{StaticResource ContextDelete}"
+                        Command="{Binding DeleteSelectedCommand}"/>
+                <Button Text="📋" 
+                        Style="{StaticResource SmallButtonStyle}"
+                        ToolTipProperties.Text="{StaticResource ContextDuplicate}"
+                        Command="{Binding DuplicateSelectedCommand}"/>
+                <BoxView WidthRequest="1" BackgroundColor="{StaticResource ToolbarBorder}" Margin="4,2"/>
+                <Button Text="▲" 
+                        Style="{StaticResource SmallButtonStyle}"
+                        ToolTipProperties.Text="{StaticResource ContextMoveUp}"
+                        Command="{Binding MoveUpCommand}"/>
+                <Button Text="▼" 
+                        Style="{StaticResource SmallButtonStyle}"
+                        ToolTipProperties.Text="{StaticResource ContextMoveDown}"
+                        Command="{Binding MoveDownCommand}"/>
+            </HorizontalStackLayout>
+        </Frame>
+    </Grid>
+</ContentView>

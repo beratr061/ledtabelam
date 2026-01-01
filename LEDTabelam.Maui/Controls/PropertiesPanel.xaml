@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:LEDTabelam.Maui.ViewModels"
+             xmlns:models="clr-namespace:LEDTabelam.Maui.Models"
+             x:Class="LEDTabelam.Maui.Controls.PropertiesPanel"
+             x:DataType="vm:PropertiesViewModel">
+
+    <Grid RowDefinitions="Auto,*" Background="{StaticResource PanelBackground}">
+        
+        <!-- Row 0: Panel Header -->
+        <Frame Grid.Row="0" 
+               BackgroundColor="{StaticResource PanelHeader}"
+               BorderColor="Transparent"
+               CornerRadius="0"
+               HasShadow="False"
+               Padding="8,6">
+            <Grid ColumnDefinitions="*,Auto">
+                <Label Text="{StaticResource PropertiesTitle}" 
+                       Style="{StaticResource PanelHeaderStyle}"
+                       TextColor="{StaticResource TextPrimary}"
+                       VerticalOptions="Center"/>
+                
+                <!-- Help Button -->
+                <Button Grid.Column="1" 
+                        Text="?" 
+                        Style="{StaticResource SmallButtonStyle}"
+                        WidthRequest="20"
+                        HeightRequest="20"
+                        FontSize="10"/>
+            </Grid>
+        </Frame>
+        
+        <!-- Row 1: Properties Content -->
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="8" Spacing="16">
+                
+                <!-- No Selection State -->
+                <VerticalStackLayout IsVisible="{Binding HasSelection, Converter={StaticResource InverseBoolConverter}}"
+                                     VerticalOptions="Center"
+                                     HorizontalOptions="Center"
+                                     Spacing="8"
+                                     Padding="20">
+                    <Label Text="📋"
+                           FontSize="32"
+                           HorizontalOptions="Center"
+                           TextColor="{StaticResource TextMuted}"/>
+                    <Label Text="İçerik seçin"
+                           TextColor="{StaticResource TextMuted}"
+                           HorizontalTextAlignment="Center"
+                           FontSize="11"/>
+                </VerticalStackLayout>
+                
+                <!-- Properties Content (visible when selection exists) -->
+                <VerticalStackLayout IsVisible="{Binding HasSelection}" Spacing="16">
+                    
+                    <!-- Section 1: Effect Settings -->
+                    <Frame BackgroundColor="{StaticResource Surface}"
+                           BorderColor="{StaticResource PanelBorder}"
+                           CornerRadius="4"
+                           Padding="10"
+                           HasShadow="False">
+                        <VerticalStackLayout Spacing="10">
+                            <!-- Section Header -->
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="{StaticResource PropertiesEffect}" 
+                                       Style="{StaticResource SectionHeaderStyle}"
+                                       VerticalOptions="Center"/>
+                                <Button Grid.Column="1" 
+                                        Text="?" 
+                                        Style="{StaticResource SmallButtonStyle}"
+                                        WidthRequest="18"
+                                        HeightRequest="18"
+                                        FontSize="9"
+                                        ToolTipProperties.Text="Efekt ayarları hakkında bilgi"/>
+                            </Grid>
+                            
+                            <!-- Entry Effect -->
+                            <Grid ColumnDefinitions="90,*" RowSpacing="8">
+                                <Label Grid.Column="0" 
+                                       Text="{StaticResource PropertiesEntryEffect}"
+                                       TextColor="{StaticResource TextSecondary}"
+                                       VerticalOptions="Center"
+                                       FontSize="12"/>
+                                <Picker Grid.Column="1"
+                                        x:Name="EntryEffectPicker"
+                                        BackgroundColor="{StaticResource InputBackground}"
+                                        TextColor="{StaticResource TextPrimary}"
+                                        ItemsSource="{Binding AvailableEntryEffects}"
+                                        SelectedItem="{Binding SelectedEntryEffect}"
+                                        ItemDisplayBinding="{Binding ., Converter={StaticResource EffectTypeToNameConverter}}"/>
+                            </Grid>
+                            
+                            <!-- Entry Direction (visible for SlideIn effect) -->
+                            <Grid ColumnDefinitions="90,*" 
+                                  IsVisible="{Binding SelectedEntryEffect, Converter={StaticResource EffectTypeToDirectionVisibleConverter}}">
+                                <Label Grid.Column="0" 
+                                       Text="Yön:"
+                                       TextColor="{StaticResource TextSecondary}"
+                                       VerticalOptions="Center"
+                                       FontSize="12"/>
+                                <Picker Grid.Column="1"
+                                        BackgroundColor="{StaticResource InputBackground}"
+                                        TextColor="{StaticResource TextPrimary}"
+                                        ItemsSource="{Binding AvailableDirections}"
+                                        SelectedItem="{Binding SelectedEntryDirection}"
+                                        ItemDisplayBinding="{Binding ., Converter={StaticResource DirectionToNameConverter}}"/>
+                            </Grid>
+                            
+                            <!-- Exit Effect -->
+                            <Grid ColumnDefinitions="90,*">
+                                <Label Grid.Column="0" 
+                                       Text="{StaticResource PropertiesExitEffect}"
+                                       TextColor="{StaticResource TextSecondary}"
+                                       VerticalOptions="Center"
+                                       FontSize="12"/>
+                                <Picker Grid.Column="1"
+                                        x:Name="ExitEffectPicker"
+                                        BackgroundColor="{StaticResource InputBackground}"
+                                        TextColor="{StaticResource TextPrimary}"
+                                        ItemsSource="{Binding AvailableExitEffects}"
+                                        SelectedItem="{Binding SelectedExitEffect}"
+                                        ItemDisplayBinding="{Binding ., Converter={StaticResource EffectTypeToNameConverter}}"/>
+                            </Grid>
+                            
+                            <!-- Exit Direction (visible for SlideIn effect) -->
+                            <Grid ColumnDefinitions="90,*"
+                                  IsVisible="{Binding SelectedExitEffect, Converter={StaticResource EffectTypeToDirectionVisibleConverter}}">
+                                <Label Grid.Column="0" 
+                                       Text="Yön:"
+                                       TextColor="{StaticResource TextSecondary}"
+                                       VerticalOptions="Center"
+                                       FontSize="12"/>
+                                <Picker Grid.Column="1"
+                                        BackgroundColor="{StaticResource InputBackground}"
+                                        TextColor="{StaticResource TextPrimary}"
+                                        ItemsSource="{Binding AvailableDirections}"
+                                        SelectedItem="{Binding SelectedExitDirection}"
+                                        ItemDisplayBinding="{Binding ., Converter={StaticResource DirectionToNameConverter}}"/>
+                            </Grid>
+                            
+                            <!-- Effect Speed -->
+                            <Grid ColumnDefinitions="90,*,Auto" ColumnSpacing="8">
+                                <Label Grid.Column="0" 
+                                       Text="{StaticResource PropertiesEffectSpeed}"
+                                       TextColor="{StaticResource TextSecondary}"
+                                       VerticalOptions="Center"
+                                       FontSize="12"/>
+                                <Slider Grid.Column="1"
+                                        Minimum="100" 
+                                        Maximum="5000"
+                                        Value="{Binding EffectSpeed}"
+                                        ThumbColor="{StaticResource Primary}"
+                                        MinimumTrackColor="{StaticResource Primary}"
+                                        MaximumTrackColor="{StaticResource InputBackground}"/>
+                                <Label Grid.Column="2"
+                                       Text="{Binding EffectSpeed, StringFormat='{0}ms'}"
+                                       TextColor="{StaticResource TextMuted}"
+                                       VerticalOptions="Center"
+                                       FontSize="11"
+                                       WidthRequest="50"/>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <!-- Section 2: Display Duration Settings -->
+                    <Frame BackgroundColor="{StaticResource Surface}"
+                           BorderColor="{StaticResource PanelBorder}"
+                           CornerRadius="4"
+                           Padding="10"
+                           HasShadow="False">
+                        <VerticalStackLayout Spacing="10">
+                            <!-- Section Header -->
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="{StaticResource PropertiesDisplayTime}" 
+                                       Style="{StaticResource SectionHeaderStyle}"
+                                       VerticalOptions="Center"/>
+                                <Button Grid.Column="1" 
+                                        Text="?" 
+                                        Style="{StaticResource SmallButtonStyle}"
+                                        WidthRequest="18"
+                                        HeightRequest="18"
+                                        FontSize="9"
+                                        ToolTipProperties.Text="Kayış süresi ayarları hakkında bilgi"/>
+                            </Grid>
+                            
+                            <!-- Show Immediately Checkbox -->
+                            <HorizontalStackLayout Spacing="8">
+                                <CheckBox Color="{StaticResource Primary}"
+                                          IsChecked="{Binding ShowImmediately}"/>
+                                <Label Text="{StaticResource PropertiesShowImmediately}"
+                                       TextColor="{StaticResource TextSecondary}"
+                                       VerticalOptions="Center"
+                                       FontSize="12">
+                                    <Label.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnShowImmediatelyLabelTapped"/>
+                                    </Label.GestureRecognizers>
+                                </Label>
+                            </HorizontalStackLayout>
+                            
+                            <!-- Timed Display Checkbox and Duration -->
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
+                                <CheckBox Grid.Column="0"
+                                          Color="{StaticResource Primary}"
+                                          IsChecked="{Binding IsTimed}"/>
+                                <Label Grid.Column="1"
+                                       Text="{StaticResource PropertiesTimed}"
+                                       TextColor="{StaticResource TextSecondary}"
+                                       VerticalOptions="Center"
+                                       FontSize="12">
+                                    <Label.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnTimedLabelTapped"/>
+                                    </Label.GestureRecognizers>
+                                </Label>
+                                <Entry Grid.Column="2"
+                                       Text="{Binding DisplayDuration, Converter={StaticResource MillisecondsToSecondsConverter}}"
+                                       BackgroundColor="{StaticResource InputBackground}"
+                                       TextColor="{StaticResource TextPrimary}"
+                                       Keyboard="Numeric"
+                                       IsEnabled="{Binding IsTimed}"
+                                       HorizontalTextAlignment="Center"
+                                       MaxLength="5"/>
+                                <Label Grid.Column="3"
+                                       Text="{StaticResource PropertiesSeconds}"
+                                       TextColor="{StaticResource TextMuted}"
+                                       VerticalOptions="Center"
+                                       FontSize="11"/>
+                            </Grid>
+                            
+                            <!-- Duration Slider (visible when timed) -->
+                            <Grid ColumnDefinitions="*,Auto" 
+                                  IsVisible="{Binding IsTimed}"
+                                  ColumnSpacing="8">
+                                <Slider Grid.Column="0"
+                                        Minimum="500" 
+                                        Maximum="60000"
+                                        Value="{Binding DisplayDuration}"
+                                        ThumbColor="{StaticResource Primary}"
+                                        MinimumTrackColor="{StaticResource Primary}"
+                                        MaximumTrackColor="{StaticResource InputBackground}"/>
+                                <HorizontalStackLayout Grid.Column="1" Spacing="4">
+                                    <Button Text="−" 
+                                            Style="{StaticResource SmallButtonStyle}"
+                                            Command="{Binding DecreaseDurationCommand}"
+                                            WidthRequest="24"
+                                            HeightRequest="24"/>
+                                    <Button Text="+" 
+                                            Style="{StaticResource SmallButtonStyle}"
+                                            Command="{Binding IncreaseDurationCommand}"
+                                            WidthRequest="24"
+                                            HeightRequest="24"/>
+                                </HorizontalStackLayout>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Frame>
+                    
+                    <!-- Section 3: Background and Border Settings -->
+                    <Frame BackgroundColor="{StaticResource Surface}"
+                           BorderColor="{StaticResource PanelBorder}"
+                           CornerRadius="4"
+                           Padding="10"
+                           HasShadow="False">
+                        <VerticalStackLayout Spacing="10">
+                            <!-- Section Header -->
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="{StaticResource PropertiesBackground}" 
+                                       Style="{StaticResource SectionHeaderStyle}"
+                                       VerticalOptions="Center"/>
+                                <Button Grid.Column="1" 
+                                        Text="?" 
+                                        Style="{StaticResource SmallButtonStyle}"
+                                        WidthRequest="18"
+                                        HeightRequest="18"
+                                        FontSize="9"
+                                        ToolTipProperties.Text="Arka plan ayarları hakkında bilgi"/>
+                            </Grid>
+                            
+                            <!-- Background Color -->
+                            <Grid ColumnDefinitions="90,*,Auto" ColumnSpacing="8">
+                                <Label Grid.Column="0" 
+                                       Text="Renk:"
+                                       TextColor="{StaticResource TextSecondary}"
+                                       VerticalOptions="Center"
+                                       FontSize="12"/>
+                                <Frame Grid.Column="1"
+                                       BackgroundColor="{Binding BackgroundColor}"
+                                       BorderColor="{StaticResource PanelBorder}"
+                                       CornerRadius="3"
+                                       HasShadow="False"
+                                       Padding="0"
+                                       HeightRequest="28">
+                                    <Frame.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnBackgroundColorTapped"/>
+                                    </Frame.GestureRecognizers>
+                                </Frame>
+                                <Button Grid.Column="2"
+                                        Text="..."
+                                        Style="{StaticResource SmallButtonStyle}"
+                                        Command="{Binding SelectBackgroundColorCommand}"
+                                        WidthRequest="28"
+                                        HeightRequest="28"/>
+                            </Grid>
+                            
+                            <!-- Preset Colors -->
+                            <HorizontalStackLayout Spacing="4" HorizontalOptions="Start">
+                                <Button BackgroundColor="Transparent" 
+                                        WidthRequest="24" HeightRequest="24"
+                                        CornerRadius="2"
+                                        BorderColor="{StaticResource PanelBorder}"
+                                        BorderWidth="1"
+                                        Clicked="OnPresetColorClicked"
+                                        ClassId="Transparent"/>
+                                <Button BackgroundColor="{StaticResource LedBackground}" 
+                                        WidthRequest="24" HeightRequest="24"
+                                        CornerRadius="2"
+                                        Clicked="OnPresetColorClicked"
+                                        ClassId="LedBackground"/>
+                                <Button BackgroundColor="{StaticResource Gray900}" 
+                                        WidthRequest="24" HeightRequest="24"
+                                        CornerRadius="2"
+                                        Clicked="OnPresetColorClicked"
+                                        ClassId="Gray900"/>
+                                <Button BackgroundColor="{StaticResource Gray700}" 
+                                        WidthRequest="24" HeightRequest="24"
+                                        CornerRadius="2"
+                                        Clicked="OnPresetColorClicked"
+                                        ClassId="Gray700"/>
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <!-- Section 4: Border Settings -->
+                    <Frame BackgroundColor="{StaticResource Surface}"
+                           BorderColor="{StaticResource PanelBorder}"
+                           CornerRadius="4"
+                           Padding="10"
+                           HasShadow="False">
+                        <VerticalStackLayout Spacing="10">
+                            <!-- Section Header -->
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="{StaticResource PropertiesBorder}" 
+                                       Style="{StaticResource SectionHeaderStyle}"
+                                       VerticalOptions="Center"/>
+                                <Button Grid.Column="1" 
+                                        Text="?" 
+                                        Style="{StaticResource SmallButtonStyle}"
+                                        WidthRequest="18"
+                                        HeightRequest="18"
+                                        FontSize="9"
+                                        ToolTipProperties.Text="Çerçeve ayarları hakkında bilgi"/>
+                            </Grid>
+                            
+                            <!-- Border Style Picker -->
+                            <Grid ColumnDefinitions="90,*" ColumnSpacing="8">
+                                <Label Grid.Column="0" 
+                                       Text="{StaticResource PropertiesBorderStyle}"
+                                       TextColor="{StaticResource TextSecondary}"
+                                       VerticalOptions="Center"
+                                       FontSize="12"/>
+                                <Picker Grid.Column="1"
+                                        x:Name="BorderStylePicker"
+                                        BackgroundColor="{StaticResource InputBackground}"
+                                        TextColor="{StaticResource TextPrimary}"
+                                        ItemsSource="{Binding AvailableBorderStyles}"
+                                        SelectedItem="{Binding BorderStyle}"
+                                        ItemDisplayBinding="{Binding ., Converter={StaticResource BorderStyleToNameConverter}}"/>
+                            </Grid>
+                            
+                            <!-- Custom Border Button (visible when Custom is selected) -->
+                            <Button Text="{StaticResource PropertiesCustomBorder}"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Command="{Binding SelectCustomBorderCommand}"
+                                    IsVisible="{Binding BorderStyle, Converter={StaticResource BorderStyleToCustomVisibleConverter}}"
+                                    HorizontalOptions="Fill"/>
+                        </VerticalStackLayout>
+                    </Frame>
+                    
+                    <!-- Reset Button -->
+                    <Button Text="Varsayılana Sıfırla"
+                            Style="{StaticResource SecondaryButton}"
+                            Command="{Binding ResetAllCommand}"
+                            HorizontalOptions="Fill"
+                            Margin="0,8,0,0"/>
+                    
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentView>
