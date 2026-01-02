@@ -227,6 +227,23 @@ public class FontLoader : IFontLoader
         if (root.TryGetProperty("base", out var baseElement))
             font.Base = baseElement.GetInt32();
 
+        // LED bitmap font formatını kontrol et (karakterler doğrudan root'ta veya characters altında)
+        // Önce root'ta sayısal key'li array var mı kontrol et
+        bool hasRootCharacters = false;
+        foreach (var prop in root.EnumerateObject())
+        {
+            if (int.TryParse(prop.Name, out _) && prop.Value.ValueKind == JsonValueKind.Array)
+            {
+                hasRootCharacters = true;
+                break;
+            }
+        }
+
+        if (hasRootCharacters)
+        {
+            return await LoadLedBitmapFontFromRootAsync(jsonPath, root);
+        }
+
         if (root.TryGetProperty("characters", out var charactersElement))
         {
             var firstProp = charactersElement.EnumerateObject().GetEnumerator();
@@ -290,6 +307,143 @@ public class FontLoader : IFontLoader
 
         // Font'u cache'e ekle
         _loadedFonts[font.Name] = font;
+
+        return font;
+    }
+
+    private async Task<BitmapFont> LoadLedBitmapFontFromRootAsync(string jsonPath, JsonElement root)
+    {
+        var font = new BitmapFont
+        {
+            FilePath = jsonPath,
+            Name = Path.GetFileNameWithoutExtension(jsonPath)
+        };
+
+        if (root.TryGetProperty("name", out var nameElement))
+            font.Name = nameElement.GetString() ?? font.Name;
+
+        int jsonLineHeight = 0;
+        if (root.TryGetProperty("lineHeight", out var lineHeightElement))
+            jsonLineHeight = lineHeightElement.GetInt32();
+
+        int letterspace = 1;
+        if (root.TryGetProperty("letterspace", out var letterspaceElement))
+        {
+            if (letterspaceElement.ValueKind == JsonValueKind.String)
+            {
+                if (int.TryParse(letterspaceElement.GetString(), out int rawLetterspace))
+                    letterspace = rawLetterspace > 10 ? 1 : Math.Max(1, rawLetterspace);
+            }
+            else if (letterspaceElement.ValueKind == JsonValueKind.Number)
+            {
+                int rawLetterspace = letterspaceElement.GetInt32();
+                letterspace = rawLetterspace > 10 ? 1 : Math.Max(1, rawLetterspace);
+            }
+        }
+
+        var characterData = new Dictionary<int, int[]>();
+        int maxWidth = 0;
+        int maxHeight = 0;
+
+        // Karakterler doğrudan root'ta sayısal key'ler olarak
+        foreach (var prop in root.EnumerateObject())
+        {
+            if (int.TryParse(prop.Name, out var charId) && prop.Value.ValueKind == JsonValueKind.Array)
+            {
+                var pixels = new List<int>();
+                foreach (var pixel in prop.Value.EnumerateArray())
+                    pixels.Add(pixel.GetInt32());
+                characterData[charId] = pixels.ToArray();
+
+                int charWidth = 0;
+                foreach (var row in pixels)
+                {
+                    int rowWidth = GetBitWidth(row);
+                    if (rowWidth > charWidth) charWidth = rowWidth;
+                }
+                if (charWidth > maxWidth) maxWidth = charWidth;
+                if (pixels.Count > maxHeight) maxHeight = pixels.Count;
+            }
+        }
+
+        font.LineHeight = jsonLineHeight > 0 ? jsonLineHeight : (maxHeight > 0 ? maxHeight : 16);
+        font.Base = font.LineHeight - 2;
+
+        int charsPerRow = 16;
+        int charCellWidth = maxWidth + 2;
+        int charCellHeight = maxHeight;
+        int imageWidth = charsPerRow * charCellWidth;
+        int imageHeight = ((characterData.Count + charsPerRow - 1) / charsPerRow) * charCellHeight;
+
+        font.FontImage = new SKBitmap(imageWidth, imageHeight);
+        using var canvas = new SKCanvas(font.FontImage);
+        canvas.Clear(SKColors.Transparent);
+
+        using var paint = new SKPaint { Color = SKColors.White, IsAntialias = false };
+
+        int charIndex = 0;
+        foreach (var kvp in characterData)
+        {
+            int charId = kvp.Key;
+            int[] pixels = kvp.Value;
+
+            int col = charIndex % charsPerRow;
+            int row = charIndex / charsPerRow;
+            int startX = col * charCellWidth;
+            int startY = row * charCellHeight;
+
+            int charMinBit = int.MaxValue;
+            int charMaxBit = 0;
+            for (int y = 0; y < pixels.Length; y++)
+            {
+                if (pixels[y] != 0)
+                {
+                    int rowMin = GetMinBit(pixels[y]);
+                    int rowMax = GetBitWidth(pixels[y]) - 1;
+                    if (rowMin < charMinBit) charMinBit = rowMin;
+                    if (rowMax > charMaxBit) charMaxBit = rowMax;
+                }
+            }
+
+            int charWidth;
+            int xOffset = 0;
+            if (charMinBit == int.MaxValue)
+                charWidth = 4;
+            else
+            {
+                charWidth = charMaxBit - charMinBit + 1;
+                xOffset = charMinBit;
+            }
+
+            for (int y = 0; y < pixels.Length; y++)
+            {
+                int rowData = pixels[y];
+                for (int x = 0; x < 16; x++)
+                {
+                    if ((rowData & (1 << x)) != 0)
+                        canvas.DrawPoint(startX + x - xOffset, startY + y, paint);
+                }
+            }
+
+            var fontChar = new FontChar
+            {
+                Id = charId,
+                X = startX,
+                Y = startY,
+                Width = charWidth > 0 ? charWidth : 1,
+                Height = pixels.Length,
+                XOffset = 0,
+                YOffset = 0,
+                XAdvance = charWidth > 0 ? charWidth : 4
+            };
+            font.Characters[charId] = fontChar;
+            charIndex++;
+        }
+
+        // Font'u cache'e ekle
+        _loadedFonts[font.Name] = font;
+
+        System.Diagnostics.Debug.WriteLine($"✅ LED Font yüklendi (root format): {font.Name} - {characterData.Count} karakter");
 
         return font;
     }
