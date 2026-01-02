@@ -144,17 +144,29 @@ public class AssetLibrary : IAssetLibrary
             var content = File.ReadAllText(file);
             var name = Path.GetFileNameWithoutExtension(file);
             
-            // Boyutları parse et - daha esnek regex (Türkçe karakterler için)
+            // Boyutları parse et - FRAME_WIDTH ve FRAME_HEIGHT veya sadece WIDTH/HEIGHT
             int width = 0, height = 0;
             
-            // WIDTH ve HEIGHT içeren satırları bul
-            var widthMatch = System.Text.RegularExpressions.Regex.Match(content, @"#define\s+[^\s]+WIDTH\s+(\d+)");
-            if (widthMatch.Success)
-                width = int.Parse(widthMatch.Groups[1].Value);
+            // Önce FRAME_WIDTH/FRAME_HEIGHT dene
+            var frameWidthMatch = System.Text.RegularExpressions.Regex.Match(content, @"#define\s+\w+_FRAME_WIDTH\s+(\d+)");
+            var frameHeightMatch = System.Text.RegularExpressions.Regex.Match(content, @"#define\s+\w+_FRAME_HEIGHT\s+(\d+)");
             
-            var heightMatch = System.Text.RegularExpressions.Regex.Match(content, @"#define\s+[^\s]+HEIGHT\s+(\d+)");
-            if (heightMatch.Success)
-                height = int.Parse(heightMatch.Groups[1].Value);
+            if (frameWidthMatch.Success && frameHeightMatch.Success)
+            {
+                width = int.Parse(frameWidthMatch.Groups[1].Value);
+                height = int.Parse(frameHeightMatch.Groups[1].Value);
+            }
+            else
+            {
+                // Fallback: WIDTH ve HEIGHT içeren satırları bul
+                var widthMatch = System.Text.RegularExpressions.Regex.Match(content, @"#define\s+[^\s]+WIDTH\s+(\d+)");
+                if (widthMatch.Success)
+                    width = int.Parse(widthMatch.Groups[1].Value);
+                
+                var heightMatch = System.Text.RegularExpressions.Regex.Match(content, @"#define\s+[^\s]+HEIGHT\s+(\d+)");
+                if (heightMatch.Success)
+                    height = int.Parse(heightMatch.Groups[1].Value);
+            }
 
             if (width == 0 || height == 0)
             {
@@ -162,9 +174,11 @@ public class AssetLibrary : IAssetLibrary
                 return;
             }
 
-            // Piksel verisini parse et - uint32_t array'i bul
+            // Piksel verisini parse et - tüm hex değerlerini al
+            // Format: uint32_t name[frame_count][pixel_count] = {{ ... }}
+            // veya: static const uint32_t name[frame_count][pixel_count] = {{ ... }}
             var dataMatch = System.Text.RegularExpressions.Regex.Match(content, 
-                @"uint32_t\s+\w+\[\d+\]\[\d+\]\s*=\s*\{\s*\{([^}]+)\}",
+                @"uint32_t\s+\w+\[\d+\]\[\d+\]\s*=\s*\{\s*\{([\s\S]+?)\}\s*\}",
                 System.Text.RegularExpressions.RegexOptions.Singleline);
             
             if (!dataMatch.Success)
@@ -183,10 +197,18 @@ public class AssetLibrary : IAssetLibrary
                 pixelValues.Add(Convert.ToUInt32(m.Groups[1].Value, 16));
             }
 
-            if (pixelValues.Count != width * height)
+            // Piksel sayısı kontrolü - sadece ilk frame'i al
+            int expectedPixels = width * height;
+            if (pixelValues.Count < expectedPixels)
             {
-                System.Diagnostics.Debug.WriteLine($"Piskel .c piksel sayısı uyuşmuyor: {file} (beklenen: {width * height}, bulunan: {pixelValues.Count})");
+                System.Diagnostics.Debug.WriteLine($"Piskel .c piksel sayısı yetersiz: {file} (beklenen: {expectedPixels}, bulunan: {pixelValues.Count})");
                 return;
+            }
+            
+            // Sadece ilk frame'in piksellerini al
+            if (pixelValues.Count > expectedPixels)
+            {
+                pixelValues = pixelValues.Take(expectedPixels).ToList();
             }
 
             // 2D array'lere dönüştür - her zaman orijinal renkleri sakla
